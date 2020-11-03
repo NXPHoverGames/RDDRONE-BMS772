@@ -90,7 +90,7 @@ Add the nuttx patch
 patch -p1 < ../Patchfiles/0001-nuttx-patch-BMS3.4.patch
 Linux command:
 ```bash
-patch -p1 < Patchfiles/0001-nuttx-patch-BMS3.4.patch
+patch -p1 < ../Patchfiles/0001-nuttx-patch-BMS3.4.patch
 ```
 ## configure and make the binary
 configure the BMS
