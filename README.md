@@ -4,6 +4,7 @@ NuttX source code for RDDRONE-BMS772
 This readme files will explain how to get the right nuttx and nuttx-apps repository with the BMS3.4 patches and build the BMS software (create a binary file)
 This will work best on a linux machine, you could use a virtual machine for it.
 
+## get the incubator nuttx and apps
 Make a usefull folder to have the files in, like drones or RDDRONE-BMS772
 Linux command:
 mkdir -p drones
@@ -29,6 +30,7 @@ ln -s incubator-nuttx nuttx
 
 ln -s incubator-nuttx-apps apps
 
+## checkout the right commit
 In the apps directory, checkout the right commit and branch
 Git hash: 7a85bc75dcf5632154a09e75cfc431b6e25df463
 Linux command:
