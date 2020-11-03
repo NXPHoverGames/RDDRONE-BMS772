@@ -65,6 +65,10 @@ cp -r src apps/nxp_bms/BMS_v1
 ```bash
 cp -r inc apps/nxp_bms/BMS_v1
 ```
+Copy the Makefile, the Make.defs and the Kconfig to the BMS_v1. Linux command:
+```bash
+cp {Makefile,Make.defs, Kconfig} apps/nxp_bms/BMS_v1
+```
 Checkout the public regulated data types.
 https://github.com/PX4/public_regulated_data_types
 Linux command:
