@@ -1,0 +1,29 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+config NXP_BMS
+	tristate "The BMS for drones"
+	default n
+	---help---
+		Enable the BMS for drones
+
+if NXP_BMS
+
+config NXP_BMS_PROGNAME
+	string "Program name"
+	default "bms"
+	---help---
+		This is the name of the program that will be used when the NSH ELF
+		program is installed.
+
+config NXP_BMS_PRIORITY
+	int "bms task priority"
+	default 100
+
+config NXP_BMS_STACKSIZE
+	int "bms stack size"
+	default 2048
+
+endif
