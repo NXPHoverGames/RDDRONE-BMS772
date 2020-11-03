@@ -123,7 +123,7 @@ See the release notes of the BMS772 how to attach the debugger.
 To program the BMS using a JLink debugger you need to have JLink installed.
 Make sure the BMS is powered.
 
-Open a terminal where the nuttx.bin file is located.
+Open a terminal where the nuttx.bin file is located (probably in the nuttx folder).
 Open JLink:
 ```bash
 JLinkExe
