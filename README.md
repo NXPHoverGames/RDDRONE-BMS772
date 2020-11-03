@@ -108,10 +108,21 @@ Make the binary with:
 ```bash
 make
 ```
-## programming the BMS with the JLink debugger
+## Using the command line interface (CLI) of the BMS
+Make sure the BMS is powered and everything is connected properly to the BMS.
+
+Use a UART terminal like minicom on a linux machine or PuTTY or teraTerm on a windows machine and connect to the right COM port.
+The settings are:
+*	115200 Baud
+*	8 data bits
+*	1 stop bit
+
+## Programming the BMS with the JLink debugger
 See the release notes of the BMS772 how to attach the debugger.
 
 To program the BMS using a JLink debugger you need to have JLink installed.
+Make sure the BMS is powered.
+
 Open a terminal where the nuttx.bin file is located.
 Open JLink:
 ```bash
@@ -160,4 +171,3 @@ Quit the JLinkExe
 ```bash
 q
 ```
-
