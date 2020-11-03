@@ -71,10 +71,10 @@ Linux command:
 ```
 ## Apply the patches
 Apply the patch to the nuttx-apps
-patch -p1 < Patchfiles/0001-apps-patch-BMS3.4.patch
+patch -p1 < ../Patchfiles/0001-apps-patch-BMS3.4.patch
 Linux command:
 ```bash
-(cd apps; patch -p1 < Patchfiles/0001-apps-patch-BMS3.4.patch)
+(cd apps; patch -p1 < ../Patchfiles/0001-apps-patch-BMS3.4.patch)
 ```
 Go the nuttx folder and checkout the right NuttX commit
 Git command:
@@ -87,7 +87,7 @@ cd nuttx
 git checkout 1115f0104bd404454b72e9e02f4583febb0fe162 -b bms772
 ```
 Add the nuttx patch 
-patch -p1 < Patchfiles/0001-nuttx-patch-BMS3.4.patch
+patch -p1 < ../Patchfiles/0001-nuttx-patch-BMS3.4.patch
 Linux command:
 ```bash
 patch -p1 < Patchfiles/0001-nuttx-patch-BMS3.4.patch
