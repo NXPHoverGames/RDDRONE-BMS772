@@ -1,8 +1,8 @@
 # RDDRONE-BMS772
 NuttX source code for RDDRONE-BMS772
 
-To view the gitbook of this product see https://nxp.gitbook.io/rddrone-bms772/
-To view the design files and the product on the NXP webpage see https://www.nxp.com/design/designs/rddrone-bms772-smart-battery-management-for-mobile-robotics:RDDRONE-BMS772 
+* To view the gitbook of this product see https://nxp.gitbook.io/rddrone-bms772/
+* To view the design files and the product on the NXP webpage see https://www.nxp.com/design/designs/rddrone-bms772-smart-battery-management-for-mobile-robotics:RDDRONE-BMS772 
 
 This readme files will explain how to get the right nuttx and nuttx-apps repository with the BMS3.4 patches and build the BMS software (create a binary file).
 This will work best on a linux machine, you could use a virtual machine for it.
