@@ -1,8 +1,13 @@
 # RDDRONE-BMS772
 NuttX source code for RDDRONE-BMS772
 
+To view the gitbook of this product see https://nxp.gitbook.io/rddrone-bms772/
+To view the design files and the product on the NXP webpage see https://www.nxp.com/design/designs/rddrone-bms772-smart-battery-management-for-mobile-robotics:RDDRONE-BMS772 
+
 This readme files will explain how to get the right nuttx and nuttx-apps repository with the BMS3.4 patches and build the BMS software (create a binary file).
 This will work best on a linux machine, you could use a virtual machine for it.
+
+See this webpage for the NuttX quickstart guide: https://nuttx.apache.org/docs/latest/quickstart/quickstart.html
 
 ## Get the incubator nuttx and apps
 Make a usefull folder to place the files in, like drones.
@@ -41,15 +46,18 @@ Checkout the public regulated data types.
 ## Apply the patches
 Apply the patch to the nuttx-apps.
 ```bash
-(cd apps; patch -p1 < nxp_bms/BMS_v1/RDDRONE-BMS772/Patchfiles/0001-apps-patch-BMS3.4.patch)
+(cd apps; patch -p1 < nxp_bms/BMS_v1/Patchfiles/0001-apps-patch-BMS3.4.patch)
 ```
 Go the nuttx folder and checkout the right NuttX commit.
+```bash
+cd nuttx
+```
 ```bash
 git checkout 1115f0104bd404454b72e9e02f4583febb0fe162 -b bms772
 ```
 Add the nuttx patch.
 ```bash
-patch -p1 < ../Patchfiles/0001-nuttx-patch-BMS3.4.patch
+patch -p1 < ../apps/nxp_bms/BMS_v1/Patchfiles/0001-nuttx-patch-BMS3.4.patch
 ```
 ## configure and make the binary
 Configure the BMS.
