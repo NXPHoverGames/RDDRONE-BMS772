@@ -2,7 +2,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright (c) 2020, NXP Drone and Rover Team
+ * Copyright 2020 NXP 
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@
  * Template:
  * StructureType.j2
  *
- * Generated at:  2020-11-02 13:23:00.954878 UTC
+ * Generated at:  2020-11-06 07:34:38.776626 UTC
  * Is deprecated: no
  * Fixed port ID: 32740
  * Full name:     uavcan.pnp.cluster.Discovery

@@ -3,7 +3,7 @@
 #
 # BSD 3-Clause License
 # 
-# Copyright (c) 2020, NXP Drone and Rover Team
+# Copyright 2020 NXP
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without
@@ -52,8 +52,6 @@ CSRCS 	+= src/batManagement.c
 CSRCS 	+= src/spi.c
 CSRCS 	+= src/uavcan.c
 
-# CSRCS 	+= src/bms_lpspi.c
-# CSRCS 	+= src/bs32k1xx_spi.c
 CSRCS 	+= src/BCC/bcc_wait.c
 CSRCS 	+= src/BCC/bcc_peripheries.c
 CSRCS 	+= src/BCC/bcc_monitoring.c

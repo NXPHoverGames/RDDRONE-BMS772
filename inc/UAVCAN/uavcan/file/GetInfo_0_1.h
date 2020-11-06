@@ -2,7 +2,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright (c) 2020, NXP Drone and Rover Team
+ * Copyright 2020 NXP 
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@
  * Template:
  * ServiceType.j2
  *
- * Generated at:  2020-11-02 13:23:09.690727 UTC
+ * Generated at:  2020-11-06 07:34:54.123321 UTC
  * Is deprecated: no
  * Fixed port ID: 405
  * Full name:     uavcan.file.GetInfo

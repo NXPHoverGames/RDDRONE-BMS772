@@ -2,7 +2,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright (c) 2020, NXP Drone and Rover Team
+ * Copyright 2020 NXP 
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -39,7 +39,7 @@
  * Template:
  * StructureType.j2
  *
- * Generated at:  2020-11-02 13:23:12.612019 UTC
+ * Generated at:  2020-11-06 07:34:49.594723 UTC
  * Is deprecated: no
  * Fixed port ID: None
  * Full name:     uavcan.primitive.array.Natural8
