@@ -3,7 +3,6 @@
  * BSD 3-Clause License
  * 
  * Copyright 2020 NXP 
- * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -39,7 +38,7 @@
  * Template:
  * ServiceType.j2
  *
- * Generated at:  2020-11-06 07:34:38.126918 UTC
+ * Generated at:  2020-11-06 10:23:21.198505 UTC
  * Is deprecated: no
  * Fixed port ID: 385
  * Full name:     uavcan.register.List
