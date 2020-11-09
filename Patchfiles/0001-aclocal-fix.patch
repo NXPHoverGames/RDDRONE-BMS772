@@ -1,0 +1,36 @@
+From e294ddd5a73e8f035c6b8bd0d5f7439487e34927 Mon Sep 17 00:00:00 2001
+From: Han Raaijmakes <han.raaijmakers@nxp.com>
+Date: Mon, 9 Nov 2020 10:40:00 +0100
+Subject: [PATCH] aclocal fix
+
+---
+ kconfig-frontends/Makefile.in | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/kconfig-frontends/Makefile.in b/kconfig-frontends/Makefile.in
+index 4ab41ec..c709179 100644
+--- a/kconfig-frontends/Makefile.in
++++ b/kconfig-frontends/Makefile.in
+@@ -498,15 +498,15 @@ distuninstallcheck_listfiles = find . -type f -print
+ am__distuninstallcheck_listfiles = $(distuninstallcheck_listfiles) \
+   | sed 's|^\./|$(prefix)/|' | grep -v '$(infodir)/dir$$'
+ distcleancheck_listfiles = find . -type f -print
+-ACLOCAL = @ACLOCAL@
++ACLOCAL = true
+ AMTAR = @AMTAR@
+ AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
+ AM_LFLAGS = @AM_LFLAGS@
+ AM_YFLAGS = @AM_YFLAGS@
+ AR = @AR@
+-AUTOCONF = @AUTOCONF@
+-AUTOHEADER = @AUTOHEADER@
+-AUTOMAKE = @AUTOMAKE@
++AUTOCONF = true
++AUTOHEADER = true
++AUTOMAKE = true
+ AWK = @AWK@
+ CC = @CC@
+ CCDEPMODE = @CCDEPMODE@
+-- 
+2.25.1
+
