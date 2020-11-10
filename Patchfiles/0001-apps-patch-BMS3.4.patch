@@ -1,7 +1,7 @@
-From 7ab728b4b116f5e2df90ee6e1a2787b5ddba8e44 Mon Sep 17 00:00:00 2001
+From 3bb3864b3623afa3879169afc409e6f236d0fcb0 Mon Sep 17 00:00:00 2001
 From: Cis van Mierlo <cis.van.mierlo@nxp.com>
-Date: Wed, 14 Oct 2020 09:47:32 +0200
-Subject: [PATCH] apps patch for Spike BMS
+Date: Tue, 10 Nov 2020 11:29:50 +0100
+Subject: [PATCH] apps patch BMS3.4
 
 ---
  canutils/libcanardv0/.gitignore |   1 +
@@ -30,9 +30,12 @@ Subject: [PATCH] apps patch for Spike BMS
  examples/canardv1/o1heap.h      | 143 +++++++++
  examples/canardv1/socketcan.c   | 171 ++++++++++
  examples/canardv1/socketcan.h   |  69 +++++
+ include/canutils/canard_dsdl.h  |  95 ++++++
+ nxp_bms/Make.defs               |  35 +++
+ nxp_bms/Makefile                |  76 +++++
  system/spi/spi_common.c         |   2 +-
  system/spi/spi_exch.c           |   2 +-
- 28 files changed, 2990 insertions(+), 2 deletions(-)
+ 31 files changed, 3196 insertions(+), 2 deletions(-)
  create mode 100644 canutils/libcanardv0/.gitignore
  create mode 100644 canutils/libcanardv0/Kconfig
  create mode 100644 canutils/libcanardv0/Make.defs
@@ -59,6 +62,9 @@ Subject: [PATCH] apps patch for Spike BMS
  create mode 100644 examples/canardv1/o1heap.h
  create mode 100644 examples/canardv1/socketcan.c
  create mode 100644 examples/canardv1/socketcan.h
+ create mode 100644 include/canutils/canard_dsdl.h
+ create mode 100644 nxp_bms/Make.defs
+ create mode 100644 nxp_bms/Makefile
 
 diff --git a/canutils/libcanardv0/.gitignore b/canutils/libcanardv0/.gitignore
 new file mode 100644
@@ -3204,6 +3210,230 @@ index 00000000..64db4323
 +#endif
 +
 +#endif //SOCKETCAN_H_INCLUDED
+diff --git a/include/canutils/canard_dsdl.h b/include/canutils/canard_dsdl.h
+new file mode 100644
+index 00000000..482f0d1e
+--- /dev/null
++++ b/include/canutils/canard_dsdl.h
+@@ -0,0 +1,95 @@
++///                         __   __   _______   __   __   _______   _______   __   __
++///                        |  | |  | /   _   ` |  | |  | /   ____| /   _   ` |  ` |  |
++///                        |  | |  | |  |_|  | |  | |  | |  |      |  |_|  | |   `|  |
++///                        |  |_|  | |   _   | `  `_/  / |  |____  |   _   | |  |`   |
++///                        `_______/ |__| |__|  `_____/  `_______| |__| |__| |__| `__|
++///                            |      |            |         |      |         |
++///                        ----o------o------------o---------o------o---------o-------
++///
++/// This is a DSDL serialization helper for libcanard -- a trivial optional extension library that contains basic
++/// DSDL field serialization routines. It is intended for use in simple applications where auto-generated DSDL
++/// serialization logic is not available. The functions are fully stateless and straightforward to use;
++/// read their documentation comments for usage info.
++///
++/// This is an optional part of libcanard that can be omitted if this functionality is not required by the application.
++/// Some high-integrity systems may prefer to avoid this extension because it relies on unsafe memory operations.
++///
++/// This library is designed to be compatible with any instruction set architecture (including big endian platforms)
++/// but the floating point functionality will be automatically disabled at compile time if the target platform does not
++/// use an IEEE 754-compatible floating point model. Support for other floating point models may be implemented later.
++/// If your application requires non-IEEE-754 floats, please reach out to the maintainers via https://forum.uavcan.org.
++///
++/// To use the library, copy the files canard_dsdl.c and canard_dsdl.h into the source tree of the application.
++/// No special compilation options are required. There are optional build configuration options defined near the top
++/// of canard_dsdl.c; they may be used to fine-tune the library for the target platform (but it is not necessary).
++///
++/// This software is distributed under the terms of the MIT License.
++/// Copyright (c) 2016-2020 UAVCAN Development Team.
++/// Author: Pavel Kirienko <pavel.kirienko@zubax.com>
++
++#ifndef CANARD_DSDL_H_INCLUDED
++#define CANARD_DSDL_H_INCLUDED
++
++#include <stdbool.h>
++#include <stddef.h>
++#include <stdint.h>
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++typedef float  CanardDSDLFloat32;
++typedef double CanardDSDLFloat64;
++
++/// Serialize a DSDL field value at the specified bit offset from the beginning of the destination buffer.
++/// The behavior is undefined if the input pointer is NULL. The time complexity is linear of the bit length.
++/// One-bit-wide signed integers are processed without raising an error but the result is unspecified.
++/// The floating point functions are only available if the target platform has an IEEE 754-compatible float model.
++///
++/// Arguments:
++///     buf     Destination buffer where the result will be stored.
++///     off_bit Offset, in bits, from the beginning of the buffer. May exceed one byte.
++///     value   The value itself (in case of integers it is promoted to 64-bit for unification).
++///     len_bit Length of the serialized representation, in bits. Zero has no effect. Values above 64 bit are saturated.
++void canardDSDLSetBit(uint8_t* const buf, const size_t off_bit, const bool value);
++void canardDSDLSetUxx(uint8_t* const buf, const size_t off_bit, const uint64_t value, const uint8_t len_bit);
++void canardDSDLSetIxx(uint8_t* const buf, const size_t off_bit, const int64_t value, const uint8_t len_bit);
++void canardDSDLSetF16(uint8_t* const buf, const size_t off_bit, const CanardDSDLFloat32 value);
++void canardDSDLSetF32(uint8_t* const buf, const size_t off_bit, const CanardDSDLFloat32 value);
++void canardDSDLSetF64(uint8_t* const buf, const size_t off_bit, const CanardDSDLFloat64 value);
++
++/// Deserialize a DSDL field value located at the specified bit offset from the beginning of the source buffer.
++/// If the deserialized value extends beyond the end of the buffer, the missing bits are taken as zero, as required
++/// by the DSDL specification (see Implicit Zero Extension Rule, IZER).
++/// The floating point functions are only available if the target platform has an IEEE 754-compatible float model.
++///
++/// If len_bit is greater than the return type, extra bits will be truncated per standard narrowing conversion rules.
++/// If len_bit is shorter than the return type, missing bits will be zero per standard integer promotion rules.
++/// Essentially, for integers, it would be enough to have 64-bit versions only; narrower variants exist only to avoid
++/// narrowing type conversions of the result and for some performance gains.
++///
++/// The behavior is undefined if the input pointer is NULL. The time complexity is linear of the bit length.
++/// One-bit-wide signed integers are processed without raising an error but the result is unspecified.
++///
++/// Arguments:
++///     buf      Source buffer where the serialized representation will be read from.
++///     buf_size The size of the source buffer, in bytes. Reads past this limit will be assumed to return zero bits.
++///     off_bit  Offset, in bits, from the beginning of the buffer. May exceed one byte.
++///     len_bit  Length of the serialized representation, in bits. Zero returns zero. Out-of-range values are saturated.
++bool     canardDSDLGetBit(const uint8_t* const buf, const size_t buf_size, const size_t off_bit);
++uint8_t  canardDSDLGetU8(const uint8_t* const buf, const size_t buf_size, const size_t off_bit, const uint8_t len_bit);
++uint16_t canardDSDLGetU16(const uint8_t* const buf, const size_t buf_size, const size_t off_bit, const uint8_t len_bit);
++uint32_t canardDSDLGetU32(const uint8_t* const buf, const size_t buf_size, const size_t off_bit, const uint8_t len_bit);
++uint64_t canardDSDLGetU64(const uint8_t* const buf, const size_t buf_size, const size_t off_bit, const uint8_t len_bit);
++int8_t   canardDSDLGetI8(const uint8_t* const buf, const size_t buf_size, const size_t off_bit, const uint8_t len_bit);
++int16_t  canardDSDLGetI16(const uint8_t* const buf, const size_t buf_size, const size_t off_bit, const uint8_t len_bit);
++int32_t  canardDSDLGetI32(const uint8_t* const buf, const size_t buf_size, const size_t off_bit, const uint8_t len_bit);
++int64_t  canardDSDLGetI64(const uint8_t* const buf, const size_t buf_size, const size_t off_bit, const uint8_t len_bit);
++CanardDSDLFloat32 canardDSDLGetF16(const uint8_t* const buf, const size_t buf_size, const size_t off_bit);
++CanardDSDLFloat32 canardDSDLGetF32(const uint8_t* const buf, const size_t buf_size, const size_t off_bit);
++CanardDSDLFloat64 canardDSDLGetF64(const uint8_t* const buf, const size_t buf_size, const size_t off_bit);
++
++#ifdef __cplusplus
++}
++#endif
++#endif  // CANARD_DSDL_H_INCLUDED
+diff --git a/nxp_bms/Make.defs b/nxp_bms/Make.defs
+new file mode 100644
+index 00000000..24f85f56
+--- /dev/null
++++ b/nxp_bms/Make.defs
+@@ -0,0 +1,35 @@
++############################################################################
++# apps/nxp_bms/Make.defs
++#
++# BSD 3-Clause License
++# 
++# Copyright 2020 NXP
++# 
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions are met:
++# 
++# 1. Redistributions of source code must retain the above copyright notice, this
++#    list of conditions and the following disclaimer.
++# 
++# 2. Redistributions in binary form must reproduce the above copyright notice,
++#    this list of conditions and the following disclaimer in the documentation
++#    and/or other materials provided with the distribution.
++# 
++# 3. Neither the name of the copyright holder nor the names of its
++#    contributors may be used to endorse or promote products derived from
++#    this software without specific prior written permission.
++# 
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
++# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
++# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
++# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
++# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
++# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++#
++############################################################################
++
++include $(wildcard nxp_bms/*/Make.defs)
+diff --git a/nxp_bms/Makefile b/nxp_bms/Makefile
+new file mode 100644
+index 00000000..7522a9a9
+--- /dev/null
++++ b/nxp_bms/Makefile
+@@ -0,0 +1,76 @@
++############################################################################
++# apps/nxp_bms/Makefile
++#
++# BSD 3-Clause License
++# 
++# Copyright 2020 NXP
++# 
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions are met:
++# 
++# 1. Redistributions of source code must retain the above copyright notice, this
++#    list of conditions and the following disclaimer.
++# 
++# 2. Redistributions in binary form must reproduce the above copyright notice,
++#    this list of conditions and the following disclaimer in the documentation
++#    and/or other materials provided with the distribution.
++# 
++# 3. Neither the name of the copyright holder nor the names of its
++#    contributors may be used to endorse or promote products derived from
++#    this software without specific prior written permission.
++# 
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
++# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
++# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
++# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
++# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
++# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++#
++############################################################################
++
++MENUDESC = "nxp_bms"
++
++-include $(TOPDIR)/Make.defs
++include $(APPDIR)/Make.defs
++
++# Sub-directories
++
++SUBDIRS = $(dir $(wildcard */Makefile))
++
++all: nothing
++
++.PHONY: nothing context depend clean distclean
++
++$(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),preconfig)))
++$(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),context)))
++$(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),depend)))
++$(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),clean)))
++$(foreach SDIR, $(SUBDIRS), $(eval $(call SDIR_template,$(SDIR),distclean)))
++
++nothing:
++
++install:
++
++preconfig: $(foreach SDIR, $(SUBDIRS), $(SDIR)_preconfig)
++ifneq ($(MENUDESC),)
++	$(Q) $(MKKCONFIG) -m $(MENUDESC)
++endif
++
++context: $(foreach SDIR, $(SUBDIRS), $(SDIR)_context)
++
++depend: $(foreach SDIR, $(SUBDIRS), $(SDIR)_depend)
++
++clean: $(foreach SDIR, $(SUBDIRS), $(SDIR)_clean)
++	find . -name "*.o" | xargs rm -rf
++
++distclean: $(foreach SDIR, $(SUBDIRS), $(SDIR)_distclean)
++	find . -name "*.o" | xargs rm -rf
++ifneq ($(MENUDESC),)
++	$(call DELFILE, Kconfig)
++endif
++
++-include Make.dep
 diff --git a/system/spi/spi_common.c b/system/spi/spi_common.c
 index 21017cec..1fc5f838 100644
 --- a/system/spi/spi_common.c
