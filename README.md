@@ -18,16 +18,25 @@ Typical parameters can and do vary in different applications and actual performa
 NXP does not convey any license under its patent rights nor the rights of others. NXP products are not designed, intended, or authorized for use as components in systems intended for surgical implant into the body, or other applications intended to support or sustain life, or for any other application in which the failure of the NXP product could create a situation where personal injury or death may occur. Should the Buyer purchase or use NXP products for any such unintended or unauthorized application, the Buyer shall indemnify and hold NXP and its officers, employees, subsidiaries, affiliates, and distributors harmless against all claims, costs, damages, and expenses, and reasonable attorney fees arising out of, directly or indirectly, any claim of personal injury or death associated with such unintended or unauthorized use, even if such claim alleges NXP was negligent regarding the design or manufacture of the part.
 
 ## sources
-* To view the gitbook of this product see https://nxp.gitbook.io/rddrone-bms772/
-* To view the design files and the product on the NXP webpage see https://www.nxp.com/design/designs/rddrone-bms772-smart-battery-management-for-mobile-robotics:RDDRONE-BMS772 
+* To view the gitbook of this product see https://nxp.gitbook.io/rddrone-bms772/.
+* To view the design files and the product on the NXP webpage see https://www.nxp.com/design/designs/rddrone-bms772-smart-battery-management-for-mobile-robotics:RDDRONE-BMS772. 
 
 NXP has battery emulators that may be used during testing:
-https://www.nxp.com/design/development-boards/analog-toolbox/6-cell-battery-pack-to-supply-mc33772-evbs:BATT-6EMULATOR
+https://www.nxp.com/design/development-boards/analog-toolbox/6-cell-battery-pack-to-supply-mc33772-evbs:BATT-6EMULATOR.
 
 This readme files will explain how to get the right nuttx and nuttx-apps repository with the BMS3.4 patches and build the BMS software (create a binary file).
 This will work best on a linux machine, you could use a virtual machine for it.
 
-See this webpage for the NuttX quickstart guide: https://nuttx.apache.org/docs/latest/quickstart/quickstart.html
+See this webpage for the NuttX quickstart guide: https://nuttx.apache.org/docs/latest/quickstart/quickstart.html.
+
+## Make sure git is installed
+If git is not installed, open a terminal and type the following commands:
+```bash
+sudo apt-get update
+```
+```bash
+sudo apt-get install git
+```
 
 ## Get the incubator nuttx and apps
 Make a usefull folder to place the files in, like drones.
@@ -79,7 +88,73 @@ Add the nuttx patch.
 ```bash
 patch -p1 < ../apps/nxp_bms/BMS_v1/Patchfiles/0001-nuttx-patch-BMS3.4.patch
 ```
-## configure and make the binary
+## Install the Kconfig tools and the crosscompiler if needed
+When this is your first NuttX project, you need to install the Kconfig tools and the cross compiler. Otherwise you can skip this part and continue with "configure and make the binary".
+### Install the Kconfig tools if needed
+Install the build essentials and everything that is needed.
+```bash
+sudo apt-get install build-essential
+```
+```bash
+sudo apt-get install flex
+```
+```bash
+sudo apt-get install bison
+```
+```bash
+sudo apt-get install gperf
+```
+```bash
+sudo apt-get install libncurses5-dev
+```
+Go back from the nuttx directory and make a tools directory next to it.
+```bash
+cd ..
+```
+```bash
+mkdir -p tools
+```
+```bash
+cd tools
+```
+Clone the nuttx tools master.
+```bash
+git clone https://bitbucket.org/nuttx/tools/src/master
+```
+```bash
+cd master
+```
+Apply the patch.
+```bash
+patch -p1 < ../../apps/nxp_bms/BMS_v1/Patchfiles/0001-aclocal-fix.patch
+```
+Configure and install it.
+```bash
+cd kconfig-frontends
+```
+```bash
+./configure --enable-mconf --disable-nconf --disable-gconf --disable-qconf
+```
+```bash
+Make
+```
+```bash
+sudo make install
+```
+```bash
+sudo ldconfig
+```
+Go back to the nuttx directory
+```bash
+cd ../../../nuttx
+```
+### Install the cross compiler if needed 
+If not already installed, install the cross compiler with the following command:
+```bash
+sudo apt install gcc-arm-none-eabi
+```
+
+## Configure and make the binary
 Configure the BMS.
 ```bash
 tools/configure.sh -e rddrone-bms772:bmsdebug
