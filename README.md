@@ -136,7 +136,7 @@ cd kconfig-frontends
 ./configure --enable-mconf --disable-nconf --disable-gconf --disable-qconf
 ```
 ```bash
-Make
+make
 ```
 ```bash
 sudo make install
