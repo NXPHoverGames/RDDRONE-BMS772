@@ -11,3 +11,5 @@
 /*.lib
 /*.src
 /*.o
+/*.orig
+old/

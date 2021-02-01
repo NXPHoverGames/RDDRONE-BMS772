@@ -32,7 +32,7 @@
 #
 ############################################################################
 
--include $(TOPDIR)/Make.defs
+-include $(APPDIR)/Make.defs
 
 # BMS! built-in application info
 
@@ -64,6 +64,7 @@ CSRCS 	+= src/BCC/Derivatives/bcc_tpl.c
 CSRCS 	+= src/UAVCAN/o1heap.c
 CSRCS 	+= src/UAVCAN/socketcan.c
 CSRCS 	+= src/UAVCAN/pnp.c
+CSRCS 	+= src/UAVCAN/portid.c
 CSRCS 	+= src/sbc.c
 CSRCS 	+= src/nfc.c
 CSRCS 	+= src/a1007.c

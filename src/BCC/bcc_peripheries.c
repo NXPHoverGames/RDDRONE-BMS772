@@ -108,7 +108,7 @@ bcc_status_t BCC_MCU_TransferSpi(uint8_t drvInstance, uint8_t transBuf[], uint8_
 
     if(spi_BMSTransferData(BCC_SPI_BUS, tBuf, rBuf))
     {
-        cli_printf("BCC: SPI transfer failed!\n");
+        cli_printfError("BCC ERROR: SPI transfer failed!\n");
     }
 
     // unlock the mutex
@@ -154,17 +154,17 @@ void BCC_MCU_Assert(bool x)
  *END**************************************************************************/
 void BCC_MCU_WriteCsbPin(uint8_t drvInstance, uint8_t value)
 {
-    int lvRetValue;
+    //int lvRetValue;
     //!
      // write the pin with the value
     //gpio_writePin(BCC_RESET, value);
-    lvRetValue = gpio_writePin(BCC_CS, (bool)(value & 1));
+    //lvRetValue = gpio_writePin(BCC_CS, (bool)(value & 1));
 
     // check for errors
-    if(lvRetValue)
-    {
-        cli_printf("BCC_MCU ERROR: Couldn't write BCC CS! %d\n", lvRetValue);
-    }
+    // if(lvRetValue)
+    // {
+    //     cli_printfError("BCC_MCU ERROR: Couldn't write BCC CS! %d\n", lvRetValue);
+    // }
 
     // LPSPI_DRV_SetPcs(BCC_SPI_LPSPI_INSTANCE, BCC_SPI_LPSPI_PCS,
     //         value ? LPSPI_ACTIVE_LOW : LPSPI_ACTIVE_HIGH);

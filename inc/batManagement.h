@@ -349,6 +349,16 @@ int batManagement_setBalancing(bool on);
 int batManagement_checkBalancing(void);
 
 /*!
+ * @brief 	This function is used to check if a flight mode current is drawn (I_BATT > I_flight_mode)
+ * @note 	Will compare with the latest measured current.
+ *
+ * @param   flightModeCurrent the address of the variable to become 1 if the current is higher than I_flight_mode
+ * 			
+ * @return 	If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error. 
+ */
+int batManagement_checkFlightModeCurrent(bool *flightModeCurrent); 
+
+/*!
  * @brief 	This function is used to check if the output voltage is at least OUTPUT_ON_VOLTAGE
  * 			
  * @return 	1 if output is active (>= OUTPUT_ON_VOLTAGE)
@@ -404,24 +414,33 @@ int batManagement_saveFullChargeCap(void);
  * @brief 	This function is to calculate the remaining capacity 
  * 			this will be used when an CC overflow occures
  * @note 	it will read and reset the CC registers
+ * @param 	clearingCCOverflow If not NULL this will be set true if the CC register is cleared. 
  * 			
  * @return 	If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error. 
  */
-int batManagement_calcRemaningCharge(void);
+int batManagement_calcRemaningCharge(bool *clearingCCOverflow);
+
+/*
+ * @brief   This function can be used to calibrate the state of charge (SoC)
+ * @note    A predefined table and the lowest cell voltage will be used for this
+ * @note    can be called from mulitple threads
+ * @warning The battery (voltage) needs to be relaxed before this is used!
+ *
+ * @param   none
+ *
+ * @return  0 if succesfull, otherwise it will indicate the error
+ * 			Could return -1 when the current > sleepcurrent.
+ */
+int batManagement_calibrateStateOfCharge(void);
 
 /*!
- * @brief 	This function is used to set the OCV interrupt timer. 
- * 			This function will be used to calculate the next OCV time, and set the timer.
- * 			If the functions isn't called with false, the time of the timer will increase with 50%
- * 			until the T_OCV_CYCLIC1 time is reached. 
- * 			To stop the timer and to reset the timer value, this should be called with false.
+ * @brief 	This function is used to output the cell voltages
  * 			
- * @param 	on, true to calculate and set the next OCV timer, false to stop and reset the timer. 
+ * @param 	none
  *
  * @return 	If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error. 
  */
-int batManagement_setOCVTimer(bool on);
-
+int batManagement_outputCellVoltages(void);
 
 /*!
  * @brief This function will initialize the spi mutex for the BCC function

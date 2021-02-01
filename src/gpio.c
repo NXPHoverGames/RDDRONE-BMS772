@@ -116,7 +116,7 @@ int gpio_init(void)
   // check if initialized
   if(!gFileDescriptorLockInitialized)
   {
-    cli_printf("SELF-TEST START: GPIO\n");
+    cli_printf("SELF-TEST GPIO: START\n");
 
     lvRetValue = -1;
 
@@ -148,7 +148,7 @@ int gpio_init(void)
       if (lvFd < 0)
       {
         lvErrorCode = errno;
-        cli_printf("gpio_init ERROR: Failed to open %s: %d\n", devPath, lvErrorCode);
+        cli_printfError("GPIO ERROR: Failed to open %s: %d\n", devPath, lvErrorCode);
         return lvRetValue;
       }
 
@@ -156,19 +156,40 @@ int gpio_init(void)
       if(setNGetFileDescriptior(true, i, lvFd))
       {
         // there is an error 
-        cli_printf("gpio_init ERROR: Failed to save file descriptor %s: %d\n", devPath, i);
+        cli_printfError("GPIO ERROR: Failed to save file descriptor %s: %d\n", devPath, i);
         return lvRetValue;
       }
-
     }
-
-    // set the return value to 0
-    lvRetValue = 0;
 
     // set the initialzed variable
     gFileDescriptorLockInitialized = true;
 
-    cli_printf("SELF-TEST PASS:  GPIO\n");
+    cli_printfWarning("WARNING: Toggling PTE8 to high and back to low!\n");
+
+    // check if the PTE8 pin can be written
+    // write the PTE8 pin to high
+    lvRetValue = gpio_writePin(PTE8, 1);
+
+    // check if it went wrong
+    if(lvRetValue)
+    {
+      cli_printfError("GPIO ERROR: writing PTE8 high went wrong!\n");
+      cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
+      return lvRetValue;
+    }
+
+    // write the PTE8 pin to low
+    lvRetValue = gpio_writePin(PTE8, 0);
+
+    // check if it went wrong
+    if(lvRetValue)
+    {
+      cli_printfError("GPIO ERROR: writing PTE8 low went wrong!\n");
+      cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
+      return lvRetValue;
+    }
+
+    // other pins will be tested during the initialize of the other parts
   }
 
   // return to the user
@@ -178,22 +199,22 @@ int gpio_init(void)
 
 /*!
  * @brief   This function will read the state a gpio pin.
- *      it can be used to see if the pin is high or low
- *      the pin needs to be defined in the specific board file (like rrdrone-bms772.h)
- *      and it needs to be added to the array in <chip>_gpio.c
+ *          it can be used to see if the pin is high or low
+ *          the pin needs to be defined in the specific board file (like rrdrone-bms772.h)
+ *          and it needs to be added to the array in <chip>_gpio.c
  *      
  * @param   which pin to read from the pinEnum_t enum. 
  *
  * @return  1 if the pin is high, 0 if the pin in low, -1 if there is an error
  * @example lvGpioReadVal = gpio_readPin(GATE_RS);
- *      if(lvGpioReadVal == -1)
- *      {
- *        // do something with the error
- *      }
- *      else if(lvGpioReadVal)
- *      {
- *        // do something
- *      }
+ *          if(lvGpioReadVal == -1)
+ *          {
+ *            // do something with the error
+ *          }
+ *          else if(lvGpioReadVal)
+ *          {
+ *            // do something
+ *          }
  */
 int gpio_readPin(pinEnum_t pin)
 {
@@ -212,7 +233,7 @@ int gpio_readPin(pinEnum_t pin)
     if (lvRetValue < 0)
     {
       lvErrorCode = errno;
-      cli_printf("GPIO ERROR: Failed to read value from %d: %d\n", pin, lvErrorCode);
+      cli_printfError("GPIO ERROR: Failed to read value from %d: %d\n", pin, lvErrorCode);
       //close(lvFd);
       lvError += ERROR_READ_DEV;
       //return lvRetValue;
@@ -222,7 +243,7 @@ int gpio_readPin(pinEnum_t pin)
   {
     // error 
     lvError += ERROR_OPEN_DEV;
-    cli_printf("GPIO ERROR: Failed to get file descriptor %d: %d\n", pin, lvFd);
+    cli_printfError("GPIO ERROR: Failed to get file descriptor %d: %d\n", pin, lvFd);
   }
 
   if(!lvError)
@@ -236,13 +257,13 @@ int gpio_readPin(pinEnum_t pin)
 }
 
 /*!
- * @brief   This function write a value to a gpio pin.
- *      it can be used to set the pin high or low
- *      the pin needs to be defined in the specific board file (like rrdrone-bms772.h)
- *      and it needs to be added to the array in <chip>_gpio.c  
+ * @brief This function write a value to a gpio pin.
+ *        it can be used to set the pin high or low
+ *        the pin needs to be defined in the specific board file (like rrdrone-bms772.h)
+ *        and it needs to be added to the array in <chip>_gpio.c  
  *    
- * @param   which pin to set from the pinEnum_t enum. 
- * @param   the new value of the pin, 1 is high and 0 is low 
+ * @param which pin to set from the pinEnum_t enum. 
+ * @param the new value of the pin, 1 is high and 0 is low 
  *
  * @return  0 if succesfull, -1 if there is an error
  * @example if(gpio_writePin(GATE_CTRL_CP, 1))
@@ -268,7 +289,7 @@ int gpio_writePin(pinEnum_t pin, bool newValue)
     if (lvRetValue < 0)
     {
       lvErrorCode = errno;
-      cli_printf("GPIO ERROR: Failed to write value %u from %d: %d\n",
+      cli_printfError("GPIO ERROR: Failed to write value %u from %d: %d\n",
          (unsigned int)newValue, pin, lvErrorCode);
 
       // set the error value
@@ -278,7 +299,7 @@ int gpio_writePin(pinEnum_t pin, bool newValue)
   else
   {
     lvError += ERROR_OPEN_DEV;
-    cli_printf("GPIO ERROR: Failed to get file descriptor %s: %d\n", pin, lvFd);
+    cli_printfError("GPIO ERROR: Failed to get file descriptor %s: %d\n", pin, lvFd);
   }
    
   // read the pin value 
@@ -288,8 +309,8 @@ int gpio_writePin(pinEnum_t pin, bool newValue)
     if (lvRetValue < 0)
     {
       lvErrorCode = errno;
-      cli_printf("GPIO ERROR: Failed to read value from %d: %d\n", pin, lvErrorCode);
-
+      cli_printfError("GPIO ERROR: Failed to read value from %d: %d\n", pin, lvErrorCode);
+      
       // set the error variable
       lvError += ERROR_READ_DEV;
     }
@@ -300,6 +321,12 @@ int gpio_writePin(pinEnum_t pin, bool newValue)
   {
     // set the return value
     lvRetValue = 0;
+  }
+  // if the read value is not equal to the written value
+  else
+  {
+    // set the return value to -1
+    lvRetValue = -1;
   }
 
   // return the value
@@ -354,7 +381,7 @@ int gpio_registerISR(pinEnum_t pin, _sa_handler_t  pinISRHandler, bool num)
   if(lvFd < 0)
   {
     lvError += ERROR_OPEN_DEV;
-    cli_printf("GPIO ERROR: Failed to get file descriptor %s: %d\n", pin, lvFd);
+    cli_printfError("GPIO ERROR: Failed to get file descriptor %s: %d\n", pin, lvFd);
   }
 
   // check if it all went ok
@@ -362,7 +389,6 @@ int gpio_registerISR(pinEnum_t pin, _sa_handler_t  pinISRHandler, bool num)
   {
 
     //cli_printf("setting notify %d!\n", pin);
-
     // set the notify signal
     notify.sigev_notify = SIGEV_SIGNAL;
     notify.sigev_signo  = signalNumber;//pin;
@@ -372,7 +398,7 @@ int gpio_registerISR(pinEnum_t pin, _sa_handler_t  pinISRHandler, bool num)
     if (lvRetValue < 0)
     {
       lvErrorCode = errno;
-      cli_printf("GPIO ERROR: Failed to register interrupt for %d: %d\n",
+      cli_printfError("GPIO ERROR: Failed to register interrupt for %d: %d\n",
          pin, lvErrorCode);
 
       // set the error value
@@ -392,7 +418,7 @@ int gpio_registerISR(pinEnum_t pin, _sa_handler_t  pinISRHandler, bool num)
     {
       // check errno for the error
       lvErrorCode = errno;
-      cli_printf("GPIO ERROR: Failed to register signal to ISR pin: %d sig: %d err:%d\n", pin, (pin+GPIO_SIG_OFFSET), lvErrorCode);
+      cli_printfError("GPIO ERROR: Failed to register signal to ISR pin: %d sig: %d err:%d\n", pin, (pin+GPIO_SIG_OFFSET), lvErrorCode);
 
       // set the errorvalue
       lvError += ERROR_REGISTER_ISR;
@@ -455,7 +481,7 @@ int setNGetFileDescriptior(bool setNGet, pinEnum_t pin, int newFileDescriptor)
     // check for errors
     if(newFileDescriptor < 0)
     {
-      cli_printf("GPIO ERROR: newFileDescriptor < 0!\n");
+      cli_printfError("GPIO ERROR: newFileDescriptor < 0!\n");
       return lvRetValue;
     }
     // write the descriptor

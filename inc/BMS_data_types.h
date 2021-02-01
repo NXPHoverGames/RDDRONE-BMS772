@@ -60,6 +60,7 @@
 /* Global */
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <float.h>
 #include <string.h>
@@ -70,6 +71,14 @@
 /*******************************************************************************
  * Defines
  ******************************************************************************/
+#define LIPO_V_CELL_OV_DEFAULT 				4.2			//!< [V] the default cell overvoltage level of a LiPo battery cell
+#define LIPO_V_CELL_UV_DEFAULT 				3			//!< [V] the default cell undervoltage level of a LiPo battery cell
+#define LIPO_V_STORAGE_DEFAULT 				3.8			//!< [V] the default cell storage voltage level of a LiPo battery cell
+
+#define LIFEPO4_V_CELL_OV_DEFAULT 			3.6			//!< [V] the default cell overvoltage level of a LiFePo4 battery cell
+#define LIFEPO4_V_CELL_UV_DEFAULT 			2.5			//!< [V] the default cell undervoltage level of a LiFePo4 battery cell
+#define LIFEPO4_V_STORAGE_DEFAULT 			3.3			//!< [V] the default cell storage voltage level of a LiFePo4 battery cell
+
 #define S_HEALTH_UNKNOWN 					127
 
 #define STATUS_ASK_PARS_BIT					0			//!< There is a change in the extra parameters so these should be asked
@@ -93,12 +102,12 @@
 #define S_OUT_DEFAULT						0			//!< [-]   
 #define	P_AVG_DEFAULT						0			//!< [W]    
 #define	E_USED_DEFAULT						0			//!< [Wh]    
-#define	A_REM_DEFAULT						2.6			//!< [Ah]
-#define	A_FULL_DEFAULT						4.6 //5.2			//!< [Ah]  
+#define	A_REM_DEFAULT						0			//!< [Ah]
+#define	A_FULL_DEFAULT						4.6			//!< [Ah]  
 #define	T_FULL_DEFAULT						0			//!< [h]   
 #define	S_FLAGS_DEFAULT						S_FLAGS_UKNOWN 	//!< [-]	
 #define	S_HEALTH_DEFAULT					S_HEALTH_UNKNOWN	//!< [%]   
-#define	S_CHARGE_DEFAULT					55			//!< [%]   
+#define	S_CHARGE_DEFAULT					0			//!< [%]   
 //#define	S_CHARGE_STDEV_DEFAULT			0			//!< [%]  
 #define	BATT_ID_DEFAULT						0			//!< [-]
 #define	MODEL_ID_DEFAULT					0			//!< [-]
@@ -116,38 +125,46 @@
 #define N_CHARGES_DEFAULT					0			//!< [-]  
 #define N_CHARGES_FULL_DEFAULT				0			//!< [-] 
 
-#define N_CELLS_DEFAULT 					3//4//3			//!< [-]
-#define T_MEAS_DEFAULT						1000 // TODO 100 		//!< [ms]
+#define N_CELLS_DEFAULT 					3			//!< [-]
+#define T_MEAS_DEFAULT						1000 		//!< [ms]
 #define T_FTTI_DEFAULT						1000 		//!< [ms]
 #define T_CYCLIC_DEFAULT					1			//!< [s] 
-#define I_SLEEP_OC_DEFAULT					30//20// 10			//!< [mA]
-#define V_CELL_OV_DEFAULT					4.2//2.8 // TODO 4.2			//!< [V] 
-#define V_CELL_UV_DEFAULT					3//3.5 //2.5//2 // TODO 2.5	// TODO 3			//!< [V] 
-#define C_CELL_OT_DEFAULT					45//55			//!< [C] 
+#define I_SLEEP_OC_DEFAULT					30			//!< [mA]
+#define V_CELL_OV_DEFAULT					LIPO_V_CELL_OV_DEFAULT //!< [V] 
+#define V_CELL_UV_DEFAULT					LIPO_V_CELL_UV_DEFAULT //!< [V] 
+#define C_CELL_OT_DEFAULT					45			//!< [C] 
 #define C_CELL_OT_CHARGE_DEFAULT			40			//!< [C] 
 #define C_CELL_UT_DEFAULT					(-20)		//!< [C] 
 #define C_CELL_UT_CHARGE_DEFAULT			0			//!< [C]
-#define A_FACTORY_DEFAULT 					A_FULL_DEFAULT			//!< [Ah] 
-#define T_BMS_TIMEOUT_DEFAULT				600 //10 // TODO 600			//!< [s]		
+#define A_FACTORY_DEFAULT 					A_FULL_DEFAULT	//!< [Ah] 
+#define T_BMS_TIMEOUT_DEFAULT				600 		//!< [s]		
 #define T_FAULT_TIMEOUT_DEFAULT				60			//!< [s] 
+#define T_SLEEP_TIMEOUT_DEFAULT				24			//!< [h]
 #define T_CHARGE_DETECT_DEFAULT				1			//!< [s] 
-#define T_CB_DELAY_DEFAULT					120 //10// TODO 120			//!< [s] 
-#define T_CHARGE_RELAX_DEFAULT				300 //20// TODO 300			//!< [s] 
+#define T_CB_DELAY_DEFAULT					120 		//!< [s] 
+#define T_CHARGE_RELAX_DEFAULT				300			//!< [s] 
 #define I_CHARGE_FULL_DEFAULT				50			//!< [mA]
-#define I_CHARGE_MAX_DEFAULT				9.2 //5.200		//!< [A]
-#define	I_OUT_MAX_DEFAULT					60 //90			//!< [A]
-#define V_CELL_MARGIN_DEFAULT				30			//!< [mV]
+#define I_CHARGE_MAX_DEFAULT				4.6			//!< [A]
+#define I_CHARGE_NOMINAL_DEFAULT			I_CHARGE_MAX_DEFAULT //!< [A]
+#define	I_OUT_MAX_DEFAULT					60 			//!< [A]
+#define I_OUT_NOMINAL_DEFAULT				I_OUT_MAX_DEFAULT //!< [A]
+#define I_FLIGHT_MODE_DEFAULT 				5			//!< [A]
+#define V_CELL_MARGIN_DEFAULT				50			//!< [mV]
 #define T_OCV_CYCLIC0_DEFAULT				300			//!< [s] 
 #define T_OCV_CYCLIC1_DEFAULT				86400		//!< [s] 
 #define C_PCB_UT_DEFAULT					(-20)		//!< [C] 
-#define C_PCB_OT_DEFAULT					45//60			//!< [C] 
-#define V_STORAGE_DEFAULT 					3.8			//!< [V]
-#define OCV_SLOPE_DEFAULT 					0.0053     	//!< [V/A.min]
+#define C_PCB_OT_DEFAULT					45			//!< [C] 
+#define V_STORAGE_DEFAULT 					LIPO_V_STORAGE_DEFAULT //!< [V]
+#define OCV_SLOPE_DEFAULT 					5.3     	//!< [mV/A.min]
 #define BATT_EOL_DEFAULT 					80 			//!< [%]
+#define BATTERY_TYPE_DEFAULT 				0			//!< [-]
 #define SENSOR_ENABLE_DEFAULT 				0			//!< [-]
 #define SELF_DISCHARGE_ENABLE_DEFAULT		1			//!< [-]
-#define UAVCAN_NODE_STATIC_ID_DEFAULT		255 // 10			//!< [-] 
-#define UAVCAN_SUBJECT_ID_DEFAULT			4096//4100		//!< [-] 
+#define FLIGHT_MODE_ENABLE_DEFAULT 			0			//!< [-]
+#define UAVCAN_NODE_STATIC_ID_DEFAULT		255			//!< [-] 
+#define UAVCAN_ESS_SUB_ID_DEFAULT			65535		//!< [-] 
+#define UAVCAN_BS_SUB_ID_DEFAULT			65535		//!< [-] 
+#define UAVCAN_BP_SUB_ID_DEFAULT			65535		//!< [-] 
 #define UAVCAN_FD_MODE_DEFAULT				0			//!< [-] 
 #define UAVCAN_BITRATE_DEFAULT				1000000 	//!< [bit/s]
 #define UAVCAN_FD_BITRATE_DEFAULT			4000000 	//!< [bit/s]
@@ -159,6 +176,7 @@
 #define I_SHORT_DEFAULT 					500			//!< [A] 
 #define T_SHORT_DEFAULT						20			//!< [uA]	
 #define I_BAL_DEFAULT						50			//!< [mA]
+#define M_MASS_DEFAULT						0			//!< [kg]
 
 /*! @brief function to generate an enum from FOR_EACH_.. */
 #define GENERATE_ENUM(ENUM) 	ENUM,		
@@ -172,6 +190,7 @@
 /*! @brief 	define the values for the state enum 
 * 			this can be used to create an enum and a string array for these values */
 #define FOR_EACH_STATE(STATE) 		\
+		STATE(SELF_TEST)			\
 		STATE(INIT) 				\
 		STATE(NORMAL) 				\
 		STATE(CHARGE) 				\
@@ -256,27 +275,35 @@ typedef enum{
 		PARAMETER(A_FACTORY)				\
 		PARAMETER(T_BMS_TIMEOUT) 			/*40*/\
 		PARAMETER(T_FAULT_TIMEOUT) 			\
+		PARAMETER(T_SLEEP_TIMEOUT)			\
 		PARAMETER(T_CHARGE_DETECT) 			\
 		PARAMETER(T_CB_DELAY) 				\
 		PARAMETER(T_CHARGE_RELAX) 			\
 		PARAMETER(I_CHARGE_FULL) 			\
 		PARAMETER(I_CHARGE_MAX)				\
+		PARAMETER(I_CHARGE_NOMINAL)			\
 		PARAMETER(I_OUT_MAX)				\
+		PARAMETER(I_OUT_NOMINAL)			/*50*/\
+		PARAMETER(I_FLIGHT_MODE)			\
 		PARAMETER(V_CELL_MARGIN) 			\
 		PARAMETER(T_OCV_CYCLIC0) 			\
-		PARAMETER(T_OCV_CYCLIC1) 			/*50*/\
+		PARAMETER(T_OCV_CYCLIC1) 			\
 		PARAMETER(C_PCB_UT) 				\
 		PARAMETER(C_PCB_OT) 				\
 		PARAMETER(V_STORAGE)				\
 		PARAMETER(OCV_SLOPE)				\
 		PARAMETER(BATT_EOL) 				\
+		PARAMETER(BATTERY_TYPE)			  	/*60*/\
 		PARAMETER(SENSOR_ENABLE)			\
 		PARAMETER(SELF_DISCHARGE_ENABLE)	\
+		PARAMETER(FLIGHT_MODE_ENABLE)		\
 		PARAMETER(UAVCAN_NODE_STATIC_ID)	\
-		PARAMETER(UAVCAN_SUBJECT_ID)		\
-		PARAMETER(UAVCAN_FD_MODE)			/*60*/\
+		PARAMETER(UAVCAN_ESS_SUB_ID)	 	\
+		PARAMETER(UAVCAN_BS_SUB_ID)	 		\
+		PARAMETER(UAVCAN_BP_SUB_ID)	 		\
+		PARAMETER(UAVCAN_FD_MODE)			\
 		PARAMETER(UAVCAN_BITRATE)			\
-		PARAMETER(UAVCAN_FD_BITRATE)		\
+		PARAMETER(UAVCAN_FD_BITRATE)		/*70*/\
 											\
 		PARAMETER(V_MIN) 					\
 		PARAMETER(V_MAX) 					\
@@ -284,8 +311,9 @@ typedef enum{
 		PARAMETER(I_MAX) 					\
 		PARAMETER(I_SHORT) 					\
 		PARAMETER(T_SHORT) 					\
-		PARAMETER(I_BAL) 					/*69*/
-		//PARAMETER(NONE) 					/*70*/  /* needs to be last! */
+		PARAMETER(I_BAL) 					\
+		PARAMETER(M_MASS)					
+		//PARAMETER(NONE) 					/*79*/  /* needs to be last! */
 
 /*! @brief 	generate the enum fromt he defined parameters, this should include all the parameters in BMSParameterValues_t in capitals 
  * 			this enum consists of each variable name, can be used to get or set variables
@@ -310,7 +338,7 @@ typedef enum
  */
 typedef struct
 {
-	float 				C_batt;								//!< float16! 	[C] the temperature of the battery
+	float 				C_batt;								//!< float16! 	[C] the temperature of the external battey temperature sensor 
 	float 				V_out;								//!< float16! 	[V] the voltage of the BMS output
 	float 				V_batt;								//!< float16! 	[V] the voltage of the battery pack
 	float 				I_batt;								//!< float16! 	[A] the last recorded current of the battery
@@ -326,10 +354,10 @@ typedef struct
 	uint8_t 			s_charge;							//!< uint7!		[%] state of charge, precent of hte full charge [0, 100]. this field is required.
 	/*uint8_t				state_of_charge_stdev;				// < uint7! 	[%] SOC error standard deviation, use best guess if unkown*/
 	uint8_t 			batt_id;							//!< 			[-] identifies the battery within this vehicle, e.g. 0 - primariy battery.
-	int32_t				model_id;							//!< 			[-] set to 0 if not applicable
+	uint64_t			model_id;							//!< 			[-] set to 0 if not applicable
 	char				model_name[MODEL_NAME_MAX_CHARS];	//!< 			[-] battery model name, model name is a human-radable string that normally should include the vendor name, model name and chemistry
 }BMSBasicVariables_t;
-
+//#error uint64
 /*! @brief this struct consists of the additional variables
  * @warning if this changes, change FOR_EACH_PARAMETER aswell!!
  */
@@ -354,37 +382,45 @@ typedef struct
 typedef struct 
 {
 	uint8_t				N_cells;							//!< [-] number of cells used in the BMS board
-	uint16_t 			t_meas;								//!< [ms] cycle of the battery to perform a complete battery measurement and SOC estimation can only be 10000 or a whole division of 10000
+	uint16_t 			t_meas;								//!< [ms] cycle of the battery to perform a complete battery measurement and SOC estimation can only be 10000 or a whole division of 10000 (For example: 5000, 1000, 500)
 	uint16_t 			t_ftti;								//!< [ms] cycle of the battery to perform diagnostics (Fault Tolerant Time Interval) 
 	uint8_t				t_cyclic;							//!< [s] wake up cyclic timing of the AFE (after front end) during sleep mode 
 	uint8_t 			I_sleep_oc;							//!< [mA] overcurrent threshold detection in sleep mode that will wake up the battery and also the threshold to detect the battery is not in use
 	float 				V_cell_ov;							//!< [V] battery maximum allowed voltage for one cell. exceeding this voltage, the battery will go to fault mode.
-	float 				V_cell_uv;							//!< [V] battery minmum allowed voltage for one cell. going below this voltage, the battery will go to deep_sleep mode.
+	float 				V_cell_uv;							//!< [V] Battery minimum allowed voltage for one cell. Going below this voltage, the BMS will go to fault (maybe deep_sleep) mode
 	float 				C_cell_ot;							//!< [C] Overtemperature threshold for the Cells during discharging. Going over this threshold and the battery will go to FAULT mode 
 	float 				C_cell_ot_charge;					//!< [C] Overtemperature threshold for the Cells during charging. Going over this threshold and the battery will go to FAULT mode 
 	float 				C_cell_ut;							//!< [C] Under temperature threshold for the Cells. Going under this threshold and the battery will go to FAULT mode 
 	float 				C_cell_ut_charge;					//!< [C] Under temperature threshold for the Cells during charging. Going under this threshold during charging and the battery will go to FAULT mode 
 	float 				A_factory; 							//!< [Ah] battery capacity stated by the factory
-	uint16_t			t_bms_timeout;						//!< [s] Timeout for the battery to go to SLEEP mode when the battery is not used. 
-	uint8_t				t_fault_timeout;					//!< [s] After this timeout, the battery will leave the FAULT mode and go to SLEEP mode. T 
-	uint8_t				t_charge_detect;					//!< [s] During NORMAL mode, is the battery voltage is positive for more than this time, then the battery will go to CHARGE mode 
+	uint16_t			t_bms_timeout;						//!< [s] Timeout for the BMS to go to SLEEP mode when the battery is not used. 
+	uint16_t			t_fault_timeout;					//!< [s] After this timeout, with an undervoltage fault the battery will go to DEEPSLEEP mode to preserve power. 0 sec is disabled.
+	uint8_t 			t_sleep_timeout; 					//!< [h] When the BMS is in sleep mode for this period it will go to the self discharge mode, 0 if disabled. 
+	uint8_t				t_charge_detect;					//!< [s] During NORMAL mode, is the battery current is positive for more than this time, then the battery will go to CHARGE mode 
 	uint8_t				t_cb_delay;							//!< [s] Time for the cell balancing function to start after entering the CHARGE mode 
 	uint16_t			t_charge_relax;						//!< [s] Relaxation after the charge is complete before going to another charge round. 
 	uint16_t			I_charge_full;						//!< [mA] Current threshold to detect end of charge sequence 
 	float 				I_charge_max;						//!< [A] Maximum current threshold to open the switch during charging
+	float 				I_charge_nominal;					//!< [A] Nominal charge current (informative only) 
 	float 				I_out_max;							//!< [A] Maximum current threshold to open the switch during normal operation, if not overrulled
+	float 				I_out_nominal;						//!< [A] Nominal discharge current (informative only) 
+	uint8_t 			I_flight_mode;						//!< [A] current threshold to not disable the power in flight mode
 	uint8_t				V_cell_margin;						//!< [mV] Cell voltage charge margin to decide or not to go through another topping charge cycle 
 	int32_t				t_ocv_cyclic0;						//!< [s] OCV measurement cyclic timer start (timer is increase by 50% at each cycle)
 	int32_t				t_ocv_cyclic1;						//!< [s] OCV measurement cyclic timer final (timer is increase by 50% at each cycle)
-	float 				C_pcb_ut;							//!< [C] Minimal ambient temperature (measured on the PCB)
-	float 				C_pcb_ot;							//!< [C] Maximal ambient temperature (measured on the PCB)
+	float 				C_pcb_ut;							//!< [C] PCB Ambient temperature under temperature threshold
+	float 				C_pcb_ot;							//!< [C] PCB Ambient temperature over temperature threshold
 	float 				V_storage;							//!< [V] The voltage what is specified as storage voltage for a cell
-	float 				ocv_slope;							//!< [V/A.min] The slope of the OCV curve  
+	float 				ocv_slope;							//!< [mV/A.min] The slope of the OCV curve  
 	uint8_t 			batt_eol;							//!< [%] perentage at which the battery is a bad battery and shouldn't be used typical between 90%-50% default is 80%
+	uint8_t 			battery_type;						//!< [-] the type of battery attached to it. 0 = LiPo, 1 = LiFePo4. Could be extended. Will change OV, UV, v-storage, OCV/SoC table if changed runtime.
 	uint8_t 			sensor_enable;						//!< [-] this variable is used to enable or disable the battery temperature sensor, 0 is disabled
 	uint8_t				self_discharge_enable; 				//!< [-] this variable is used to enable or disable the SELF_DISCHARGE state, 0 is disabled
+	uint8_t				flight_mode_enable;					//!< [-] this variable is used to enable or disable flight mode, is used together with i-flight-mode
 	uint8_t 			Uavcan_node_static_id;				//!< [-] This is the node ID of the UAVCAN message 
-	uint16_t			Uavcan_subject_id; 					//!< [-] This is the subject ID of the UAVCAN message
+	uint16_t			Uavcan_ess_sub_id; 					//!< [-] This is the subject ID of the energy source state UAVCAN message (1...100Hz)
+	uint16_t			Uavcan_bs_sub_id; 					//!< [-] This is the subject ID of the battery status UAVCAN message (1Hz)
+	uint16_t			Uavcan_bp_sub_id; 					//!< [-] This is the subject ID of the battery parameters UAVCAN message (0.2Hz)
 	uint8_t 			Uavcan_fd_mode;						//!< [-] If true CANFD is used, otherwise classic CAN is used, only during startup check!
 	int32_t 			Uavcan_bitrate; 					//!< [bit/s] the bitrate of classical can or CAN FD arbitratration bitrate
  	int32_t 			Uavcan_fd_bitrate; 					//!< [bit/s] the bitrate of CAN FD data bitrate
@@ -402,6 +438,7 @@ typedef struct
 	uint16_t 			I_short; 							//!< [A] short circuit current threshold (typical: 550A, min: 500A, max: 600A)
 	uint8_t				t_short;							//!< [us] Blanking time for the short circuit detection 
 	uint8_t				I_bal; 								//!< [mA] Cell balancing current under 4.2V with cell balancing resistors of 82 ohms
+	float 				m_mass;								//!< [kg] The total mass of the (smart) battery
 }BMSHardwareVariables_t;
 
 /*! @brief  this struct contains all the variables
@@ -414,14 +451,18 @@ typedef struct
 	BMSHardwareVariables_t			hardwareVariables;		//!< the hardware parameters
 }BMSParameterValues_t;
 
-/*! @brief  union to be used with the max and min value
+/*! @brief  	union to be used with the max and min value
+	@warning 	for integers, INT32_MAX is the maximum value to check on and INT32_MIN the minimum value
  */
 typedef union
 {
 	uint8_t 		U8;										//!< the uint8 value
 	uint16_t 		U16;									//!< the uint16 value
-	int32_t 		FX10;									//!< the float x 10  and int32 value	
-	//int16_t 		FX10; 									//!< the float x 10  and int16 value	
+	int32_t 		I32;									//!< the int32 value	
+	// //int16_t 		FX10; 									//!< the float x 10  and int16 value
+	//int64_t 		I64F;									//!< the 64 bit value and the float value
+	float 			FLTVAL;									//!< the float value
+
 }types_t;
 
 /*! @brief  enum to define what data type it is
@@ -431,6 +472,7 @@ typedef enum
 	UINT8VAL, 												//!< it is a uint8
 	UINT16VAL, 												//!< it is a uint16
 	INT32VAL, 												//!< it is an int32
+	UINT64VAL, 												//!< it is a uint64
 	FLOATVAL,												//!< it is a float value
 	STRINGVAL/*,*/ 											//!< it is a string value (character pointer)
 	//BOOLVAL 												//!< it is a bool
@@ -446,7 +488,8 @@ typedef struct
 	types_t					max;							//!< the maximum value of the parameter
 	types_t 				min;							//!< the minimum value of the parameter
 	void*					parameterAdr;					//!< the address of the parameter
-
+	char 					*parameterUnit;					//!< the unit of the parameter as a string if any, "-" otherwise
+	char 					*parameterType;					//!< the parameter type of the variable in a sting				
 }BMSparametersInfo_t;	
 
 

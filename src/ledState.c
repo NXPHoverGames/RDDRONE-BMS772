@@ -65,7 +65,7 @@
 #define DEFAULT_LED_STACK_SIZE 	1024
 
 #ifndef MAX_NSEC
-#define MAX_NSEC	 				999999999
+#define MAX_NSEC	 			999999999
 #endif
 
 /****************************************************************************
@@ -108,7 +108,7 @@ static int ledBlinkTaskFunc(int argc, char *argv[]);
 /*!
  * @brief 	this function initialized the RGB LED and it will set the LED to green blinking
  * 			
- * @param 	None
+ * @param 	startColor the starting color from the LEDColor_t enum
  *
  * @return 	If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error:
  * @example if(ledState_initialize())
@@ -116,15 +116,16 @@ static int ledBlinkTaskFunc(int argc, char *argv[]);
  *				// do something with the error
  *			}
  */
-int ledState_initialize(void)
+int ledState_initialize(LEDColor_t startColor)
 {
 	int lvRetValue = !gLEDInitialized;
 	int errcode;
+	uint32_t realLedState = 0;
 
 	// check if already configured
 	if(!gLEDInitialized)
 	{
-		cli_printf("SELF-TEST START: LEDs\n");
+		cli_printf("SELF-TEST LEDs: START\n");
 
 		/* Configure LED GPIOs for output */
 	  	board_userled_initialize();
@@ -132,11 +133,94 @@ int ledState_initialize(void)
 	  	// initialze the mutex
 		pthread_mutex_init(&gLedsLock, NULL);
 
-	 	// start the leds with OFF
-	 	board_userled_all((uint8_t)OFF);
-
-	 	// set that the color is off
+		// set the leds off
 	 	gLEDColor = OFF;
+
+	 	// set the leds 
+	 	board_userled_all((uint8_t)gLEDColor);
+
+	 	// read the read LED state
+	 	board_userled_checkall(&realLedState);
+
+		// check if the LEDS are not off
+		if(realLedState != OFF)
+		{
+			// output to user
+			cli_printfError("ledState ERROR: failed to turn all the LEDs off!\n");
+
+			// check which LED is on and output to the user
+			if(realLedState & RED)
+			{
+				cli_printfError("ledState ERROR: RED LED is on!\n");
+			}
+			if(realLedState & GREEN)
+			{
+				cli_printfError("ledState ERROR: GREEN LED is on!\n");
+			}
+			if(realLedState & BLUE)
+			{
+				cli_printfError("ledState ERROR: BLUE LED is on!\n");
+			}
+
+			return lvRetValue;
+		}
+
+		// set the LED to RED
+	 	gLEDColor = RED;
+
+	 	// set the LEDs 
+	 	board_userled_all((uint8_t)gLEDColor);
+
+	 	// read the read LED state
+	 	board_userled_checkall(&realLedState);
+
+		// check if the LED is not RED
+		if(realLedState != RED)
+		{
+			// output to user
+			cli_printfError("ledState ERROR: failed to make the LED RED!\n");
+			return lvRetValue;
+		}
+
+		// set the LED to GREEN
+		gLEDColor = GREEN;
+
+	 	// set the LEDs 
+	 	board_userled_all((uint8_t)gLEDColor);
+
+	 	// read the read LED state
+	 	board_userled_checkall(&realLedState);
+
+		// check if the LED is not GREEN
+		if(realLedState != GREEN)
+		{
+			// output to user
+			cli_printfError("ledState ERROR: failed to make the LED GREEN!\n");
+			return lvRetValue;
+		}
+
+		// set the LED to BLUE
+		gLEDColor = BLUE;
+
+	 	// set the LEDs 
+	 	board_userled_all((uint8_t)gLEDColor);
+
+	 	// read the read LED state
+	 	board_userled_checkall(&realLedState);
+
+		// check if the LED is not BLUE
+		if(realLedState != BLUE)
+		{
+			// output to user
+			cli_printfError("ledState ERROR: failed to make the LED BLUE!\n");
+			return lvRetValue;
+		}
+
+		// set that the color to the start color
+	 	gLEDColor = startColor;
+
+	 	// set the LEDs to the start color
+	 	board_userled_all((uint8_t)gLEDColor);
 
 	 	// initialize the semaphores
 		lvRetValue = sem_init(&gBlinkerSem, 0, 0);
@@ -145,7 +229,7 @@ int ledState_initialize(void)
 		if(lvRetValue)
 		{
 			// output to user
-			cli_printf("ledState ERROR: failed to initialze blinker sem! error: %d\n", lvRetValue);
+			cli_printfError("ledState ERROR: failed to initialze blinker sem! error: %d\n", lvRetValue);
 			return lvRetValue;
 		}
 
@@ -155,7 +239,7 @@ int ledState_initialize(void)
 		if(lvRetValue)
 		{
 			// output to user
-			cli_printf("ledState ERROR: failed to initialze wait sem! error: %d\n", lvRetValue);
+			cli_printfError("ledState ERROR: failed to initialze wait sem! error: %d\n", lvRetValue);
 			return lvRetValue;
 		}
 
@@ -165,7 +249,7 @@ int ledState_initialize(void)
 	    {
 	    	// inform user
 	    	errcode = errno;
-	      	cli_printf("ledState ERROR: Failed to start task: %d\n", errcode);
+	      	cli_printfError("ledState ERROR: Failed to start task: %d\n", errcode);
 	      	return lvRetValue;
 	    }
 
@@ -175,7 +259,7 @@ int ledState_initialize(void)
 	 	// change the return value
 	 	lvRetValue = !gLEDInitialized;
 
-	 	cli_printf("SELF-TEST PASS:  LEDs\n");
+	 	cli_printf("SELF-TEST LEDs: \e[32mPASS\e[39m\n");
 	}
 
 	// return the value
@@ -207,7 +291,7 @@ int ledState_setLedColor(LEDColor_t newColor, bool BlinkOn)
 	if(!gLEDInitialized)
 	{
 		// error
-		cli_printf("ERROR: Leds not initialized, pleaze initialze\n");
+		cli_printfError("ledState ERROR: Leds not initialized, pleaze initialze\n");
 		return lvRetValue;
 	}
 
@@ -327,7 +411,7 @@ static int ledBlinkTaskFunc(int argc, char *argv[])
 		// get the time 
 		if(clock_gettime(CLOCK_REALTIME, &waitTime))
         {
-            cli_printf("ledState ERROR: failed to get time! errno: %d\n", errno);
+            cli_printfError("ledState ERROR: failed to get time! errno: %d\n", errno);
 
             // than use sleep for seconds
             usleep(LED_BLINK_TIME_MS*1000);
@@ -370,12 +454,12 @@ static int ledBlinkTaskFunc(int argc, char *argv[])
 					waitTime.tv_nsec  	= (waitTime.tv_nsec + ((LED_BLINK_TIME_MS % 1000) *1000*1000)) % (MAX_NSEC+1);
 				}				
 			}
-			// if ledColor is not green
 			else
 			{
 				// add the blinktime
 				waitTime.tv_sec 	+= LED_BLINK_TIME_S;
 			}
+		 	//waitTime.tv_sec += LED_BLINK_TIME_S;
 
 			// wait for the time to expire or continue when semaphore is available
 			semState = sem_timedwait(&gBlinkerWaitSem, &waitTime);
@@ -411,7 +495,7 @@ uint8_t ledState_calcStateIndication(uint8_t newValue)
 	if(!gLEDInitialized)
 	{
 		// error
-		cli_printf("ERROR: Leds not initialized, pleaze initialze\n");
+		cli_printfError("ledState ERROR: Leds not initialized, pleaze initialze\n");
 		return lvRetValue;
 	}
 
@@ -419,7 +503,7 @@ uint8_t ledState_calcStateIndication(uint8_t newValue)
 	if(newValue > 100)
 	{
 		// error
-		cli_printf("ERROR: enter valid input: %d > 100\n", newValue);
+		cli_printfError("ledState ERROR: enter valid input: %d > 100\n", newValue);
 		return lvRetValue;
 	}
 
@@ -458,7 +542,7 @@ uint8_t ledState_calcStateIndication(uint8_t newValue)
 	if(lvRetValue >= LED_PERIOD_INDICATION_S)
 	{
 		// error
-		cli_printf("ERROR: LED_PERIOD_INDICATION_S is not valid: %d >= %d\n", lvRetValue, LED_PERIOD_INDICATION_S);
+		cli_printfError("ledState ERROR: LED_PERIOD_INDICATION_S is not valid: %d >= %d\n", lvRetValue, LED_PERIOD_INDICATION_S);
 		return lvRetValue;
  	}
 
@@ -497,7 +581,7 @@ uint8_t ledState_getStateIndication(void)
 	if(!gLEDInitialized)
 	{
 		// error
-		cli_printf("ERROR: Leds not initialized, pleaze initialze\n");
+		cli_printfError("ledState ERROR: Leds not initialized, pleaze initialze\n");
 		return lvRetValue;
 	}
 

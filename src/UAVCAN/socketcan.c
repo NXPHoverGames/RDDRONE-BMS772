@@ -230,7 +230,7 @@ int16_t socketcanSetBitrate(CanardSocketInstance *ins, const char *const can_ifa
 	// if(ioctl(ins->s, SIOCGCANBITRATE, &ifr) < 0)
 	// {
 	// 	// error and return
-	// 	cli_printf("socketcan ERROR: couldn't read the new bitrates!\n");
+	// 	cli_printfError("socketcan ERROR: couldn't read the new bitrates!\n");
 	// 	ret = -1;
 	// 	return ret;
 	// }
@@ -251,7 +251,7 @@ int16_t socketcanSetBitrate(CanardSocketInstance *ins, const char *const can_ifa
     if(ioctl(ins->s, SIOCSCANBITRATE, &ifr) < 0)
 	{
 		// error and return
-		cli_printf("socketcan ERROR: couldn't write the new bitrates!\n");
+		cli_printfError("socketcan ERROR: couldn't write the new bitrates!\n");
 		ret = -1;
 		return ret;
 	}
@@ -260,7 +260,7 @@ int16_t socketcanSetBitrate(CanardSocketInstance *ins, const char *const can_ifa
 	if(ioctl(ins->s, SIOCGCANBITRATE, &ifr) < 0)
 	{
 		// error and return
-		cli_printf("socketcan ERROR: couldn't read the new bitrates!\n");
+		cli_printfError("socketcan ERROR: couldn't read the new bitrates!\n");
 		ret = -1;
 		return ret;
 	}
@@ -269,7 +269,7 @@ int16_t socketcanSetBitrate(CanardSocketInstance *ins, const char *const can_ifa
 	if(ifr.ifr_ifru.ifru_can_data.arbi_bitrate*1000 != arbit_bitrate) 
 	{
 		// output error 
-		cli_printf("socketcan ERROR: CAN bitrate write went wrong, read: %d != set: %d!\n", 
+		cli_printfError("socketcan ERROR: CAN bitrate write went wrong, read: %d != set: %d!\n", 
 			ifr.ifr_ifru.ifru_can_data.arbi_bitrate*1000, arbit_bitrate);
 
 		// set the error value
@@ -279,7 +279,7 @@ int16_t socketcanSetBitrate(CanardSocketInstance *ins, const char *const can_ifa
 	if(ifr.ifr_ifru.ifru_can_data.data_bitrate*1000 != data_bitrate)
     {
     	// output error 
-		cli_printf("socketcan ERROR: CAN FD bitrate write went wrong, read: %d != set: %d!\n", 
+		cli_printfError("socketcan ERROR: CAN FD bitrate write went wrong, read: %d != set: %d!\n", 
 			ifr.ifr_ifru.ifru_can_data.data_bitrate*1000, data_bitrate);
 
 		// set the error value

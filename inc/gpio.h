@@ -59,27 +59,33 @@
 #include <stdio.h>
 #include <string.h>
 #include <sched.h>
-
+// #include <nuttx/ioexpander/gpio.h>
 /*******************************************************************************
  * defines
  ******************************************************************************/
 #define START_OUTPUT_PIN_NUMBER 	0
-#define START_INTERRRUPT_PIN_NUMBER 7
-#define END_INTERRUPT_PIN_NUMBER 	13
+#define START_INTERRRUPT_PIN_NUMBER 6
+#define END_INTERRUPT_PIN_NUMBER 	12
 
 #define GPIO_SIG_OFFSET 			100
 /*******************************************************************************
  * types
  ******************************************************************************/
+/*!
+	this enum could be used to drive the GPIOs of the BMS and reflect the GPIOs from the 
+	rddrone-bms772.h file.
+	With START_OUTPUT_PIN_NUMBER stating where the GPIO output pins start
+	and START_INTERRRUPT_PIN_NUMBER stating where the GPIO (input) interrupt pins start
+*/
 typedef enum {	
 	GATE_CTRL_CP,
 	GATE_CTRL_D,
 	BCC_RESET,
 	NFC_HPD,
 	AUTH_WAKE,
-	EXT_OUT1,
-	BCC_CS,
-	OVERCURRNT,
+	PTE8,
+	//BCC_CS,
+	OVERCURRENT,
 	SBC_WAKE,
 	GATE_RS, 
 	SBC_LIMP,
@@ -116,7 +122,7 @@ int gpio_init(void);
  * 			the pin needs to be defined in the specific board file (like rrdrone-bms772.h)
  * 			and it needs to be added to the array in <chip>_gpio.c
  * 			
- * @param 	which pin to read from the pinEnum_t enum. 
+ * @param 	pin which pin to read from the pinEnum_t enum. 
  *
  * @return 	1 if the pin is high, 0 if the pin in low, -1 if there is an error
  * @example lvGpioReadVal = gpio_readPin(GATE_RS);
@@ -137,8 +143,8 @@ int gpio_readPin(pinEnum_t pin);
  * 			the pin needs to be defined in the specific board file (like rrdrone-bms772.h)
  * 			and it needs to be added to the array in <chip>_gpio.c 	
  *		
- * @param 	which pin to set from the pinEnum_t enum. 
- * @param 	the new value of the pin, 1 is high and 0 is low 
+ * @param 	pin which pin to set from the pinEnum_t enum. 
+ * @param 	newValue the new value of the pin, 1 is high and 0 is low 
  *
  * @return 	0 if succesfull, -1 if there is an error
  * @example if(gpio_writePin(GATE_CTRL_CP, 1))
@@ -155,8 +161,8 @@ int gpio_writePin(pinEnum_t pin, bool newValue);
  *      	if the thread pid doesn't exist any more, it will not go to the ISR 
  * @warning only 2 pins can be registered as interrupt
  *    
- * @param   which pin to set the ISR for from the pinEnum_t enum. 
- * @param   The ISR handle function
+ * @param   pin which pin to set the ISR for from the pinEnum_t enum. 
+ * @param   pinISRHandler The ISR handle function
  *      	pinISRHandler = void handler(int sig);
  * @param 	num which pin is registered 0 or 1 
  * 			note: 0 = SIGUSR1 and 1 = SIGUSR2

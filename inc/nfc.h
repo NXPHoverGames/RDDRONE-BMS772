@@ -82,6 +82,20 @@
  */
 int nfc_initialize(void);
 
+/*!
+ * @brief 	This function can be used to set the hard power-down (HPD) mode of the NFC 
+ * 		
+ * @param 	HPD if true, the microcontroller will set the NFC chip in hard power-down mode. 
+ * 			if false, it will disable this mode.
+ * @return 	0 if ok, -1 if there is an error
+ * @example 
+ * 			if(nfc_setHPD())
+ *			{
+ *				// do something with the error
+ *			}
+ */
+int nfc_setHPD(bool HPD);
+
 /*******************************************************************************
  * EOF
  ******************************************************************************/

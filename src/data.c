@@ -54,47 +54,44 @@
 #define HANDLE_CHANGE_DEFAULT_PRIORITY    100
 #define HANDLE_CHANGE_DEFAULT_STACK_SIZE  2048
 
-/*#define set_MAX(typeT, par)                                   (typeT == UINT8VAL ? .parametersInfo[par].max.U8 = par##_MAX : \
-                                                              (typeT == UINT16VAL ? .parametersInfo[par].max.U16 = par##_MAX : \
-                                                              (.parametersInfo[par].max.FX10 = (int16_t)par##_MAX))) //(typeT != FLOATVAL ? (int16_t)par##_MAX :((int16_t)par##_MAX*FLOAT_MULTIPIER))
-*/
-/* #define SET_DEFAULT(typeT, maxOn, minOn, par, parVal_t) \
-                                                               .parametersInfo[par].type                            = typeT, \
-                                                               .parametersInfo[par].checkMax                        = maxOn, \
-                                                               .parametersInfo[par].checkMin                        = minOn, \
-                                                               .parametersInfo[par].max.U16                         = (typeT != FLOATVAL ? par##_MAX :((int16_t)((float)par##_MAX*FLOAT_MULTIPIER))), \
-                                                               .parametersInfo[par].min.U16                         = (typeT != FLOATVAL ? par##_MIN :((int16_t)((float)par##_MIN*FLOAT_MULTIPIER))), \
-                                                               .parametersInfo[par].parameterAdr                    = &s_parameters.parameters.parVal_t, \
-                                                               .parameters.parVal_t                                 = par##_DEFAULT
-*/
-#define SET_DEFAULT2(typeT, maxOn, minOn, par, parVal_t) \
-                                                              .type                            = typeT, \
-                                                              .checkMax                        = maxOn, \
-                                                              .checkMin                        = minOn, \
-                                                              /*.max.U16                         = (typeT != FLOATVAL ? par##_MAX :((int16_t)((float)par##_MAX*FLOAT_MULTIPIER))), */\
-                                                              .max.FX10                         = (typeT != FLOATVAL ? par##_MAX :((int16_t)((float)par##_MAX*FLOAT_MULTIPIER))), \
-                                                              /*.min.U16                         = (typeT != FLOATVAL ? par##_MIN :((int16_t)((float)par##_MIN*FLOAT_MULTIPIER))), */\
-                                                              .min.FX10                         = (typeT != FLOATVAL ? par##_MIN :((int16_t)((float)par##_MIN*FLOAT_MULTIPIER))), \
-                                                              .parameterAdr                    = &s_parameters.parVal_t, \
+//! @brief macro to initialze the BMSparametersInfo_t value for integers (and strings) (no floating point values)
+#define SET_DEFAULT_INT(typeT, maxOn, minOn, stringUnit, stringType, par, parVal_t) \
+                                                              .type                   = typeT, \
+                                                              .checkMax               = maxOn, \
+                                                              .checkMin               = minOn, \
+                                                              .parameterUnit          = stringUnit, \
+                                                              .parameterType          = stringType, \
+                                                              .max.I32                = (int32_t)par##_MAX, \
+                                                              .min.I32                = (int32_t)par##_MIN, \
+                                                              .parameterAdr           = &s_parameters.parVal_t, 
 
-/*#define SET_VALUE_IN_VAR(var, typeT, maxOn, minOn, par, parVal_t) \
-                                                              var.parametersInfo[par].type                            = typeT; \
-                                                              var.parametersInfo[par].checkMax                        = maxOn; \
-                                                              var.parametersInfo[par].checkMin                        = minOn; \
-                                                              var.parametersInfo[par].max.U16                         = (typeT != FLOATVAL ? par##_MAX :((int16_t)((float)par##_MAX*FLOAT_MULTIPIER))); \
-                                                              var.parametersInfo[par].min.U16                         = (typeT != FLOATVAL ? par##_MIN :((int16_t)((float)par##_MIN*FLOAT_MULTIPIER))); \
-                                                              var.parametersInfo[par].parameterAdr                    = &s_parameters.parameters.parVal_t; \
-                                                              var.parameters.parVal_t                                 = par##_DEFAULT;
-*/
+//! @brief macro to initialze the BMSparametersInfo_t value for floating point values
+#define SET_DEFAULT_FLT(typeT, maxOn, minOn, stringUnit, stringType, par, parVal_t) \
+                                                              .type                   = typeT, \
+                                                              .checkMax               = maxOn, \
+                                                              .checkMin               = minOn, \
+                                                              .parameterUnit          = stringUnit, \
+                                                              .parameterType          = stringType, \
+                                                              .max.FLTVAL             = (float)par##_MAX, \
+                                                              .min.FLTVAL             = (float)par##_MIN, \
+                                                              .parameterAdr           = &s_parameters.parVal_t, 
 
-//#define CHECK_NULL_ASSIGN_LENGHT(data)                        if(outLength != NULL) *outLength = sizeof(data);
-//#define ASSIGN_OUT_TYPE(valueType)                            if(outData != NULL) (*(valueType*)outData = *(valueType*)lvRetValue);
-
+//! @brief This macro will check if the setting has changed compared to the inNewValue, if so it will set lvChanged true
 #define CHECK_CHANGED(setting, valueType)                     (setting != (*(valueType*)inNewValue)) ? (lvChanged = true) : (lvChanged = false)
+
+//! @brief This macro will assign the setting with inNewValue
 #define ASSIGN(setting, valueType)                            (setting = (*(valueType*)inNewValue));
+
+//! @brief This macro will first check if the value has changed and set lvChanged if so, it will assign the value if it doesn't exceed the both limits
 #define CHECK_ASSIGN_BOTH(max, min, setting, valueType)       CHECK_CHANGED(setting, valueType); RANGE_OK(min, (*(valueType*)inNewValue), max) {ASSIGN(setting, valueType) lvRetValue = 0;} else{lvRetValue = -1;}
+
+//! @brief This macro will first check if the value has changed and set lvChanged if so, it will assign the value if it doesn't exceed the max limit
 #define CHECK_ASSIGN_MAX(max, setting, valueType)             CHECK_CHANGED(setting, valueType); RANGE_OK_HIGH((*(valueType*)inNewValue), max) {ASSIGN(setting, valueType) lvRetValue = 0;} else{lvRetValue = -1;}
+
+//! @brief This macro will first check if the value has changed and set lvChanged if so, it will assign the value if it doesn't exceed the min limit
 #define CHECK_ASSIGN_MIN(min, setting, valueType)             CHECK_CHANGED(setting, valueType); RANGE_OK_LOW(min, (*(valueType*)inNewValue))  {ASSIGN(setting, valueType) lvRetValue = 0;} else{lvRetValue = -1;}
+
+//! @brief This macro will first check if the value has changed and set lvChanged if so, it will assign the value 
 #define CHECK_ASSIGN_NONE(setting, valueType)                 CHECK_CHANGED(setting, valueType); ASSIGN(setting, valueType) lvRetValue = 0; 
 
 /****************************************************************************
@@ -131,160 +128,8 @@ bool gFlashInitialized = false;
 //! to indicate a configuration parameter has changed, and it should be saved to flashed 
 static bool gSavableParameterChanged = false;
 
-//make the struct containing all the data with the default values
-//BMSparameters_t s_parameters;
-/* =
-{
-  .parameters.basicVariables.batt_temperature                = C_BATT_DEFAULT,
-  .parameters.basicVariables.batt_voltage                    = V_BATT_DEFAULT,
-  .parameters.basicVariables.batt_current                    = I_BATT_DEFAULT,
-  .parameters.basicVariables.avg_power_10sec                 = P_AVG_DEFAULT,
-  .parameters.basicVariables.remaining_cap_wh                = A_REM_WH_DEFAULT, 
-  .parameters.basicVariables.full_charge_cap_wh              = A_FULL_WH_DEFAULT,
-  .parameters.basicVariables.hours_to_full_charge            = T_FULL_DEFAULT,
-  .parameters.basicVariables.s_flags                    = S_FLAGS_DEFAULT,
-  .parameters.basicVariables.state_of_health                 = S_HEALTH_PCT_DEFAULT,
-  .parameters.basicVariables.state_of_charge                 = S_CHARGE_PCT_DEFAULT,
-  .parameters.basicVariables.state_of_charge_stdev           = S_CHARGE_PCT_STDEV_DEFAULT,
-  .parameters.basicVariables.battery_id                      = BATT_ID_DEFAULT,
-  .parameters.basicVariables.model_instance_id               = MODEL_ID_DEFAULT,
-  .parameters.basicVariables.model_name                      = MODEL_NAME_DEFAULT,
-    
-  .parameters.additionalVariables.cell1_voltage              = V_CELL1_DEFAULT,
-  .parameters.additionalVariables.cell2_voltage              = V_CELL2_DEFAULT,
-  .parameters.additionalVariables.cell3_voltage              = V_CELL3_DEFAULT,
-  .parameters.additionalVariables.cell4_voltage              = V_CELL4_DEFAULT,
-  .parameters.additionalVariables.cell5_voltage              = V_CELL5_DEFAULT,
-  .parameters.additionalVariables.cell6_voltage              = V_CELL6_DEFAULT,
-  .parameters.additionalVariables.AFE_temperature            = C_AFE_DEFAULT,
-  .parameters.additionalVariables.T_temperature              = C_T_DEFAULT,
-  .parameters.additionalVariables.R_temperature              = C_R_DEFAULT,
-  .parameters.additionalVariables.N_charges                  = N_CHARGES_DEFAULT,
-  .parameters.additionalVariables.N_chargesCmplt             = N_CHARGES_FULL_DEFAULT,
-    
-  .parameters.configurationVariables.N_cells                 = N_CELLS_DEFAULT,
-  .parameters.configurationVariables.T_meas                  = T_MEAS_DEFAULT,
-  .parameters.configurationVariables.T_cyclic                = t_CYCLIC_DEFAULT,
-  .parameters.configurationVariables.IBatt_sleep_oc          = I_SLEEP_OC_DEFAULT,
-  .parameters.configurationVariables.Cell_ov                 = V_CELL_OV_DEFAULT,
-  .parameters.configurationVariables.Cell_uv                 = V_CELL_UV_DEFAULT,
-  .parameters.configurationVariables.Cell_ot                 = C_CELL_OT_DEFAULT,
-  .parameters.configurationVariables.Cell_ot_charge          = C_CELL_OT_CHARGE_DEFAULT,
-  .parameters.configurationVariables.Cell_ut                 = C_CELL_UT_DEFAULT,
-  .parameters.configurationVariables.Cell_ut_charge          = CELL_CHARGE_UT_DEFAULT,
-  .parameters.configurationVariables.T_batt_timeout          = T_BMS_TIMEOUT_DEFAULT,
-  .parameters.configurationVariables.T_fault_timeout         = T_FAULT_TIMEOUT_DEFAULT,
-  .parameters.configurationVariables.T_batt_chrg_detect      = T_CHARGE_DETECT_DEFAULT,
-  .parameters.configurationVariables.T_cb_delay              = T_CB_DELAY_DEFAULT,
-  .parameters.configurationVariables.T_chrg_relax            = T_CHARGE_RELAX_DEFAULT,
-  .parameters.configurationVariables.IBatt_chrg_complete     = I_CHARGE_FULL_DEFAULT,
-  .parameters.configurationVariables.Cell_chrg_margin        = V_CELL_MARGIN_DEFAULT,
-
-  .parameters.hardwareVariables.VBatt_min                    = VBATT_MIN_DEFAULT,
-  .parameters.hardwareVariables.VBatt_max                    = VBATT_MAX_DEFAULT,
-  .parameters.hardwareVariables.IBatt_maxp                   = IBATT_MAXP_DEFAULT,
-  .parameters.hardwareVariables.IBatt_max                    = IBATT_MAX_DEFAULT,
-  .parameters.hardwareVariables.IBatt_sc                     = IBATT_SC_DEFAULT,
-  .parameters.hardwareVariables.T_IBatt_sc_blank             = T_IBATT_SC_BLANK_DEFAULT,
-  .parameters.hardwareVariables.I_bal                        = I_BAL_DEFAULT, 
-
-  .parametersInfo.type                                       = U8,
-  .parametersInfo.checkMax                                   = true,
-  .parametersInfo.checkMin                                   = true,
-  .parametersInfo.max                                        = S_CHARGE_MAX,
-  .parametersInfo.min                                        = S_CHARGE_MIN,
-  .parametersInfo.parameterAdr                               = &s_parameters.parameters.basicVariables.state_of_charge
-};*/
-
-/* the struct containing all the data with the default values and the right parameter info
-every type, minOn, maxOn, min, max, address and the default value is set
-this struct is set in the setDefault function */
-// BMSparameters_t s_parameters =
-// {
-//   //SET_DEFAULT(UINT8VAL,  true, true, S_HEALTH, basicVariables.state_of_health),
-//   //SET_DEFAULT(UINT8VAL,  true, true, S_CHARGE, basicVariables.state_of_charge)
-
-//   // assign the default values;
-//   SET_DEFAULT(FLOATVAL,  true,  true,  C_BATT, basicVariables.C_batt),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  V_OUT, basicVariables.V_out),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  V_BATT, basicVariables.V_batt),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  I_BATT, basicVariables.I_batt),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  I_BATT_AVG, basicVariables.I_batt_avg),
-//   //SET_DEFAULT(BOOLVAL,   false, false, S_OUT, basicVariables.output_status),
-//   SET_DEFAULT(UINT8VAL,  true, false,  S_OUT, basicVariables.s_out),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  P_AVG, basicVariables.P_avg),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  E_USED, basicVariables.E_used),
-//   SET_DEFAULT(FLOATVAL,  false, true,  A_REM, basicVariables.A_rem), 
-//   SET_DEFAULT(FLOATVAL,  false, true,  A_FULL, basicVariables.A_full),
-//   SET_DEFAULT(FLOATVAL,  false, true,  T_FULL, basicVariables.t_full),
-//   SET_DEFAULT(UINT8VAL,  false, false, S_FLAGS, basicVariables.s_flags),
-//   SET_DEFAULT(UINT8VAL,  true,  false, S_HEALTH, basicVariables.s_health),
-//   SET_DEFAULT(UINT8VAL,  true,  false, S_CHARGE, basicVariables.s_charge),
-//   //SET_DEFAULT(UINT8VAL,  true,  false, S_CHARGE_STDEV, basicVariables.state_of_charge_stdev),
-//   SET_DEFAULT(UINT8VAL,  false, false, BATT_ID, basicVariables.batt_id),
-//   SET_DEFAULT(INT32VAL,  false, false, MODEL_ID, basicVariables.model_id),
-//   SET_DEFAULT(STRINGVAL, false, false, MODEL_NAME, basicVariables.model_name),
-    
-//   SET_DEFAULT(FLOATVAL,  true,  true,  V_CELL1, additionalVariables.V_cell1),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  V_CELL2, additionalVariables.V_cell2),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  V_CELL3, additionalVariables.V_cell3),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  V_CELL4, additionalVariables.V_cell4),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  V_CELL5, additionalVariables.V_cell5),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  V_CELL6, additionalVariables.V_cell6),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  C_AFE, additionalVariables.C_AFE),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  C_T, additionalVariables.C_T),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  C_R, additionalVariables.C_R),
-//   SET_DEFAULT(UINT16VAL, false, false, N_CHARGES, additionalVariables.N_charges),
-//   SET_DEFAULT(UINT16VAL, false, false, N_CHARGES_FULL, additionalVariables.N_charges_full),
-    
-//   SET_DEFAULT(UINT8VAL,  true,  true,  N_CELLS, configurationVariables.N_cells),
-//   SET_DEFAULT(UINT16VAL, false, true,  T_MEAS, configurationVariables.t_meas),
-//   SET_DEFAULT(UINT16VAL, false, true,  T_FTTI, configurationVariables.t_ftti),
-//   SET_DEFAULT(UINT8VAL,  false, true,  T_CYCLIC, configurationVariables.t_cyclic),
-//   SET_DEFAULT(UINT8VAL,  false, true,  I_SLEEP_OC, configurationVariables.I_sleep_oc),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  V_CELL_OV, configurationVariables.V_cell_ov),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  V_CELL_UV, configurationVariables.V_cell_uv),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  C_CELL_OT, configurationVariables.C_cell_ot),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  C_CELL_OT_CHARGE, configurationVariables.C_cell_ot_charge),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  C_CELL_UT, configurationVariables.C_cell_ut),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  C_CELL_UT_CHARGE, configurationVariables.C_cell_ut_charge),
-//   SET_DEFAULT(FLOATVAL,  false, true,  A_FACTORY, configurationVariables.A_factory),
-//   SET_DEFAULT(UINT16VAL, false, true,  T_BMS_TIMEOUT, configurationVariables.t_bms_timeout),
-//   SET_DEFAULT(UINT8VAL,  true,  true,  T_FAULT_TIMEOUT, configurationVariables.t_fault_timeout),
-//   SET_DEFAULT(UINT8VAL,  false, true,  T_CHARGE_DETECT, configurationVariables.t_charge_detect),
-//   SET_DEFAULT(UINT8VAL,  false, true,  T_CB_DELAY, configurationVariables.t_cb_delay),
-//   SET_DEFAULT(UINT16VAL, false, true,  T_CHARGE_RELAX, configurationVariables.t_charge_relax),
-//   SET_DEFAULT(UINT16VAL, false, true,  I_CHARGE_FULL, configurationVariables.I_charge_full),
-//   SET_DEFAULT(FLOATVAL,  false, true,  I_CHARGE_MAX, configurationVariables.I_charge_max),
-//   SET_DEFAULT(FLOATVAL,  false, true,  I_OUT_MAX, configurationVariables.I_out_max),
-//   SET_DEFAULT(UINT8VAL,  false, true,  V_CELL_MARGIN, configurationVariables.V_cell_margin),
-//   SET_DEFAULT(INT32VAL,  false, true,  T_OCV_CYCLIC0, configurationVariables.t_ocv_cyclic0),
-//   SET_DEFAULT(INT32VAL,  false, true,  T_OCV_CYCLIC1, configurationVariables.t_ocv_cyclic1),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  C_PCB_UT, configurationVariables.C_pcb_ut),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  C_PCB_OT, configurationVariables.C_pcb_ot),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  V_STORAGE, configurationVariables.V_storage),
-//   SET_DEFAULT(FLOATVAL,  true,  true,  OCV_SLOPE, configurationVariables.ocv_slope),
-//   SET_DEFAULT(UINT8VAL,  true,  false, BATT_EOL, configurationVariables.batt_eol),
-//   SET_DEFAULT(UINT8VAL,  true,  true,  SENSOR_ENABLE, configurationVariables.sensor_enable),
-//   SET_DEFAULT(UINT8VAL,  true,  true,  SELF_DISCHARGE_ENABLE, configurationVariables.self_discharge_enable),
-//   SET_DEFAULT(UINT8VAL,  true,  true,  UAVCAN_NODE_STATIC_ID, configurationVariables.Uavcan_node_static_id),
-//   SET_DEFAULT(UINT16VAL, true,  true,  UAVCAN_SUBJECT_ID, configurationVariables.Uavcan_subject_id),
-//   SET_DEFAULT(UINT8VAL,  true,  true,  UAVCAN_FD_MODE, configurationVariables.Uavcan_fd_mode),
-//   SET_DEFAULT(INT32VAL,  true,  true,  UAVCAN_BITRATE, configurationVariables.Uavcan_bitrate),
-//   SET_DEFAULT(INT32VAL,  true,  true,  UAVCAN_FD_BITRATE, configurationVariables.Uavcan_fd_bitrate),
-
-//   SET_DEFAULT(UINT8VAL,  true, true,   V_MIN, hardwareVariables.V_min),
-//   SET_DEFAULT(UINT8VAL,  true, true,   V_MAX, hardwareVariables.V_max),
-//   SET_DEFAULT(UINT8VAL,  true, true,   I_PEAK, hardwareVariables.I_peak),
-//   SET_DEFAULT(UINT8VAL,  true, true,   I_MAX, hardwareVariables.I_max),
-//   SET_DEFAULT(UINT16VAL, true, true,   I_SHORT, hardwareVariables.I_short),
-//   SET_DEFAULT(UINT8VAL,  false, true,  T_SHORT, hardwareVariables.t_short),
-//   SET_DEFAULT(UINT8VAL,  false, false, I_BAL, hardwareVariables.I_bal)
-// };
-
-/*! the struct containing all the data with the default values and the right parameter info
-every type, minOn, maxOn, min, max, address and the default value is set
-this struct is set in the setDefault function */
+/*! @brief the struct containing all the data with the default values, the default values are set
+this struct */
 BMSParameterValues_t s_parameters = 
 {
   .basicVariables.C_batt                          = C_BATT_DEFAULT, 
@@ -331,12 +176,16 @@ BMSParameterValues_t s_parameters =
   .configurationVariables.A_factory               = A_FACTORY_DEFAULT, 
   .configurationVariables.t_bms_timeout           = T_BMS_TIMEOUT_DEFAULT, 
   .configurationVariables.t_fault_timeout         = T_FAULT_TIMEOUT_DEFAULT, 
+  .configurationVariables.t_sleep_timeout         = T_SLEEP_TIMEOUT_DEFAULT, 
   .configurationVariables.t_charge_detect         = T_CHARGE_DETECT_DEFAULT, 
   .configurationVariables.t_cb_delay              = T_CB_DELAY_DEFAULT, 
   .configurationVariables.t_charge_relax          = T_CHARGE_RELAX_DEFAULT, 
   .configurationVariables.I_charge_full           = I_CHARGE_FULL_DEFAULT, 
   .configurationVariables.I_charge_max            = I_CHARGE_MAX_DEFAULT, 
+  .configurationVariables.I_charge_nominal        = I_CHARGE_NOMINAL_DEFAULT, 
   .configurationVariables.I_out_max               = I_OUT_MAX_DEFAULT, 
+  .configurationVariables.I_out_nominal           = I_OUT_NOMINAL_DEFAULT, 
+  .configurationVariables.I_flight_mode           = I_FLIGHT_MODE_DEFAULT, 
   .configurationVariables.V_cell_margin           = V_CELL_MARGIN_DEFAULT, 
   .configurationVariables.t_ocv_cyclic0           = T_OCV_CYCLIC0_DEFAULT, 
   .configurationVariables.t_ocv_cyclic1           = T_OCV_CYCLIC1_DEFAULT, 
@@ -345,10 +194,14 @@ BMSParameterValues_t s_parameters =
   .configurationVariables.V_storage               = V_STORAGE_DEFAULT, 
   .configurationVariables.ocv_slope               = OCV_SLOPE_DEFAULT, 
   .configurationVariables.batt_eol                = BATT_EOL_DEFAULT, 
+  .configurationVariables.battery_type            = BATTERY_TYPE_DEFAULT,
   .configurationVariables.sensor_enable           = SENSOR_ENABLE_DEFAULT, 
   .configurationVariables.self_discharge_enable   = SELF_DISCHARGE_ENABLE_DEFAULT, 
+  .configurationVariables.flight_mode_enable      = FLIGHT_MODE_ENABLE_DEFAULT,
   .configurationVariables.Uavcan_node_static_id   = UAVCAN_NODE_STATIC_ID_DEFAULT, 
-  .configurationVariables.Uavcan_subject_id       = UAVCAN_SUBJECT_ID_DEFAULT, 
+  .configurationVariables.Uavcan_ess_sub_id       = UAVCAN_ESS_SUB_ID_DEFAULT, 
+  .configurationVariables.Uavcan_bs_sub_id        = UAVCAN_BS_SUB_ID_DEFAULT, 
+  .configurationVariables.Uavcan_bp_sub_id        = UAVCAN_BP_SUB_ID_DEFAULT, 
   .configurationVariables.Uavcan_fd_mode          = UAVCAN_FD_MODE_DEFAULT, 
   .configurationVariables.Uavcan_bitrate          = UAVCAN_BITRATE_DEFAULT, 
   .configurationVariables.Uavcan_fd_bitrate       = UAVCAN_FD_BITRATE_DEFAULT, 
@@ -359,171 +212,98 @@ BMSParameterValues_t s_parameters =
   .hardwareVariables.I_max                        = I_MAX_DEFAULT, 
   .hardwareVariables.I_short                      = I_SHORT_DEFAULT, 
   .hardwareVariables.t_short                      = T_SHORT_DEFAULT, 
-  .hardwareVariables.I_bal                        = I_BAL_DEFAULT 
+  .hardwareVariables.I_bal                        = I_BAL_DEFAULT,
+  .hardwareVariables.m_mass                       = M_MASS_DEFAULT
+
 };
 
+/*! @brief  This struct array contains all the parameter info variables like every type, minOn, maxOn, min, max, address 
+            the default values are set using the SET_DEFAULT_FLT or the SET_DEFAULT_INT macro*/
 const BMSparametersInfo_t s_parametersInfo[NONE] = 
 {
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  C_BATT, basicVariables.C_batt) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  V_OUT, basicVariables.V_out) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  V_BATT, basicVariables.V_batt) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  I_BATT, basicVariables.I_batt) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  I_BATT_AVG, basicVariables.I_batt_avg) },
-   { SET_DEFAULT2(UINT8VAL,  true, false,  S_OUT, basicVariables.s_out) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  P_AVG, basicVariables.P_avg) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  E_USED, basicVariables.E_used) },
-   { SET_DEFAULT2(FLOATVAL,  false, true,  A_REM, basicVariables.A_rem) },
-   { SET_DEFAULT2(FLOATVAL,  false, true,  A_FULL, basicVariables.A_full) },
-   { SET_DEFAULT2(FLOATVAL,  false, true,  T_FULL, basicVariables.t_full) },
-   { SET_DEFAULT2(UINT8VAL,  false, false, S_FLAGS, basicVariables.s_flags) },
-   { SET_DEFAULT2(UINT8VAL,  true,  false, S_HEALTH, basicVariables.s_health) },
-   { SET_DEFAULT2(UINT8VAL,  true,  false, S_CHARGE, basicVariables.s_charge) },
-   { SET_DEFAULT2(UINT8VAL,  false, false, BATT_ID, basicVariables.batt_id) },
-   { SET_DEFAULT2(INT32VAL,  false, false, MODEL_ID, basicVariables.model_id) },
-   { SET_DEFAULT2(STRINGVAL, false, false, MODEL_NAME, basicVariables.model_name) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "C",  "float",  C_BATT, basicVariables.C_batt) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "V",  "float",  V_OUT, basicVariables.V_out) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "V",  "float",  V_BATT, basicVariables.V_batt) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "A",  "float",  I_BATT, basicVariables.I_batt) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "A",  "float",  I_BATT_AVG, basicVariables.I_batt_avg) },
+   { SET_DEFAULT_INT(UINT8VAL,  true,  false, "-",  "bool",   S_OUT, basicVariables.s_out) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "W",  "float",  P_AVG, basicVariables.P_avg) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "Wh", "float",  E_USED, basicVariables.E_used) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "Ah", "float",  A_REM, basicVariables.A_rem) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "Ah", "float",  A_FULL, basicVariables.A_full) },
+   { SET_DEFAULT_FLT(FLOATVAL,  false, true,  "h",  "float",  T_FULL, basicVariables.t_full) },
+   { SET_DEFAULT_INT(UINT8VAL,  false, false, "-",  "uint8",  S_FLAGS, basicVariables.s_flags) },
+   { SET_DEFAULT_INT(UINT8VAL,  true,  false, "%",  "uint8",  S_HEALTH, basicVariables.s_health) },
+   { SET_DEFAULT_INT(UINT8VAL,  true,  false, "%",  "uint8",  S_CHARGE, basicVariables.s_charge) },
+   { SET_DEFAULT_INT(UINT8VAL,  false, false, "-",  "uint8",  BATT_ID, basicVariables.batt_id) },
+   { SET_DEFAULT_INT(UINT64VAL, false, false, "-",  "uint64", MODEL_ID, basicVariables.model_id) },
+   { SET_DEFAULT_INT(STRINGVAL, false, false, "-",  "char[32]", MODEL_NAME, basicVariables.model_name) },
 
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  V_CELL1, additionalVariables.V_cell1) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  V_CELL2, additionalVariables.V_cell2) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  V_CELL3, additionalVariables.V_cell3) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  V_CELL4, additionalVariables.V_cell4) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  V_CELL5, additionalVariables.V_cell5) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  V_CELL6, additionalVariables.V_cell6) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  C_AFE, additionalVariables.C_AFE) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  C_T, additionalVariables.C_T) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  C_R, additionalVariables.C_R) },
-   { SET_DEFAULT2(UINT16VAL, false, false, N_CHARGES, additionalVariables.N_charges) },
-   { SET_DEFAULT2(UINT16VAL, false, false, N_CHARGES_FULL, additionalVariables.N_charges_full) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "V",  "float",  V_CELL1, additionalVariables.V_cell1) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "V",  "float",  V_CELL2, additionalVariables.V_cell2) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "V",  "float",  V_CELL3, additionalVariables.V_cell3) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "V",  "float",  V_CELL4, additionalVariables.V_cell4) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "V",  "float",  V_CELL5, additionalVariables.V_cell5) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "V",  "float",  V_CELL6, additionalVariables.V_cell6) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "C",  "float",  C_AFE, additionalVariables.C_AFE) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "C",  "float",  C_T, additionalVariables.C_T) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "C",  "float",  C_R, additionalVariables.C_R) },
+   { SET_DEFAULT_INT(UINT16VAL, false, false, "-",  "uint16", N_CHARGES, additionalVariables.N_charges) },
+   { SET_DEFAULT_INT(UINT16VAL, false, false, "-",  "uint16", N_CHARGES_FULL, additionalVariables.N_charges_full) },
 
-   { SET_DEFAULT2(UINT8VAL,  true,  true,  N_CELLS, configurationVariables.N_cells) },
-   { SET_DEFAULT2(UINT16VAL, false, true,  T_MEAS, configurationVariables.t_meas) },
-   { SET_DEFAULT2(UINT16VAL, false, true,  T_FTTI, configurationVariables.t_ftti) },
-   { SET_DEFAULT2(UINT8VAL,  false, true,  T_CYCLIC, configurationVariables.t_cyclic) },
-   { SET_DEFAULT2(UINT8VAL,  false, true,  I_SLEEP_OC, configurationVariables.I_sleep_oc) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  V_CELL_OV, configurationVariables.V_cell_ov) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  V_CELL_UV, configurationVariables.V_cell_uv) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  C_CELL_OT, configurationVariables.C_cell_ot) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  C_CELL_OT_CHARGE, configurationVariables.C_cell_ot_charge) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  C_CELL_UT, configurationVariables.C_cell_ut) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  C_CELL_UT_CHARGE, configurationVariables.C_cell_ut_charge) },
-   { SET_DEFAULT2(FLOATVAL,  false, true,  A_FACTORY, configurationVariables.A_factory) },
-   { SET_DEFAULT2(UINT16VAL, false, true,  T_BMS_TIMEOUT, configurationVariables.t_bms_timeout) },
-   { SET_DEFAULT2(UINT8VAL,  true,  true,  T_FAULT_TIMEOUT, configurationVariables.t_fault_timeout) },
-   { SET_DEFAULT2(UINT8VAL,  false, true,  T_CHARGE_DETECT, configurationVariables.t_charge_detect) },
-   { SET_DEFAULT2(UINT8VAL,  false, true,  T_CB_DELAY, configurationVariables.t_cb_delay) },
-   { SET_DEFAULT2(UINT16VAL, false, true,  T_CHARGE_RELAX, configurationVariables.t_charge_relax) },
-   { SET_DEFAULT2(UINT16VAL, false, true,  I_CHARGE_FULL, configurationVariables.I_charge_full) },
-   { SET_DEFAULT2(FLOATVAL,  false, true,  I_CHARGE_MAX, configurationVariables.I_charge_max) },
-   { SET_DEFAULT2(FLOATVAL,  false, true,  I_OUT_MAX, configurationVariables.I_out_max) },
-   { SET_DEFAULT2(UINT8VAL,  false, true,  V_CELL_MARGIN, configurationVariables.V_cell_margin) },
-   { SET_DEFAULT2(INT32VAL,  false, true,  T_OCV_CYCLIC0, configurationVariables.t_ocv_cyclic0) },
-   { SET_DEFAULT2(INT32VAL,  false, true,  T_OCV_CYCLIC1, configurationVariables.t_ocv_cyclic1) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  C_PCB_UT, configurationVariables.C_pcb_ut) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  C_PCB_OT, configurationVariables.C_pcb_ot) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  V_STORAGE, configurationVariables.V_storage) },
-   { SET_DEFAULT2(FLOATVAL,  true,  true,  OCV_SLOPE, configurationVariables.ocv_slope) },
-   { SET_DEFAULT2(UINT8VAL,  true,  false, BATT_EOL, configurationVariables.batt_eol) },
-   { SET_DEFAULT2(UINT8VAL,  true,  true,  SENSOR_ENABLE, configurationVariables.sensor_enable) },
-   { SET_DEFAULT2(UINT8VAL,  true,  true,  SELF_DISCHARGE_ENABLE, configurationVariables.self_discharge_enable) },
-   { SET_DEFAULT2(UINT8VAL,  true,  true,  UAVCAN_NODE_STATIC_ID, configurationVariables.Uavcan_node_static_id) },
-   { SET_DEFAULT2(UINT16VAL, true,  true,  UAVCAN_SUBJECT_ID, configurationVariables.Uavcan_subject_id) },
-   { SET_DEFAULT2(UINT8VAL,  true,  true,  UAVCAN_FD_MODE, configurationVariables.Uavcan_fd_mode) },
-   { SET_DEFAULT2(INT32VAL,  true,  true,  UAVCAN_BITRATE, configurationVariables.Uavcan_bitrate) },
-   { SET_DEFAULT2(INT32VAL,  true,  true,  UAVCAN_FD_BITRATE, configurationVariables.Uavcan_fd_bitrate) },
+   { SET_DEFAULT_INT(UINT8VAL,  true,  true,  "-",  "uint8",  N_CELLS, configurationVariables.N_cells) },
+   { SET_DEFAULT_INT(UINT16VAL, false, true,  "ms", "uint16", T_MEAS, configurationVariables.t_meas) },
+   { SET_DEFAULT_INT(UINT16VAL, false, true,  "ms", "uint16", T_FTTI, configurationVariables.t_ftti) },
+   { SET_DEFAULT_INT(UINT8VAL,  false, true,  "s",  "uint8",  T_CYCLIC, configurationVariables.t_cyclic) },
+   { SET_DEFAULT_INT(UINT8VAL,  false, true,  "mA", "uint8",  I_SLEEP_OC, configurationVariables.I_sleep_oc) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "V",  "float",  V_CELL_OV, configurationVariables.V_cell_ov) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "V",  "float",  V_CELL_UV, configurationVariables.V_cell_uv) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "C",  "float",  C_CELL_OT, configurationVariables.C_cell_ot) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "C",  "float",  C_CELL_OT_CHARGE, configurationVariables.C_cell_ot_charge) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "C",  "float",  C_CELL_UT, configurationVariables.C_cell_ut) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "C",  "float",  C_CELL_UT_CHARGE, configurationVariables.C_cell_ut_charge) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "Ah", "float",  A_FACTORY, configurationVariables.A_factory) },
+   { SET_DEFAULT_INT(UINT16VAL, false, true,  "s",  "uint16", T_BMS_TIMEOUT, configurationVariables.t_bms_timeout) },
+   { SET_DEFAULT_INT(UINT16VAL, true,  true,  "s",  "uint16", T_FAULT_TIMEOUT, configurationVariables.t_fault_timeout) },
+   { SET_DEFAULT_INT(UINT8VAL,  false, true,  "h",  "uint8",  T_SLEEP_TIMEOUT, configurationVariables.t_sleep_timeout) },
+   { SET_DEFAULT_INT(UINT8VAL,  false, true,  "s",  "uint8",  T_CHARGE_DETECT, configurationVariables.t_charge_detect) },
+   { SET_DEFAULT_INT(UINT8VAL,  false, true,  "s",  "uint8",  T_CB_DELAY, configurationVariables.t_cb_delay) },
+   { SET_DEFAULT_INT(UINT16VAL, false, true,  "s",  "uint16", T_CHARGE_RELAX, configurationVariables.t_charge_relax) },
+   { SET_DEFAULT_INT(UINT16VAL, false, true,  "mA", "uint16", I_CHARGE_FULL, configurationVariables.I_charge_full) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "A",  "float",  I_CHARGE_MAX, configurationVariables.I_charge_max) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "A",  "float",  I_CHARGE_NOMINAL, configurationVariables.I_charge_nominal) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "A",  "float",  I_OUT_MAX, configurationVariables.I_out_max) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "A",  "float",  I_OUT_NOMINAL, configurationVariables.I_out_nominal) },
+   { SET_DEFAULT_INT(UINT8VAL,  true, true,   "A",  "uint8",  I_FLIGHT_MODE, configurationVariables.I_flight_mode) },
+   { SET_DEFAULT_INT(UINT8VAL,  false, true,  "mV", "uint8",  V_CELL_MARGIN, configurationVariables.V_cell_margin) },
+   { SET_DEFAULT_INT(INT32VAL,  false, true,  "s",  "int32",  T_OCV_CYCLIC0, configurationVariables.t_ocv_cyclic0) },
+   { SET_DEFAULT_INT(INT32VAL,  false, true,  "s",  "int32",  T_OCV_CYCLIC1, configurationVariables.t_ocv_cyclic1) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "C",  "float",  C_PCB_UT, configurationVariables.C_pcb_ut) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "C",  "float",  C_PCB_OT, configurationVariables.C_pcb_ot) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "V",  "float",  V_STORAGE, configurationVariables.V_storage) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "mV/A.min", "float", OCV_SLOPE, configurationVariables.ocv_slope) },
+   { SET_DEFAULT_INT(UINT8VAL,  true,  false, "%",  "uint8",  BATT_EOL, configurationVariables.batt_eol) },
+   { SET_DEFAULT_INT(UINT8VAL,  true,  true,  "-",  "uint8",  BATTERY_TYPE, configurationVariables.battery_type) },
+   { SET_DEFAULT_INT(UINT8VAL,  true,  true,  "-",  "bool",   SENSOR_ENABLE, configurationVariables.sensor_enable) },
+   { SET_DEFAULT_INT(UINT8VAL,  true,  true,  "-",  "bool",   SELF_DISCHARGE_ENABLE, configurationVariables.self_discharge_enable) },
+   { SET_DEFAULT_INT(UINT8VAL,  true,  true,  "-",  "bool",   FLIGHT_MODE_ENABLE, configurationVariables.flight_mode_enable) },
+   { SET_DEFAULT_INT(UINT8VAL,  true,  true,  "-",  "uint8",  UAVCAN_NODE_STATIC_ID, configurationVariables.Uavcan_node_static_id) },
+   { SET_DEFAULT_INT(UINT16VAL, true,  true,  "-",  "uint16", UAVCAN_ESS_SUB_ID, configurationVariables.Uavcan_ess_sub_id) },
+   { SET_DEFAULT_INT(UINT16VAL, true,  true,  "-",  "uint16", UAVCAN_BS_SUB_ID, configurationVariables.Uavcan_bs_sub_id) },
+   { SET_DEFAULT_INT(UINT16VAL, true,  true,  "-",  "uint16", UAVCAN_BP_SUB_ID, configurationVariables.Uavcan_bp_sub_id) },
+   { SET_DEFAULT_INT(UINT8VAL,  true,  true,  "-",  "uint8",  UAVCAN_FD_MODE, configurationVariables.Uavcan_fd_mode) },
+   { SET_DEFAULT_INT(INT32VAL,  true,  true,  "bit/s", "int32", UAVCAN_BITRATE, configurationVariables.Uavcan_bitrate) },
+   { SET_DEFAULT_INT(INT32VAL,  true,  true,  "bit/s", "int32", UAVCAN_FD_BITRATE, configurationVariables.Uavcan_fd_bitrate) },
 
-   { SET_DEFAULT2(UINT8VAL,  true, true,   V_MIN, hardwareVariables.V_min) },
-   { SET_DEFAULT2(UINT8VAL,  true, true,   V_MAX, hardwareVariables.V_max) },
-   { SET_DEFAULT2(UINT16VAL, true, true,   I_PEAK, hardwareVariables.I_peak) },
-   { SET_DEFAULT2(UINT8VAL,  true, true,   I_MAX, hardwareVariables.I_max) },
-   { SET_DEFAULT2(UINT16VAL, true, true,   I_SHORT, hardwareVariables.I_short) },
-   { SET_DEFAULT2(UINT8VAL,  false, true,  T_SHORT, hardwareVariables.t_short) },
-   { SET_DEFAULT2(UINT8VAL,  false, false, I_BAL, hardwareVariables.I_bal) }
+   { SET_DEFAULT_INT(UINT8VAL,  true,  true,  "V",  "uint8",  V_MIN, hardwareVariables.V_min) },
+   { SET_DEFAULT_INT(UINT8VAL,  true,  true,  "V",  "uint8",  V_MAX, hardwareVariables.V_max) },
+   { SET_DEFAULT_INT(UINT16VAL, true,  true,  "A",  "uint16", I_PEAK, hardwareVariables.I_peak) },
+   { SET_DEFAULT_INT(UINT8VAL,  true,  true,  "A",  "uint8",  I_MAX, hardwareVariables.I_max) },
+   { SET_DEFAULT_INT(UINT16VAL, true,  true,  "A",  "uint16", I_SHORT, hardwareVariables.I_short) },
+   { SET_DEFAULT_INT(UINT8VAL,  false, true,  "us", "uint8",  T_SHORT, hardwareVariables.t_short) },
+   { SET_DEFAULT_INT(UINT8VAL,  false, false, "mA", "uint8",  I_BAL, hardwareVariables.I_bal) },
+   { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "kg", "float",  M_MASS, hardwareVariables.m_mass) }
 };
-
-//! these are the units for each parameter in the right sequence
-const char *parameterUnits[] = 
-{
-  "C",
-  "V",
-  "V",
-  "A",
-  "A",
-  "-",
-  "W",
-  "Wh",
-  "Ah",
-  "Ah",
-  "h",
-  "-",
-  "%",
-  "%",
-  "-",
-  "-",
-  "-",
-  "V",
-  "V",
-  "V",
-  "V",
-  "V",
-  "V",
-  "C",
-  "C",
-  "C",
-  "-",
-  "-",
-  "-",
-  "ms",
-  "ms",
-  "s",
-  "mA",
-  "V",
-  "V",
-  "C",
-  "C",
-  "C",
-  "C",
-  "Ah",
-  "s",
-  "s",
-  "s",
-  "s",
-  "s",
-  "mA",
-  "A",
-  "A",
-  "mV",
-  "s",
-  "s",
-  "C",
-  "C",
-  "V",
-  "V/A.min",
-  "%",
-  "-",
-  "-",
-  "-",
-  "-",
-  "-",
-  "bit/s",
-  "bit/s",
-  "V",
-  "V",
-  "A",
-  "A",
-  "A",
-  "us",
-  "mA"
-};
-
-// test_t test = 
-// { 
-//    .parametersInfo.type                                       = U8,
-//   .parametersInfo.checkMax                                   = true,
-//   .parametersInfo.checkMin                                   = true,
-//   .parametersInfo.max                                        = S_CHARGE_MAX,
-//   .parametersInfo.min                                        = S_CHARGE_MIN,
-//   .parametersInfo.parameterAdr                               = &s_parameters.parameters.basicVariables.state_of_charge
-// };
-
 
 /****************************************************************************
  * private Functions
@@ -556,11 +336,10 @@ void data_setDefault(void);
 int data_initialize(parameterChangeCallbackFunction p_parameterChangeCallbackFunction)
 {
   int lvRetValue = !gDataInitialized;
+  int flightModeDefault = FLIGHT_MODE_ENABLE_DEFAULT;
 
   if(!gDataInitialized)
   {
-    cli_printf("SELF-TEST START: FLASH\n");
-
     // connect the callback function
     g_parameterChangeCallbackFunctionfp = p_parameterChangeCallbackFunction;
 
@@ -574,7 +353,7 @@ int data_initialize(parameterChangeCallbackFunction p_parameterChangeCallbackFun
 
     if(lvRetValue != 0)
     {
-      cli_printf("data_initialize ERROR: couldn't init data mutex!\n");
+      cli_printfError("data_initialize ERROR: couldn't init data mutex!\n");
       return lvRetValue;
     }
 
@@ -584,7 +363,7 @@ int data_initialize(parameterChangeCallbackFunction p_parameterChangeCallbackFun
     // check for errors
     if(lvRetValue != 0)
     {
-      cli_printf("data_initialize ERROR: couldn't init flash mutex!\n");
+      cli_printfError("data_initialize ERROR: couldn't init flash mutex!\n");
       return lvRetValue;
     }
 
@@ -600,7 +379,15 @@ int data_initialize(parameterChangeCallbackFunction p_parameterChangeCallbackFun
       cli_printf("nothing/wrong saved!\n");
     }
 
-    cli_printf("SELF-TEST PASS:  FLASH\n");
+    // set flight mode to 0 (default)
+    // set the new value and set it in the data struct with the set function 
+    lvRetValue = data_setParameter(FLIGHT_MODE_ENABLE, &flightModeDefault);
+    if(lvRetValue)
+    {
+      cli_printfError("data ERROR: couldn't set default flight mode variable! error: %d\n", lvRetValue);
+    }
+    // sleep for a short time to make sure it is handeld
+    usleep(1);   
   }
 
   return lvRetValue;
@@ -684,21 +471,21 @@ void* data_getParameter(parameterKind_t parameterKind, void* outData, uint16_t* 
   // check if wrong input
   if(parameterKind == NONE)
   {
-    cli_printf("ERROR: wrong input!\n");
+    cli_printfError("data ERROR: wrong input!\n");
     return lvRetValue;
   }
 
   // check if initialized
   if(!gDataInitialized)
   {
-    cli_printf("ERROR: initialize mutex!\n");
+    cli_printfError("data ERROR: initialize mutex!\n");
     return lvRetValue;
   }
 
   // lock the mutex(with error check)
   if ((pthread_mutex_lock(&dataLock)) != 0)
   {
-    cli_printf("ERROR: pthread_mutex_lock failed\n");
+    cli_printfError("data ERROR: pthread_mutex_lock failed\n");
     return lvRetValue;
   }
 
@@ -709,15 +496,40 @@ void* data_getParameter(parameterKind_t parameterKind, void* outData, uint16_t* 
   switch(s_parametersInfo[parameterKind].type)
   {
     // in case it is a floatvalue
-    case FLOATVAL:  
+    case FLOATVAL:  // set the returnvalue to the address of the parameter
                     lvRetValue = (float*)s_parametersInfo[parameterKind].parameterAdr;
-                    if(outLength != NULL) *outLength = sizeof(*lvRetValue);
-                    if(outData != NULL) (*(float*)outData = *(float*)lvRetValue);
+
+                    // if outlenght isn't NULL
+                    if(outLength != NULL) 
+                    {
+                      // set the outlenght to the size of the value
+                      *outLength = sizeof(*lvRetValue);
+                    }
+
+                    // if outData isn't NULL
+                    if(outData != NULL) 
+                    {
+                      // set outData to the needed value
+                      (*(float*)outData = *(float*)lvRetValue);
+                    }
     break;
     // in case it is a uint8_t value
-    case UINT8VAL:  lvRetValue = (uint8_t*)s_parametersInfo[parameterKind].parameterAdr;
-                    if(outLength != NULL) *outLength = sizeof(*lvRetValue);
-                    if(outData != NULL) (*(uint8_t*)outData = *(uint8_t*)lvRetValue);
+    case UINT8VAL:  // set the returnvalue to the address of the parameter
+                    lvRetValue = (uint8_t*)s_parametersInfo[parameterKind].parameterAdr;
+                    
+                    // if outlenght isn't NULL
+                    if(outLength != NULL) 
+                    {
+                      // set the outlenght to the size of the value
+                       *outLength = sizeof(*lvRetValue);
+                    }
+
+                    // if outData isn't NULL
+                    if(outData != NULL)  
+                    {
+                      // set outData to the needed value
+                      (*(uint8_t*)outData = *(uint8_t*)lvRetValue);
+                    }
                    
     break;
     // in case it is a bool value
@@ -727,23 +539,79 @@ void* data_getParameter(parameterKind_t parameterKind, void* outData, uint16_t* 
                    
     // break;
     // in case it is a uint16_t value
-    case UINT16VAL: lvRetValue = (uint16_t*)s_parametersInfo[parameterKind].parameterAdr;
-                    if(outLength != NULL) *outLength = sizeof(*lvRetValue);
-                    if(outData != NULL) (*(uint16_t*)outData = *(uint16_t*)lvRetValue);
+    case UINT16VAL: // set the returnvalue to the address of the parameter
+                    lvRetValue = (uint16_t*)s_parametersInfo[parameterKind].parameterAdr;
                     
+                    // if outlenght isn't NULL
+                    if(outLength != NULL) 
+                    {
+                      // set the outlenght to the size of the value
+                       *outLength = sizeof(*lvRetValue);
+                    }
 
+                    // if outData isn't NULL
+                    if(outData != NULL)  
+                    {
+                      // set outData to the needed value
+                      (*(uint16_t*)outData = *(uint16_t*)lvRetValue);
+                    }
+                    
     break;
     // in case it is a int32_t value
-    case INT32VAL:  lvRetValue = (int32_t*)s_parametersInfo[parameterKind].parameterAdr;
-                    if(outLength != NULL) *outLength = sizeof(*lvRetValue);
-                    if(outData != NULL) (*(int32_t*)outData = *(int32_t*)lvRetValue);
+    case INT32VAL:  // set the returnvalue to the address of the parameter
+                    lvRetValue = (int32_t*)s_parametersInfo[parameterKind].parameterAdr;
                     
+                    // if outlenght isn't NULL
+                    if(outLength != NULL) 
+                    {
+                      // set the outlenght to the size of the value
+                       *outLength = sizeof(*lvRetValue);
+                    }
 
+                    // if outData isn't NULL
+                    if(outData != NULL)  
+                    {
+                      // set outData to the needed value
+                      (*(int32_t*)outData = *(int32_t*)lvRetValue);
+                    }
+                    
+    break;
+    // in case it is a uint64_t value
+    case UINT64VAL:  // set the returnvalue to the address of the parameter
+                    lvRetValue = (uint64_t*)s_parametersInfo[parameterKind].parameterAdr;
+                    
+                    // if outlenght isn't NULL
+                    if(outLength != NULL) 
+                    {
+                      // set the outlenght to the size of the value
+                       *outLength = sizeof(*lvRetValue);
+                    }
+
+                    // if outData isn't NULL
+                    if(outData != NULL)  
+                    {
+                      // set outData to the needed value
+                      (*(uint64_t*)outData = *(uint64_t*)lvRetValue);
+                    }
+                    
     break;
     // in case it is a string value
-    case STRINGVAL: lvRetValue = &s_parameters.basicVariables.model_name;
-                    if(outLength != NULL) *outLength = strlen(s_parameters.basicVariables.model_name);
-                    if(outData != NULL) strncpy(((char*)outData), s_parameters.basicVariables.model_name, *outLength); 
+    case STRINGVAL: // set the returnvalue to the address of the parameter
+                    lvRetValue = &s_parameters.basicVariables.model_name;
+                    
+                    // if outlenght isn't NULL
+                    if(outLength != NULL) 
+                    {
+                      // set the outlenght to the size of the value
+                       *outLength = strlen(s_parameters.basicVariables.model_name);
+                    }
+
+                    // if outData isn't NULL
+                    if(outData != NULL)  
+                    {
+                      // set outData to the needed value
+                      strncpy(((char*)outData), s_parameters.basicVariables.model_name, *outLength); 
+                    }
                     
     break;
     // just in case
@@ -754,7 +622,7 @@ void* data_getParameter(parameterKind_t parameterKind, void* outData, uint16_t* 
   // unlock the mutex after writing is done
   if ((pthread_mutex_unlock(&dataLock)) != 0)
   {
-    cli_printf("ERROR: pthread_mutex_unlock failed\n");
+    cli_printfError("data ERROR: pthread_mutex_unlock failed\n");
     return NULL;
   } 
 
@@ -794,9 +662,6 @@ int data_setParameter(parameterKind_t parameterKind, void* inNewValue)
   int lvRetValue = -1;
   //int lvErrcode;
 
-  //static char * dataChangeArg[] = {"98", NULL};
-  //char *dataChange = "99";
-  //char *theData = "0000000000000";
   checkLimit_t lvCheckLimit;
 
   // variable to check if the variable has changed
@@ -805,7 +670,7 @@ int data_setParameter(parameterKind_t parameterKind, void* inNewValue)
   // check for a void pointer and right input
   if(inNewValue == NULL || parameterKind == NONE)
   {
-    cli_printf("ERROR: wrong input!\n");
+    cli_printfError("data ERROR: wrong input!\n");
     return lvRetValue;
   }
 
@@ -818,7 +683,7 @@ int data_setParameter(parameterKind_t parameterKind, void* inNewValue)
   // lock the mutex(with error check)
   if ((pthread_mutex_lock(&dataLock)) != 0)
   {
-    cli_printf("ERROR: pthread_mutex_lock failed\n");
+    cli_printfError("data ERROR: pthread_mutex_lock failed\n");
     return lvRetValue;
   }  
 
@@ -833,7 +698,7 @@ int data_setParameter(parameterKind_t parameterKind, void* inNewValue)
   switch(s_parametersInfo[parameterKind].type)
   {
     // in case it is a floatvalue
-    case FLOATVAL:  
+    case FLOATVAL: 
                     // if((*(s_parameters.parametersInfo[parameterKind].parameterAdr) != (*(float*)inNewValue)))
                     //   (lvChanged = true); 
                     // else 
@@ -847,16 +712,16 @@ int data_setParameter(parameterKind_t parameterKind, void* inNewValue)
                     switch(lvCheckLimit)
                     {
                       // if the limit check need to be done on both high and low limit
-                      case CHECK_BOTH:  CHECK_ASSIGN_BOTH(s_parametersInfo[parameterKind].max.FX10/(float)FLOAT_MULTIPIER,
-                                        s_parametersInfo[parameterKind].min.FX10/(float)FLOAT_MULTIPIER,
+                      case CHECK_BOTH:  CHECK_ASSIGN_BOTH((float)(s_parametersInfo[parameterKind].max.FLTVAL),
+                                        (float)(s_parametersInfo[parameterKind].min.FLTVAL),
                                         *(float*)(s_parametersInfo[parameterKind].parameterAdr), float)
                       break;
                       // if the limit check need to be done on low limit
-                      case CHECK_LOW:   CHECK_ASSIGN_MIN(s_parametersInfo[parameterKind].min.FX10/(float)FLOAT_MULTIPIER, 
+                      case CHECK_LOW:   CHECK_ASSIGN_MIN((float)s_parametersInfo[parameterKind].min.FLTVAL, 
                                         *(float*)(s_parametersInfo[parameterKind].parameterAdr), float)
                       break;
                       // if the limit check need to be done on high limit
-                      case CHECK_HIGH:  CHECK_ASSIGN_MAX(s_parametersInfo[parameterKind].max.FX10/(float)FLOAT_MULTIPIER, 
+                      case CHECK_HIGH:  CHECK_ASSIGN_MAX((float)s_parametersInfo[parameterKind].max.FLTVAL, 
                                         *(float*)(s_parametersInfo[parameterKind].parameterAdr), float)
                       break;
                       // if the limit check shouldn't be done
@@ -958,16 +823,16 @@ int data_setParameter(parameterKind_t parameterKind, void* inNewValue)
                     switch(lvCheckLimit)
                     {
                       // if the limit check need to be done on both high and low limit
-                      case CHECK_BOTH:  CHECK_ASSIGN_BOTH(s_parametersInfo[parameterKind].max.FX10,
-                                        s_parametersInfo[parameterKind].min.FX10,
+                      case CHECK_BOTH:  CHECK_ASSIGN_BOTH(s_parametersInfo[parameterKind].max.I32,
+                                        s_parametersInfo[parameterKind].min.I32,
                                         *(int32_t*)(s_parametersInfo[parameterKind].parameterAdr), int32_t)
                       break;
                       // if the limit check need to be done on low limit
-                      case CHECK_LOW:   CHECK_ASSIGN_MIN(s_parametersInfo[parameterKind].min.FX10, 
+                      case CHECK_LOW:   CHECK_ASSIGN_MIN(s_parametersInfo[parameterKind].min.I32, 
                                         *(int32_t*)(s_parametersInfo[parameterKind].parameterAdr), int32_t)
                       break;
                       // if the limit check need to be done on high limit
-                      case CHECK_HIGH:  CHECK_ASSIGN_MAX(s_parametersInfo[parameterKind].max.FX10, 
+                      case CHECK_HIGH:  CHECK_ASSIGN_MAX(s_parametersInfo[parameterKind].max.I32, 
                                         *(int32_t*)(s_parametersInfo[parameterKind].parameterAdr), int32_t)
                       break;
                       // if the limit check shouldn't be done
@@ -976,10 +841,48 @@ int data_setParameter(parameterKind_t parameterKind, void* inNewValue)
                     }
 
     break;
+    // in case it is a uint64_t value
+    // WARNING max value to check on is INT32_MAX and min value is INT32_MIN
+    case UINT64VAL: // check if there is a limit on it 
+                    // this switch will check what check needs to be done with the limit 
+                    // it will assign the right value
+                    // it will set lvChanged high if the data is different
+                    // it will set lvRetValue if succeeded
+                    // WARNING max value to check on is INT32_MAX and min value is INT32_MIN
+                    switch(lvCheckLimit)
+                    {
+                      // if the limit check need to be done on both high and low limit
+                      case CHECK_BOTH:  CHECK_ASSIGN_BOTH(s_parametersInfo[parameterKind].max.I32,
+                                        s_parametersInfo[parameterKind].min.I32,
+                                        *(uint64_t*)(s_parametersInfo[parameterKind].parameterAdr), uint64_t)
+                      break;
+                      // if the limit check need to be done on low limit
+                      case CHECK_LOW:   CHECK_ASSIGN_MIN(s_parametersInfo[parameterKind].min.I32, 
+                                        *(uint64_t*)(s_parametersInfo[parameterKind].parameterAdr), uint64_t)
+                      break;
+                      // if the limit check need to be done on high limit
+                      case CHECK_HIGH:  CHECK_ASSIGN_MAX(s_parametersInfo[parameterKind].max.I32, 
+                                        *(uint64_t*)(s_parametersInfo[parameterKind].parameterAdr), uint64_t)
+                      break;
+                      // if the limit check shouldn't be done
+                      case CHECK_NONE:  CHECK_ASSIGN_NONE(*(uint64_t*)(s_parametersInfo[parameterKind].parameterAdr), uint64_t)
+                      break;
+                    }
+
+    break;
+
     // in case it is a string value
-    case STRINGVAL:   if(strcmp(s_parameters.basicVariables.model_name, ((char*)inNewValue))) 
+    case STRINGVAL:   // do a stringcompare on the model name and if it is not equal
+                      if(strcmp(s_parameters.basicVariables.model_name, ((char*)inNewValue))) 
+                      {
+                        // set the change value to true
                         lvChanged = true;       
+                      }
+
+                      // string copy the new value in the struct
                       strncpy(s_parameters.basicVariables.model_name, ((char*)inNewValue), MODEL_NAME_MAX_CHARS); 
+                      
+                      // set the return value to true
                       lvRetValue = 0;
     break;
     // just in case
@@ -1007,7 +910,7 @@ int data_setParameter(parameterKind_t parameterKind, void* inNewValue)
   if ((pthread_mutex_unlock(&dataLock)) != 0)
   {
     lvRetValue = -1;
-    cli_printf("ERROR: pthread_mutex_unlock failed\n");
+    cli_printfError("data ERROR: pthread_mutex_unlock failed\n");
     return lvRetValue;
   } 
 
@@ -1032,7 +935,6 @@ int data_setParameter(parameterKind_t parameterKind, void* inNewValue)
  */
 int data_lockMutex(void)
 {
-  // lock the data mutex and return
   return pthread_mutex_lock(&dataLock);
 }
 
@@ -1053,7 +955,6 @@ int data_lockMutex(void)
  */
 int data_unlockMutex(void)
 {
-  // unlock the data mutex and return
   return pthread_mutex_unlock(&dataLock);
 }
 
@@ -1079,7 +980,7 @@ int data_unlockMutex(void)
  */
 void* data_getAdr(parameterKind_t parameterKind)
 {
-  // if it is not NONE
+  // check the input
   if(parameterKind != NONE)
   {
     // return the parameter address
@@ -1088,33 +989,62 @@ void* data_getAdr(parameterKind_t parameterKind)
   // else
   else 
   {
-    // return NULL
+    // return NULL when out of range
     return NULL;
   }
 }
 
 /*!
- * @brief   function to get the unit as a strings of a certain parameter * 
+ * @brief   function to get the unit as a strings of a certain parameter 
  *     
  * @param   parameterKind the parameter of which the unit should be returned, 
  *          from the parameterKind enum in BMS_data_types.h
  *
- * @retval  an char pointer addres to the value
+ * @retval  a char pointer (string) of the value
  *        
  */
 char* data_getUnit(parameterKind_t parameterKind)
 {
-  // check if it is not in range
+  char* noUnit = "-";
+
+  // check if out of range
   if(parameterKind >= NONE)
   {
-    // return the "-"
-    return (char*)parameterUnits[5];
+    // return the unit -
+    return noUnit;
   }
   // if in range
   else
   {
     // return the unit
-    return (char*)parameterUnits[parameterKind];
+    return (char*)s_parametersInfo[parameterKind].parameterUnit;
+  }
+}
+
+/*!
+ * @brief   function to get the type as a strings of a certain parameter  
+ *     
+ * @param   parameterKind the parameter of which the type should be returned, 
+ *          from the parameterKind enum in BMS_data_types.h
+ *
+ * @retval  a char pointer (string) of the value
+ *        
+ */
+char* data_getTypeString(parameterKind_t parameterKind)
+{
+  char* noUnit = "-";
+
+  // check if out of range
+  if(parameterKind >= NONE)
+  {
+    // return the unit -
+    return noUnit;
+  }
+  // if in range
+  else
+  {
+    // return the unit
+    return (char*)s_parametersInfo[parameterKind].parameterType;
   }
 }
 
@@ -1141,7 +1071,7 @@ int data_statusFlagBit(uint8_t bit, bool value)
   if(bit > STATUS_HIGHEST_BIT)
   {
     // return and output to user
-    cli_printf("data_statusFlagBit ERROR: input bit: %d > %d\n", bit, STATUS_HIGHEST_BIT);
+    cli_printfError("data_statusFlagBit ERROR: input bit: %d > %d\n", bit, STATUS_HIGHEST_BIT);
     return lvRetValue;
   } 
 
@@ -1154,7 +1084,7 @@ int data_statusFlagBit(uint8_t bit, bool value)
   // lock the mutex(with error check)
   if ((pthread_mutex_lock(&dataLock)) != 0)
   {
-    cli_printf("ERROR: pthread_mutex_lock failed\n");
+    cli_printfError("data ERROR: pthread_mutex_lock failed\n");
     return lvRetValue;
   }  
 
@@ -1183,7 +1113,7 @@ int data_statusFlagBit(uint8_t bit, bool value)
   if ((pthread_mutex_unlock(&dataLock)) != 0)
   {
     lvRetValue = -1;
-    cli_printf("ERROR: pthread_mutex_unlock failed\n");
+    cli_printfError("data ERROR: pthread_mutex_unlock failed\n");
     return lvRetValue;
   }  
 
@@ -1210,7 +1140,7 @@ int data_saveParameters(void)
   if(!gFlashInitialized)
   {
     // output to user
-    cli_printf("data_saveParameters ERROR: not initialized!\n");
+    cli_printfError("data_saveParameters ERROR: not initialized!\n");
 
     lvRetValue -= 1;
 
@@ -1248,7 +1178,7 @@ int data_saveParameters(void)
   // lock the mutex(with error check)
   if ((pthread_mutex_lock(&dataLock)) != 0)
   {
-    cli_printf("ERROR: pthread_mutex_lock failed\n");
+    cli_printfError("data ERROR: pthread_mutex_lock failed\n");
 
     // close the filedescriptor
     close(fd);
@@ -1271,7 +1201,7 @@ int data_saveParameters(void)
   if(writtenBytes != parSize)
   {
     // output to user
-    cli_printf("data_saveParameters ERROR: could not write parameters! %d != %d\n", writtenBytes, parSize);
+    cli_printfError("data_saveParameters ERROR: could not write parameters! %d != %d\n", writtenBytes, parSize);
 
     lvRetValue -= 4;
 
@@ -1300,7 +1230,7 @@ int data_saveParameters(void)
   // unlock the mutex(with error check)
   if ((pthread_mutex_unlock(&dataLock)) != 0)
   {
-    cli_printf("ERROR: pthread_mutex_unlock failed\n");
+    cli_printfError("data ERROR: pthread_mutex_unlock failed\n");
 
     // close the filedescriptor
     close(fd);
@@ -1323,9 +1253,9 @@ int data_saveParameters(void)
   if(writtenBytes != sizeof(CRC)/sizeof(uint8_t))
   {
     // output to user
-    cli_printf("data_saveParameters ERROR: could not write CRC! %d != %d\n", writtenBytes, 
+    cli_printfError("data_saveParameters ERROR: could not write CRC! %d != %d\n", writtenBytes, 
       sizeof(CRC)/sizeof(uint8_t));
-
+    
     // return error
     lvRetValue -= 16;
 
@@ -1363,7 +1293,7 @@ int data_loadParameters(void)
   if(!gFlashInitialized)
   {
     // output to user
-    cli_printf("data_saveParameters ERROR: not initialized!\n");
+    cli_printfError("data_saveParameters ERROR: not initialized!\n");
 
     lvRetValue -= 1;
 
@@ -1380,7 +1310,7 @@ int data_loadParameters(void)
   // lock the mutex(with error check)
   if ((pthread_mutex_lock(&dataLock)) != 0)
   {
-    cli_printf("ERROR: pthread_mutex_lock failed\n");
+    cli_printfError("data ERROR: pthread_mutex_lock failed\n");
 
      // close file descriptor
     close(fd);
@@ -1406,7 +1336,7 @@ int data_loadParameters(void)
   if(readBytes != parSize)
   {
     // output to user
-    cli_printf("data_saveParameters ERROR: could not read parameters!\n");
+    cli_printfError("data_saveParameters ERROR: could not read parameters!\n");
 
     // return erro
     lvRetValue -= 8;
@@ -1423,7 +1353,7 @@ int data_loadParameters(void)
   if(readBytes != sizeof(CRCR)/sizeof(uint8_t))
   {
     // output to user
-    cli_printf("data_saveParameters ERROR: could not read CRC!\n");
+    cli_printfError("data_saveParameters ERROR: could not read CRC!\n");
 
     // return erro
     lvRetValue -= 16;
@@ -1462,7 +1392,7 @@ int data_loadParameters(void)
   // unlock the mutex(with error check)
   if ((pthread_mutex_unlock(&dataLock)) != 0)
   {
-    cli_printf("ERROR: pthread_mutex_unlock failed\n");
+    cli_printfError("data ERROR: pthread_mutex_unlock failed\n");
 
      // close file descriptor
     close(fd);
@@ -1509,7 +1439,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                          
@@ -1520,7 +1450,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                         
@@ -1531,7 +1461,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, charVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                   
@@ -1542,7 +1472,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                  
@@ -1553,7 +1483,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                   
@@ -1564,7 +1494,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                   
@@ -1575,7 +1505,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                 
@@ -1586,7 +1516,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);               
@@ -1597,7 +1527,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &floatVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                
@@ -1608,7 +1538,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &floatVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                
@@ -1619,7 +1549,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &floatVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                
@@ -1630,7 +1560,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &floatVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);         
@@ -1641,7 +1571,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &floatVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                
@@ -1652,7 +1582,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &floatVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);         
@@ -1663,7 +1593,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &floatVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                
@@ -1674,7 +1604,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);            
@@ -1685,10 +1615,21 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
-  usleep(1);          
+  usleep(1);       
+
+  // set the new value and set it in the data struct with the set function to make sure it is handled
+  intVariable = T_SLEEP_TIMEOUT_DEFAULT;
+  parameter = T_SLEEP_TIMEOUT;
+  lvRetValue = data_setParameter(parameter, &intVariable);
+  if(lvRetValue)
+  {
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+  }
+  // sleep for a short time to make sure it is handeld
+  usleep(1);    
   
   // set the new value and set it in the data struct with the set function to make sure it is handled
   intVariable = T_CHARGE_DETECT_DEFAULT;
@@ -1696,7 +1637,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);          
@@ -1707,7 +1648,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);               
@@ -1718,7 +1659,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);           
@@ -1729,7 +1670,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);            
@@ -1740,10 +1681,21 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &floatVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
-  usleep(1);             
+  usleep(1);   
+
+  // set the new value and set it in the data struct with the set function to make sure it is handled
+  floatVariable = I_CHARGE_NOMINAL_DEFAULT;
+  parameter = I_CHARGE_NOMINAL;
+  lvRetValue = data_setParameter(parameter, &floatVariable);
+  if(lvRetValue)
+  {
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+  }
+  // sleep for a short time to make sure it is handeld
+  usleep(1);                       
   
   // set the new value and set it in the data struct with the set function to make sure it is handled
   floatVariable = I_OUT_MAX_DEFAULT;
@@ -1751,10 +1703,32 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &floatVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
-  usleep(1);                
+  usleep(1);     
+
+  // set the new value and set it in the data struct with the set function to make sure it is handled
+  floatVariable = I_OUT_NOMINAL_DEFAULT;
+  parameter = I_OUT_NOMINAL;
+  lvRetValue = data_setParameter(parameter, &floatVariable);
+  if(lvRetValue)
+  {
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+  }
+  // sleep for a short time to make sure it is handeld
+  usleep(1);   
+
+  // set the new value and set it in the data struct with the set function to make sure it is handled
+  intVariable = I_FLIGHT_MODE_DEFAULT;
+  parameter = I_FLIGHT_MODE;
+  lvRetValue = data_setParameter(parameter, &intVariable);
+  if(lvRetValue)
+  {
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+  }
+  // sleep for a short time to make sure it is handeld
+  usleep(1);              
   
   // set the new value and set it in the data struct with the set function to make sure it is handled
   intVariable = V_CELL_MARGIN_DEFAULT;
@@ -1762,7 +1736,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);            
@@ -1773,7 +1747,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);            
@@ -1784,7 +1758,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);            
@@ -1795,7 +1769,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &floatVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                 
@@ -1806,7 +1780,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &floatVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                 
@@ -1817,7 +1791,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &floatVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                
@@ -1828,7 +1802,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &floatVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                
@@ -1839,10 +1813,21 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
-  usleep(1);                 
+  usleep(1); 
+
+  // set the new value and set it in the data struct with the set function to make sure it is handled
+  intVariable = BATTERY_TYPE_DEFAULT;
+  parameter = BATTERY_TYPE;
+  lvRetValue = data_setParameter(parameter, &intVariable);
+  if(lvRetValue)
+  {
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+  }
+  // sleep for a short time to make sure it is handeld
+  usleep(1);                           
   
   // set the new value and set it in the data struct with the set function to make sure it is handled
   intVariable = SENSOR_ENABLE_DEFAULT;
@@ -1850,7 +1835,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);            
@@ -1861,10 +1846,21 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
-  usleep(1);    
+  usleep(1);  
+
+  // set the new value and set it in the data struct with the set function to make sure it is handled
+  intVariable = FLIGHT_MODE_ENABLE_DEFAULT;
+  parameter = FLIGHT_MODE_ENABLE;
+  lvRetValue = data_setParameter(parameter, &intVariable);
+  if(lvRetValue)
+  {
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+  }
+  // sleep for a short time to make sure it is handeld
+  usleep(1);      
   
   // set the new value and set it in the data struct with the set function to make sure it is handled
   intVariable = UAVCAN_NODE_STATIC_ID_DEFAULT;
@@ -1872,21 +1868,43 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);    
   
   // set the new value and set it in the data struct with the set function to make sure it is handled
-  intVariable = UAVCAN_SUBJECT_ID_DEFAULT;
-  parameter = UAVCAN_SUBJECT_ID;
+  intVariable = UAVCAN_ESS_SUB_ID_DEFAULT;
+  parameter = UAVCAN_ESS_SUB_ID;
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
-  usleep(1);        
+  usleep(1);       
+    
+  // set the new value and set it in the data struct with the set function to make sure it is handled
+  intVariable = UAVCAN_BS_SUB_ID_DEFAULT;
+  parameter = UAVCAN_BS_SUB_ID;
+  lvRetValue = data_setParameter(parameter, &intVariable);
+  if(lvRetValue)
+  {
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+  }
+  // sleep for a short time to make sure it is handeld
+  usleep(1);      
+
+  // set the new value and set it in the data struct with the set function to make sure it is handled
+  intVariable = UAVCAN_BP_SUB_ID_DEFAULT;
+  parameter = UAVCAN_BP_SUB_ID;
+  lvRetValue = data_setParameter(parameter, &intVariable);
+  if(lvRetValue)
+  {
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+  }
+  // sleep for a short time to make sure it is handeld
+  usleep(1);       
   
   // set the new value and set it in the data struct with the set function to make sure it is handled
   intVariable = UAVCAN_FD_MODE_DEFAULT;
@@ -1894,7 +1912,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);           
@@ -1905,7 +1923,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);           
@@ -1916,7 +1934,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);        
@@ -1927,7 +1945,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                         
@@ -1938,7 +1956,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                         
@@ -1949,7 +1967,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                        
@@ -1960,7 +1978,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                         
@@ -1971,7 +1989,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                       
@@ -1982,7 +2000,7 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                       
@@ -1993,7 +2011,18 @@ int data_setDefaultParameters(void)
   lvRetValue = data_setParameter(parameter, &intVariable);
   if(lvRetValue)
   {
-    cli_printf("cli ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
+  }
+  // sleep for a short time to make sure it is handeld
+  usleep(1);       
+
+  // set the new value and set it in the data struct with the set function to make sure it is handled
+  floatVariable = M_MASS_DEFAULT;
+  parameter = M_MASS;
+  lvRetValue = data_setParameter(parameter, &intVariable);
+  if(lvRetValue)
+  {
+    cli_printfError("data ERROR: couldn't set default variable! par: %d error: %d\n", parameter, lvRetValue);
   }
   // sleep for a short time to make sure it is handeld
   usleep(1);                         

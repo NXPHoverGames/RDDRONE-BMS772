@@ -171,7 +171,7 @@ int spi_BMSTransferData(uint8_t  spiBus, uint8_t *txDataBuf, uint8_t *rxDataBuf)
 	lvFd = spi_open(spiBus);
 	if (lvFd < 0)
 	{
-		cli_printf("Failed to get bus %d\n", spiBus);
+		cli_printfError("SPI ERROR: failed to get bus %d\n", spiBus);
 		return lvRetValue;
 	}
 
@@ -213,7 +213,7 @@ int spi_BMSTransferData(uint8_t  spiBus, uint8_t *txDataBuf, uint8_t *rxDataBuf)
 	lvRetValue = ioctl(lvFd, SPIIOC_TRANSFER, &lvSeq);//spidev_transfer(lvFd, &lvSeq);
 	if(lvRetValue)
 	{
-		cli_printf("spi ERROR: failed to transfer! error: %d\n", lvRetValue);
+		cli_printfError("SPI ERROR: failed to transfer! error: %d\n", lvRetValue);
 	}
 
 	// close the device

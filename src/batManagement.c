@@ -310,6 +310,8 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 	int lvRetValue = !gBatManInitialized;
 	int error, errcode;
 	bool boolValue = 1;
+	float current = 0.0;
+	uint8_t sleepCurrentmA = 0; 
 
 	// check if already configured
 	if(!gBatManInitialized)
@@ -340,7 +342,7 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 		// check for errors
 		if(error)
 		{
-			cli_printf("coulnd't initialize monitoring semaphore! error: %d\n", error);
+			cli_printfError("batManagement ERROR: failed to initialze sem! error: %d\n", error);
 			return error;
 		}
 
@@ -350,7 +352,7 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 		if(error)
 		{
 			// output to user
-			cli_printf("batManagement ERROR: failed to initialze sem! error: %d\n", error);
+			cli_printfError("batManagement ERROR: failed to initialze sem! error: %d\n", error);
 		}
 		else
 		{
@@ -365,7 +367,7 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 		if(error)
 		{
 			// output to user
-			cli_printf("batManagement ERROR: failed to initialze other sem! error: %d\n", error);
+			cli_printfError("batManagement ERROR: failed to initialze other sem! error: %d\n", error);
 		}
 		else
 		{
@@ -380,7 +382,7 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 		if(error)
 		{
 			// output to user
-			cli_printf("batManagement ERROR: failed to initialze charge sem! error: %d\n", error);
+			cli_printfError("batManagement ERROR: failed to initialze charge sem! error: %d\n", error);
 		}
 		else
 		{
@@ -395,7 +397,7 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 		if(error)
 		{
 			// output to user
-			cli_printf("batManagement ERROR: failed to initialze sdchar sem! error: %d\n", error);
+			cli_printfError("batManagement ERROR: failed to initialze sdchar sem! error: %d\n", error);
 		}
 		else
 		{
@@ -410,7 +412,7 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 		if(error)
 		{
 			// output to user
-			cli_printf("batManagement ERROR: failed to initialze dosdchar sem! error: %d\n", error);
+			cli_printfError("batManagement ERROR: failed to initialze dosdchar sem! error: %d\n", error);
 		}
 		else
 		{
@@ -425,7 +427,7 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 		if(error)
 		{
 			// output to user
-			cli_printf("batManagement ERROR: failed to initialze docellbalance sem! error: %d\n", error);
+			cli_printfError("batManagement ERROR: failed to initialze docellbalance sem! error: %d\n", error);
 		}
 		else
 		{
@@ -441,7 +443,7 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 	    {
 	    	// inform user
 	    	errcode = errno;
-	      	cli_printf("batManagement: ERROR: Failed to start task: %d\n", errcode);
+	      	cli_printfError("batManagement ERROR: Failed to start task: %d\n", errcode);
 	      	return lvRetValue;
 	    }
 
@@ -452,7 +454,7 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 	    {
 	    	// inform user
 	    	errcode = errno;
-	      	cli_printf("batManagement: ERROR: Failed to start task: %d\n", errcode);
+	      	cli_printfError("batManagement ERROR: Failed to start task: %d\n", errcode);
 	      	return lvRetValue;
 	    }
 
@@ -463,7 +465,7 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 	    {
 	    	// inform user
 	    	errcode = errno;
-	      	cli_printf("batManagement: ERROR: Failed to start task: %d\n", errcode);
+	      	cli_printfError("batManagement ERROR: Failed to start task: %d\n", errcode);
 	      	return lvRetValue;
 	    }
 
@@ -471,46 +473,71 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 	    // write the reset pin 
 	    lvRetValue = gpio_writePin(BCC_RESET, 1);
 
+	    // check if it went wrong
+	    if(lvRetValue)
+	    {
+	    	cli_printfError("batManagement ERROR: writing BCC_RESET high went wrong!\n");
+	    	cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
+	    	return lvRetValue;
+	    }
+
 	    // wait a time longer than needed 
 	    usleep(1000);
 
 	    // pull down the reset pin
 	    lvRetValue = gpio_writePin(BCC_RESET, 0);
 
+	    // check if it went wrong
+	    if(lvRetValue)
+	    {
+	    	cli_printfError("batManagement ERROR: writing BCC_RESET low went wrong!\n");
+	    	cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
+	    	return lvRetValue;
+	    }
+
 		// initialize SPI mutex
 		lvRetValue = BCC_initialze_spi_mutex();
 		if(lvRetValue)
 		{
-			cli_printf("failed to initialze spi mutex!\n");
+			cli_printfError("batManagement ERROR: failed to initialze spi mutex!\n");
 			return lvRetValue;
 		}
 
-	 	// // set that the battery managementment is configured
+	 	// set that the battery managementment is configured
 	 	gBatManInitialized = true;
 
 	 	//turn off the gate
-	 	batManagement_setGatePower(GATE_OPEN);
+	 	lvRetValue = batManagement_setGatePower(GATE_OPEN);
 
-		cli_printf("SELF-TEST START: BCC\n");
+	 	// check if it went wrong
+	    if(lvRetValue)
+	    {
+	    	cli_printfError("batManagement ERROR: opening the gate went wrong!\n");
+	    	cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
+	    	return lvRetValue;
+	    }
+
+		cli_printf("SELF-TEST BCC: START\n");
 
 		// initalize the BCC
 		lvRetValue = BatManagement_initializeBCC(); 
+		
 		// check for errors
 		if(lvRetValue < 0)
 	    {
 	    	// inform user
 	    	//errcode = errno;
-	      	cli_printf("batManagement: ERROR: Failed to initialze BCC: %d\n", lvRetValue);
-	      	cli_printf("SELF-TEST FAIL:  BCC\n");
+	      	cli_printfError("batManagement ERROR: Failed to initialze BCC: %d\n", lvRetValue);
+	      	cli_printf("SELF-TEST BCC: \e[31mFAIL\e[39m\n");
 	      	return lvRetValue;
 	    }
 
-	    cli_printf("SELF-TEST PASS:  BCC\n");
+	    cli_printf("SELF-TEST BCC: \e[32mPASS\e[39m\n");
 
 	    // do the Gate check at least once 
 	    do
 	    {
-	    	cli_printf("SELF-TEST START: GATE\n");
+	    	cli_printf("SELF-TEST GATE: START\n");
 
 	    	//turn off the gate
 	 		batManagement_setGatePower(GATE_OPEN);
@@ -523,8 +550,8 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 		    {
 		    	// inform user
 		    	//errcode = errno;
-		      	cli_printf("batManagement: ERROR: Failed to do measurement: %d\n", lvRetValue);
-		      	cli_printf("SELF-TEST FAIL:  GATE\n");
+		      	cli_printfError("batManagement ERROR: Failed to do measurement: %d\n", lvRetValue);
+		      	cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
 		      	return lvRetValue;
 		    }
 
@@ -537,17 +564,17 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 		    {
 		    	// inform user
 		    	//errcode = errno;
-		      	cli_printf("batManagement: ERROR: Failed get output: %d\n", lvRetValue);
-		      	cli_printf("SELF-TEST FAIL:  GATE\n");
+		      	cli_printfError("batManagement ERROR: Failed get output: %d\n", lvRetValue);
+		      	cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
 		      	return lvRetValue;
 		    }
 
 		    // check if the output is high
 		    if(boolValue == 1)
 		    {
-		    	cli_printf("batManagement ERROR: Failed to disable the gate!\n");
+		    	cli_printfError("batManagement ERROR: Failed to disable the gate!\n");
 		    	cli_printf("Make sure there is no charger connected and press the button to try again\n");
-		    	cli_printf("SELF-TEST FAIL:  GATE\n");
+		    	cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
 
 		    	//lvRetValue = BCC_STATUS_DIAG_FAIL;
 
@@ -572,10 +599,100 @@ int batManagement_initialize(overCurrentCallbackFunction p_overCurrentCallbackFu
 		// loop while the output is high
 		}while(boolValue == 1);
 
-		cli_printf("SELF-TEST PASS:  GATE\n");
+		// change the LED color to RED again
+		g_changeLedColorCallbackBatFuntionfp(RED, LED_BLINK_OFF);
 
-		// change the LED color to off
-		g_changeLedColorCallbackBatFuntionfp(OFF, LED_BLINK_OFF);
+		cli_printf("SELF-TEST GATE: \e[32mPASS\e[39m\n");
+		cli_printf("SELF-TEST CURRENT_SENSE: START\n");
+
+		// get the sleepcurrent
+	    if(data_getParameter(I_SLEEP_OC, &sleepCurrentmA, NULL) == NULL)
+	    {
+	    	cli_printfError("batManagement ERROR: getting sleepcurrent went wrong!\n");
+	       	sleepCurrentmA = I_SLEEP_OC_DEFAULT;
+	    } 
+
+		// check the input pin of the overcurrent circuit
+		//cli_printf("overcurrent pin: %d\n", gpio_readPin(OVERCURRENT));
+
+		// do a blockingmeasurement
+		lvRetValue = bcc_monitoring_doBlockingMeasurement(&gBccDrvConfig);
+
+		// check for errors
+		if(lvRetValue != 0)
+	    {
+	    	// inform user
+	      	cli_printfError("batManagement ERROR: Failed to do measurement: %d\n", lvRetValue);
+	      	cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
+	      	return lvRetValue;
+	    }
+
+	    // get the ISENSE pin open load value 
+	    lvRetValue = bcc_monitoring_getIsenseOpenLoad(&gBccDrvConfig, &boolValue);
+ 		
+ 		// check for errors
+		if(lvRetValue != 0)
+	    {
+	    	// inform user
+	    	//errcode = errno;
+	      	cli_printfError("batManagement ERROR: Failed to open load value: %d\n", lvRetValue);
+	      	cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
+	      	return lvRetValue;
+	    }
+
+	    // check if the ISENSE pins have an open load
+		if(boolValue)
+		{
+			// there is an ISENSE pins open load detected
+			cli_printfError("batManagement ERROR: ISENSE open load pin detected!\n");
+			cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
+			return BCC_STATUS_PARAM_RANGE;
+		} 
+
+	    // set the current in the struct
+	    lvRetValue = bcc_monitoring_getBattCurrent(&gBccDrvConfig, SHUNT_RESISTOR_UOHM);
+
+	    // check for errors
+		if(lvRetValue != 0)
+	    {
+	    	// inform user
+	      	cli_printfError("batManagement ERROR: Failed to read current: %d\n", lvRetValue);
+	      	cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
+	      	return lvRetValue;
+	    }
+
+	    // get the batterycurrent
+	    if(data_getParameter(I_BATT, &current, NULL) == NULL)
+	    {
+	       	cli_printfError("batManagement ERROR: getting current went wrong!\n");
+	       	current = I_BATT_MAX;
+	    } 
+
+	    // check the current
+		//cli_printf("current: %.3f\n", current);
+
+	    // check if the abs current is higher than the sleepcurrent or the overcurrent is hight
+	    if(((int)(fabs(current)*1000) > sleepCurrentmA) || (gpio_readPin(OVERCURRENT)))
+	    {
+	    	// why did it happend?
+	    	if(((int)(fabs(current)*1000) > sleepCurrentmA))
+	    	{
+	    		cli_printfError("BatManagement ERROR: current: |%.3fA| > %.3fA\n", current, (float)sleepCurrentmA/1000.0);
+	    	}
+	    	else
+	    	{
+	    		cli_printfError("BatManagement ERROR: overcurrent pin high!\n");
+	    	}
+
+	    	// output that the test has failed
+	      	cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
+	      	return BCC_STATUS_PARAM_RANGE;
+	    }
+
+		// mention that the self test has passed
+	    cli_printf("SELF-TEST CURRENT_SENSE: \e[32mPASS\e[39m\n");
+
+	    //cli_printf("current: %f", );
 
 	 	// change the return value
 	 	lvRetValue = !gBatManInitialized;
@@ -605,7 +722,7 @@ int batManagement_setGatePower(bool on)
 	if(!gBatManInitialized)
 	{
 		// error
-		cli_printf("ERROR: Battery management not initialized, pleaze initialze\n");
+		cli_printfError("batmanagement ERROR: Battery management not initialized, pleaze initialze\n");
 		return lvRetValue;
 	}
 
@@ -616,7 +733,13 @@ int batManagement_setGatePower(bool on)
 	pthread_mutex_lock(&gGateLock);
 
 	// Set Data pin to 1 so GATE_IN signal turns 1 (power OFF) when clock rises.
-	lvRetValue += gpio_writePin(GATE_CTRL_D, !on);			
+	lvRetValue += gpio_writePin(GATE_CTRL_D, !on);
+
+	// check if writing GATE_CTRL_D went wrong
+	if(lvRetValue)
+	{
+		cli_printfError("batmanagement ERROR: could not write GATE_CTRL_D to %d\n", !on);
+	}			
 
 	// Reset then set again Clock signal so Data gets through the flip-flop
 	lvRetValue += gpio_writePin(GATE_CTRL_CP, 0);		
@@ -681,7 +804,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 	dataReturn = (int32_t*)data_getParameter(N_CELLS, &NumCells, NULL);
 	if(dataReturn == NULL)
 	{
-		cli_printf("batManagement_checkFault ERROR: couldn't get num cells\n");
+		cli_printfError("batManagement_checkFault ERROR: couldn't get num cells\n");
 		return lvRetValue;
 	}
 
@@ -729,7 +852,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			dataReturn = (int32_t*)data_getParameter((parameterKind_t)(V_CELL1 + i), &lvCurrent, NULL);
 			if(dataReturn == NULL)
 			{
-				cli_printf("batManagement_checkFault ERROR: couldn't get cell voltage\n");
+				cli_printfError("batManagement_checkFault ERROR: couldn't get cell voltage\n");
 			}
 			else
 			{
@@ -750,7 +873,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			dataReturn = (int32_t*)data_getParameter((parameterKind_t)(V_CELL1 + i), &lvCurrent, NULL);
 			if(dataReturn == NULL)
 			{
-				cli_printf("batManagement_checkFault ERROR: couldn't get cell voltage\n");
+				cli_printfError("batManagement_checkFault ERROR: couldn't get cell voltage\n");
 			}
 			else
 			{
@@ -775,7 +898,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			if(lvBccStatus != BCC_STATUS_SUCCESS)
 			{
 				// output to the user
-				cli_printf("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
+				cli_printfError("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
 			}
 		}
 	}
@@ -795,7 +918,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			if(lvBccStatus != BCC_STATUS_SUCCESS)
 			{
 				// output to the user
-				cli_printf("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
+				cli_printfError("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
 			}
 		}
 	}
@@ -818,7 +941,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			dataReturn = (int32_t*)data_getParameter(V_OUT, &lvCurrent, NULL);
 			if(dataReturn == NULL)
 			{
-				cli_printf("batManagement_checkFault ERROR: couldn't get voltage\n");
+				cli_printfError("batManagement_checkFault ERROR: couldn't get voltage\n");
 			}
 			else
 			{
@@ -861,7 +984,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			if(lvBccStatus != BCC_STATUS_SUCCESS)
 			{
 				// output to the user
-				cli_printf("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
+				cli_printfError("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
 			}
 		}		
 	}
@@ -870,7 +993,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 	dataReturn = (int32_t*)data_getParameter(I_BATT, &lvCurrent, NULL);
 	if(dataReturn == NULL)
 	{
-		cli_printf("batManagement_checkFault ERROR: couldn't get current\n");
+		cli_printfError("batManagement_checkFault ERROR: couldn't get current\n");
 	}
 	else
 	{
@@ -881,7 +1004,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			dataReturn = (int32_t*)data_getParameter(I_OUT_MAX, &lvMaxCurrent, NULL);
 			if(dataReturn == NULL)
 			{
-				cli_printf("batManagement_changedParameter ERROR: couldn't get max current\n");
+				cli_printfError("batManagement_changedParameter ERROR: couldn't get max current\n");
 			}
 			else
 			{
@@ -901,7 +1024,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			dataReturn = (int32_t*)data_getParameter(I_CHARGE_MAX, &lvMaxCurrent, NULL);
 			if(dataReturn == NULL)
 			{
-				cli_printf("batManagement_changedParameter ERROR: couldn't get max current\n");
+				cli_printfError("batManagement_changedParameter ERROR: couldn't get max current\n");
 			}
 			else
 			{
@@ -938,8 +1061,8 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 
 #ifdef OUTPUT_OTHER_FAULT
 		// output to the user
-		cli_printf("BCC fault error: fault in BCC_FS_CB_OPEN reg: %d: "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
-		 lvBccFaultStatus[BCC_FS_CB_OPEN], BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_CB_OPEN] >> 8), BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_CB_OPEN]));
+		cli_printfError("BCC fault error: fault in BCC_FS_CB_OPEN reg: %d: \n", lvBccFaultStatus[BCC_FS_CB_OPEN]);//BYTE_TO_BINARY_PATTERN BYTE_TO_BINARY_PATTERN "\n",
+		 //lvBccFaultStatus[BCC_FS_CB_OPEN], BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_CB_OPEN] >> 8), BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_CB_OPEN]));
 #endif
 		// set the new value
 		resetBCCFaultValue = BCC_FS_CB_OPEN;
@@ -954,7 +1077,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			if(lvBccStatus != BCC_STATUS_SUCCESS)
 			{
 				// output to the user
-				cli_printf("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
+				cli_printfError("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
 			}
 		}
 	}
@@ -967,8 +1090,8 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 
 #ifdef OUTPUT_OTHER_FAULT
 		// output to the user
-		cli_printf("BCC fault error: fault in BCC_FS_CB_SHORT reg: %d: "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
-		 lvBccFaultStatus[BCC_FS_CB_SHORT], BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_CB_SHORT] >> 8), BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_CB_SHORT]));
+		cli_printfError("BCC fault error: fault in BCC_FS_CB_SHORT reg: %d: \n", lvBccFaultStatus[BCC_FS_CB_SHORT]);//"BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
+		 //lvBccFaultStatus[BCC_FS_CB_SHORT], BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_CB_SHORT] >> 8), BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_CB_SHORT]));
 #endif
 
 		// set the new value
@@ -984,7 +1107,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			if(lvBccStatus != BCC_STATUS_SUCCESS)
 			{
 				// output to the user
-				cli_printf("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
+				cli_printfError("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
 			}
 		}
 	}
@@ -997,8 +1120,8 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 
 #ifdef OUTPUT_OTHER_FAULT
 		// output to the user
-		cli_printf("BCC fault error: fault in BCC_FS_GPIO_STATUS reg: %d: "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
-		 lvBccFaultStatus[BCC_FS_GPIO_STATUS], BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_GPIO_STATUS] >> 8), BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_GPIO_STATUS]));
+		cli_printfError("BCC fault error: fault in BCC_FS_GPIO_STATUS reg: %d: \n", lvBccFaultStatus[BCC_FS_GPIO_STATUS]);//"BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
+		//lvBccFaultStatus[BCC_FS_GPIO_STATUS], BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_GPIO_STATUS] >> 8), BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_GPIO_STATUS]));
 #endif
 		// set the new value
 		resetBCCFaultValue = BCC_FS_GPIO_STATUS;
@@ -1013,7 +1136,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			if(lvBccStatus != BCC_STATUS_SUCCESS)
 			{
 				// output to the user
-				cli_printf("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
+				cli_printfError("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
 			}
 		}
 	}
@@ -1026,8 +1149,8 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 
 #ifdef OUTPUT_OTHER_FAULT
 		// output to the user
-		cli_printf("BCC fault error: fault in BCC_FS_GPIO_SHORT reg: %d: "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
-		 lvBccFaultStatus[BCC_FS_GPIO_SHORT], BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_GPIO_SHORT] >> 8), BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_GPIO_SHORT]));
+		cli_printfError("BCC fault error: fault in BCC_FS_GPIO_SHORT reg: %d: \n", lvBccFaultStatus[BCC_FS_GPIO_SHORT]);//"BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
+		//lvBccFaultStatus[BCC_FS_GPIO_SHORT], BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_GPIO_SHORT] >> 8), BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_GPIO_SHORT]));
 #endif
 		// set the new value
 		resetBCCFaultValue = BCC_FS_GPIO_SHORT;
@@ -1042,37 +1165,55 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			if(lvBccStatus != BCC_STATUS_SUCCESS)
 			{
 				// output to the user
-				cli_printf("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
+				cli_printfError("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
 			}
 		}
 	}
 
 	// check the BCC_FS_COMM fault register
-	if (lvBccFaultStatus[BCC_FS_COMM])
+	if((lvBccFaultStatus[BCC_FS_COMM] >> 8) & 0xFF)
 	{
 		// set the fault
 		*BMSFault |= BMS_OTHER_FAULT;
 
 #ifdef OUTPUT_OTHER_FAULT
 		// output to the user
-		cli_printf("BCC fault error: fault in BCC_FS_COMM reg: %d: "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
-		 lvBccFaultStatus[BCC_FS_COMM], BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_COMM] >> 8), BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_COMM]));
+		cli_printfError("BCC fault error: fault in BCC_FS_COMM reg: %d: \n", (lvBccFaultStatus[BCC_FS_COMM] >> 8) & 0xFF);//"BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
+		//lvBccFaultStatus[BCC_FS_COMM], BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_COMM] >> 8), BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_COMM]));
 #endif
+		// check if there are communication errors
+		if(lvBccFaultStatus[BCC_FS_COMM])
+		{
+			// output the amount of errors
+			cli_printfError("%d communication error(s) detected!\n", ((lvBccFaultStatus[BCC_FS_COMM] >> 8) & 0xFF));
+		}
+
 		// set the new value
 		resetBCCFaultValue = BCC_FS_COMM;
 
 		// check if the pin needs to be resetted
 		if(resetFaultPin)
 		{
-			// clear the fault
-			lvBccStatus = BCC_Fault_ClearStatus(&gBccDrvConfig, BCC_CID_DEV1, resetBCCFaultValue);
-		
-			// check for errors
-			if(lvBccStatus != BCC_STATUS_SUCCESS)
+			// check if the max is reached
+			if(((lvBccFaultStatus[BCC_FS_COMM] >> 8) & 0xFF) >= 255)
 			{
-				// output to the user
-				cli_printf("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
+				// clear the fault
+				//lvBccStatus = BCC_Fault_ClearStatus(&gBccDrvConfig, BCC_CID_DEV1, resetBCCFaultValue);
+				// write 0 to the register to reset it because it is w0c: write 0 to clear 
+				lvRetValue = BCC_Reg_Write(&gBccDrvConfig, BCC_CID_DEV1, BCC_REG_COM_STATUS_ADDR, 0, NULL);
+
+				// check for errors
+				if(lvBccStatus != BCC_STATUS_SUCCESS)
+				{
+					// output to the user
+					cli_printfError("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
+				}
 			}
+			else
+			{
+				cli_printfWarning("not resetting communication errors, max (255) not reached\n", lvBccFaultStatus[BCC_FS_COMM]);
+			}
+			
 		}
 	}
 
@@ -1087,8 +1228,8 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 
 #ifdef OUTPUT_OTHER_FAULT
 		// output to the user
-		cli_printf("BCC fault error: fault in BCC_FS_FAULT1 reg: %d: "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
-		 maskedFaultReg, BYTE_TO_BINARY(maskedFaultReg >> 8), BYTE_TO_BINARY(maskedFaultReg));
+		cli_printfError("BCC fault error: fault in BCC_FS_FAULT1 reg: %d: \n", maskedFaultReg);//"BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
+		//maskedFaultReg, BYTE_TO_BINARY(maskedFaultReg >> 8), BYTE_TO_BINARY(maskedFaultReg));
 #endif
 	}
 
@@ -1108,7 +1249,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			if(lvBccStatus != BCC_STATUS_SUCCESS)
 			{
 				// output to the user
-				cli_printf("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
+				cli_printfError("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
 			}
 		}
 	}
@@ -1120,8 +1261,8 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 
 #ifdef OUTPUT_OTHER_FAULT
 		// output to the user
-		cli_printf("BCC fault error: fault in BCC_FS_FAULT2 reg: %d: "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
-		 lvBccFaultStatus[BCC_FS_FAULT2], BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_FAULT2] >> 8), BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_FAULT2]));
+		cli_printfError("BCC fault error: fault in BCC_FS_FAULT2 reg: %d: \n", lvBccFaultStatus[BCC_FS_FAULT2]);//"BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
+		//lvBccFaultStatus[BCC_FS_FAULT2], BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_FAULT2] >> 8), BYTE_TO_BINARY(lvBccFaultStatus[BCC_FS_FAULT2]));
 #endif
 
 		// set the new value
@@ -1137,7 +1278,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			if(lvBccStatus != BCC_STATUS_SUCCESS)
 			{
 				// output to the user
-				cli_printf("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
+				cli_printfError("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
 			}
 		}
 	}
@@ -1153,8 +1294,8 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 
 #ifdef OUTPUT_OTHER_FAULT
 		// output to the user
-		cli_printf("BCC fault error: fault in BCC_FS_FAULT3 reg: %d: "BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
-		 maskedFaultReg, BYTE_TO_BINARY(maskedFaultReg >> 8), BYTE_TO_BINARY(maskedFaultReg));
+		cli_printfError("BCC fault error: fault in BCC_FS_FAULT3 reg: %d: \n", maskedFaultReg);//"BYTE_TO_BINARY_PATTERN" "BYTE_TO_BINARY_PATTERN "\n",
+		 //maskedFaultReg, BYTE_TO_BINARY(maskedFaultReg >> 8), BYTE_TO_BINARY(maskedFaultReg));
 #endif
 	}
 
@@ -1173,7 +1314,7 @@ int batManagement_checkFault(BMSFault_t *BMSFault, bool resetFaultPin)
 			if(lvBccStatus != BCC_STATUS_SUCCESS)
 			{
 				// output to the user
-				cli_printf("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
+				cli_printfError("batManagement_checkFault ERROR: couldn't reset fault: %d\n", resetBCCFaultValue);
 			}
 		}
 	}
@@ -1222,7 +1363,7 @@ int batManagement_setAFEMode(AFEmode_t mode)
 		  	if(lvRetValue)
 		  	{
 		  		// ouptut to the user 
-		  		cli_printf("batManagement_setAFEMode ERROR: Couldn't verify com! %d\n", lvRetValue);
+		  		cli_printfError("batManagement_setAFEMode ERROR: Couldn't verify com! %d\n", lvRetValue);
 		  	}
 
 			// set the cyclic measurement on
@@ -1232,7 +1373,7 @@ int batManagement_setAFEMode(AFEmode_t mode)
 			if(lvRetValue)
 			{
 				// ouptut to the user
-				cli_printf("batManagement_setAFEMode ERROR: Couldn't set measurements! %d\n", lvRetValue);
+				cli_printfError("batManagement_setAFEMode ERROR: Couldn't set measurements! %d\n", lvRetValue);
 			}
 
 		break;
@@ -1316,7 +1457,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 				dataReturn = (int32_t*)data_getParameter(I_OUT_MAX, &lvFloatValue2, NULL);
 				if(dataReturn == NULL)
 				{
-					cli_printf("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
+					cli_printfError("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
 					return lvRetValue;
 				}
 			}
@@ -1326,7 +1467,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 				dataReturn = (int32_t*)data_getParameter(I_CHARGE_MAX, &lvFloatValue2, NULL);
 				if(dataReturn == NULL)
 				{
-					cli_printf("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
+					cli_printfError("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
 					return lvRetValue;
 				}
 
@@ -1336,7 +1477,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 					// get the end of charge current
 					if(data_getParameter(I_CHARGE_FULL, &lvInt32Value1, NULL) == NULL)
 				    {
-				       cli_printf("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
+				       cli_printfError("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
 				       lvInt32Value1 = I_CHARGE_FULL_DEFAULT;
 				    } 
 
@@ -1374,6 +1515,10 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 #endif
 		break;
 
+		// in case it is the average current 
+		// case I_BATT_AVG:
+
+		// break;
 
 		// in case it is the remaining capacity or the full charge capacity 
 		case A_REM:
@@ -1398,7 +1543,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 				dataReturn = (int32_t*)data_getParameter(A_REM, &lvFloatValue1, NULL);
 				if(dataReturn == NULL)
 				{
-					cli_printf("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
+					cli_printfError("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
 					return lvRetValue;
 				}
 
@@ -1410,7 +1555,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 				dataReturn = (int32_t*)data_getParameter(A_FULL, &lvFloatValue2, NULL);
 				if(dataReturn == NULL)
 				{
-					cli_printf("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
+					cli_printfError("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
 					return lvRetValue;
 				}
 			}
@@ -1421,7 +1566,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 				// set the remaining capacity to be the full_charge_capacity
 				if(data_setParameter(A_REM, &lvFloatValue2))
 				{
-					cli_printf("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
 					return lvRetValue;
 				}
 			}
@@ -1433,7 +1578,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 				// save the new state of charge 
 				if(data_setParameter(S_CHARGE, &lvInt32Value1))
 				{
-					cli_printf("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
 					return lvRetValue;
 				}
 			}
@@ -1450,7 +1595,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 				dataReturn = (int32_t*)data_getParameter(A_FACTORY, &lvFloatValue1, NULL);
 				if(dataReturn == NULL)
 				{
-					cli_printf("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
+					cli_printfError("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
 					return lvRetValue;
 				}
 				
@@ -1460,7 +1605,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 				// set the new state of health
 				if(data_setParameter(S_HEALTH, &lvInt32Value1))
 				{
-					cli_printf("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
 					return lvRetValue;
 				}
 
@@ -1483,7 +1628,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 			dataReturn = (int32_t*)data_getParameter(A_FULL, &lvFloatValue2, NULL);
 			if(dataReturn == NULL)
 			{
-				cli_printf("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
+				cli_printfError("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
 				return lvRetValue;
 			}
 			
@@ -1493,7 +1638,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 			// set the new state of health
 			if(data_setParameter(S_HEALTH, &lvInt32Value1))
 			{
-				cli_printf("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
+				cli_printfError("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
 				return lvRetValue;
 			}
 
@@ -1505,14 +1650,26 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 		break;
 
 		case T_MEAS:
+
+			// get the value
 			lvInt32Value1 = (*(uint16_t*)newValue) & UINT16_MAX;
+
 			// check if is not a whole division of T_MEAS_MAX
 			if(T_MEAS_MAX % lvInt32Value1)
 			{
 				cli_printf("inserted T_meas: %d not a whole division of %d\n", lvInt32Value1, T_MEAS_MAX);
+				
+				// check if the inserted value is less than 1
+				if(lvInt32Value1 < 1)
+				{
+					// set the boolvalue to true
+					lvBoolVal = true;
+				}
+
 				// calculate lower measurement ratio
 				while(T_MEAS_MAX % lvInt32Value1)
 				{
+					// check if decrease is needed to find the next whole division
 					if(!lvBoolVal)
 					{
 						// decrease the update ratio
@@ -1523,7 +1680,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 							// set the value
 							lvBoolVal = true;
 
-							//increase once for equasion
+							//increase once for equation
 							lvInt32Value1++;
 						}
 					}
@@ -1541,7 +1698,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 				// save the new state of charge 
 				if(data_setParameter(T_MEAS, &lvInt32Value1))
 				{
-					cli_printf("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
 					return lvRetValue;
 				}
 			}
@@ -1555,7 +1712,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 
 		case C_BATT:
 #ifdef OUTPUT_UPDATE
-	
+			// get the value
 			lvFloatValue1 = *(float*)newValue;
 
 			// ouput to the user if needed
@@ -1564,7 +1721,8 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 
 		break;
 		case V_OUT:
-#ifdef OUTPUT_UPDATE			
+#ifdef OUTPUT_UPDATE
+			// get the value
 			lvFloatValue1 = *(float*)newValue;
 
 			// ouput to the user if needed
@@ -1573,7 +1731,8 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 
 		break;
 		case V_BATT:
-#ifdef OUTPUT_UPDATE			
+#ifdef OUTPUT_UPDATE
+			// get the value
 			lvFloatValue1 = *(float*)newValue;
 
 			// ouput to the user if needed
@@ -1581,7 +1740,8 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 #endif
 		break;
 		case P_AVG:
-#ifdef OUTPUT_UPDATE			
+#ifdef OUTPUT_UPDATE
+			// get the value
 			lvFloatValue1 = *(float*)newValue;
 
 			// ouput to the user if needed
@@ -1602,25 +1762,25 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 			// check if end of charge voltage needs to be checked
 			if((batManagement_SetNReadEndOfCBCharge(false, 0) & 2) != 2)
 			{
+				// get the cell margin in mv
+				if(data_getParameter(V_CELL_MARGIN, &lvInt32Value1, NULL) == NULL)
+			    {
+			       cli_printfError("batManagement_selfDischarge ERROR: getting cell margin went wrong!\n");
+			       lvInt32Value1 = V_CELL_MARGIN_DEFAULT;
+			    } 
+
+			    // limit the value 
+		    	lvInt32Value1 &= UINT8_MAX;
+
 				// check if it needs to be charged to the V_CELL_OV voltage
 				if(!batManagement_SetNReadChargeToStorage(false, 0))
 				{
 					// get the cell over voltage
 				    if(data_getParameter(V_CELL_OV, &lvFloatValue2, NULL) == NULL)
 				    {
-				       cli_printf("main ERROR: getting cell over voltage went wrong!\n");
+				       cli_printfError("BatManagment ERROR: getting cell over voltage went wrong!\n");
 				       lvFloatValue2 = V_CELL_OV_DEFAULT;
-				    } 
-
-				    // get the cell margin in mv
-					if(data_getParameter(V_CELL_MARGIN, &lvInt32Value1, NULL) == NULL)
-				    {
-				       cli_printf("batManagement_selfDischarge ERROR: getting cell margin went wrong!\n");
-				       lvInt32Value1 = V_CELL_MARGIN_DEFAULT;
-				    } 
-
-				    // limit the value 
-			    	lvInt32Value1 &= UINT8_MAX;
+				    } 				    
 				}
 				// if charge to storage
 				else
@@ -1628,17 +1788,18 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 					// get the cell over voltage
 				    if(data_getParameter(V_STORAGE, &lvFloatValue2, NULL) == NULL)
 				    {
-				       cli_printf("main ERROR: getting storage voltage went wrong!\n");
+				       cli_printfError("BatManagment ERROR: getting storage voltage went wrong!\n");
 				       lvFloatValue2 = V_STORAGE_DEFAULT;
 				    } 
 
-				    // set the margin to 0
-				    lvInt32Value1 = 0;
-
+				    // muliply the cell margin by the CHARGE_COMPLETE_MARGIN_DIV to eleminate it
+				    // make the value negative to keep charging until v-storage + v-cell-margin
+				    lvInt32Value1 = -lvInt32Value1*CHARGE_COMPLETE_MARGIN_DIV;
 				}
 
-			    //check if the to charge to voltage is reached
-			    if(lvFloatValue1 >= (lvFloatValue2 - ((((float)lvInt32Value1)/1000)/CHARGE_COMPLETE_MARGIN_DIV)))
+			    //check if the to charge to voltage is reached during charging
+			    if(batManagement_setNGetChargingState(false, 0) &&
+			    	(lvFloatValue1 >= (lvFloatValue2 - ((((float)lvInt32Value1)/1000)/CHARGE_COMPLETE_MARGIN_DIV))))
 			    {
 
 			    	cli_printf("End of charge voltage! cell%d %.3f >= %.3f\n", ((changedParam - V_CELL1)+1),
@@ -1654,7 +1815,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 
 			}
 
-#ifdef OUTPUT_UPDATE			
+#ifdef OUTPUT_UPDATE
 			// ouput to the user if needed
 			cli_printf("Cell%d voltage: %.3fV\n", ((changedParam - V_CELL1)+1), lvFloatValue1);
 #endif
@@ -1664,7 +1825,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 		case C_AFE:
 		
 #ifdef OUTPUT_UPDATE
-			// get the temperature 			
+			// get the temperature 
 			lvFloatValue1 = *(float*)newValue;
 
 			// print to the user
@@ -1674,7 +1835,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 		case C_T:
 
 #ifdef OUTPUT_UPDATE
-			// get the temperature 			
+			// get the temperature 
 			lvFloatValue1 = *(float*)newValue;
 
 			// print to the user
@@ -1684,7 +1845,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 		case C_R:
 
 #ifdef OUTPUT_UPDATE
-			// get the temperature 			
+			// get the temperature 
 			lvFloatValue1 = *(float*)newValue;
 
 			// print to the user
@@ -1729,7 +1890,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 		     // check for error
 		    if(lvRetValue != BCC_STATUS_SUCCESS)
 		    {
-				cli_printf("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
+				cli_printfError("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
 		        return lvRetValue;
 		    }
 		break;
@@ -1749,7 +1910,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 		     // check for error
 		    if(lvRetValue != BCC_STATUS_SUCCESS)
 		    {
-				cli_printf("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
+				cli_printfError("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
 		        return lvRetValue;
 		    }
 		break;
@@ -1776,7 +1937,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 			    // check for error
 			    if(lvRetValue != BCC_STATUS_SUCCESS)
 			    {
-					cli_printf("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
 			        return lvRetValue;
 			    }
 			}
@@ -1805,7 +1966,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 			    // check for error
 			    if(lvRetValue != BCC_STATUS_SUCCESS)
 			    {
-					cli_printf("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
 			        return lvRetValue;
 			    }
 			}
@@ -1834,7 +1995,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 			    // check for error
 			    if(lvRetValue != BCC_STATUS_SUCCESS)
 			    {
-					cli_printf("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
 			        return lvRetValue;
 			    }
 			}
@@ -1863,7 +2024,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 			    // check for error
 			    if(lvRetValue != BCC_STATUS_SUCCESS)
 			    {
-					cli_printf("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
 			        return lvRetValue;
 			    }
 			}
@@ -1878,7 +2039,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 			// get the bad battery threshold
 			if(data_getParameter(BATT_EOL, &lvInt32Value2, NULL) == NULL)
          	{
-         	  	cli_printf("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
+         	  	cli_printfError("batManagement_changedParameter ERROR: couldn't get parameter in %d\n", changedParam);
 			    return lvRetValue;
          	}
 
@@ -1916,7 +2077,7 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 			if(lvRetValue != BCC_STATUS_SUCCESS)
 			{
 				// output error 
-				cli_printf("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
+				cli_printfError("batManagement_changedParameter ERROR: couldn't set parameter in %d\n", changedParam);
 			    return lvRetValue;
 			}
 
@@ -1935,10 +2096,109 @@ int batManagement_changedParameter(parameterKind_t changedParam, void* newValue)
 		    // check for error
 		    if(lvRetValue != BCC_STATUS_SUCCESS)
 		    {
-		        cli_printf("batManagement_changedParameter ERROR: failed to set batt temperature measurement: %d\n", lvRetValue);
+		        cli_printfError("batManagement_changedParameter ERROR: failed to set batt temperature measurement: %d\n", lvRetValue);
 		        return lvRetValue;
 		    }
     break;
+
+    	// if the user changed the battery type
+    	case BATTERY_TYPE:
+    		// get the value
+    		lvInt32Value1 = *(uint8_t*)newValue & 1;
+
+    		// sleep a little bit for the nsh> (for CLI output)
+    		usleep(1);
+
+    		// if it has changed to a LiPo battery
+    		if(lvInt32Value1 == 0)
+    		{	
+    			// change the cell overvoltage, cell undervoltage and storage voltage
+    			lvFloatValue1 = LIPO_V_CELL_OV_DEFAULT;
+
+    			// output to the user
+    			cli_printfWarning("WARNING: Setting v-cell-ov to %.3f\n", lvFloatValue1);
+
+    			// set the overvoltage
+    			if(data_setParameter(V_CELL_OV, &lvFloatValue1))
+				{
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set v-cell-ov\n");
+					return lvRetValue;
+				}
+
+				lvFloatValue1 = LIPO_V_CELL_UV_DEFAULT;
+
+				// output to the user
+    			cli_printfWarning("WARNING: Setting v-cell-uv to %.3f\n", lvFloatValue1);
+
+    			// set the overvoltage
+    			if(data_setParameter(V_CELL_UV, &lvFloatValue1))
+				{
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set v-cell-uv\n");
+					return lvRetValue;
+				}
+
+				lvFloatValue1 = LIPO_V_STORAGE_DEFAULT;
+
+				// output to the user
+    			cli_printfWarning("WARNING: Setting v-storage to %.3f\n", lvFloatValue1);
+
+    			// set the overvoltage
+    			if(data_setParameter(V_STORAGE, &lvFloatValue1))
+				{
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set v-storage\n");
+					return lvRetValue;
+				}
+
+				lvRetValue = 0;
+    		}
+    		// if it has changed to a LiFePo4 battery
+    		else if(lvInt32Value1 == 1)
+    		{
+    			// change the cell overvoltage, cell undervoltage and storage voltage
+    			lvFloatValue1 = LIFEPO4_V_CELL_OV_DEFAULT;
+
+    			// output to the user
+    			cli_printfWarning("WARNING: Setting v-cell-ov to %.3f\n", lvFloatValue1);
+
+    			// set the overvoltage
+    			if(data_setParameter(V_CELL_OV, &lvFloatValue1))
+				{
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set v-cell-ov\n");
+					return lvRetValue;
+				}
+
+				lvFloatValue1 = LIFEPO4_V_CELL_UV_DEFAULT;
+
+				// output to the user
+    			cli_printfWarning("WARNING: Setting v-cell-uv to %.3f\n", lvFloatValue1);
+
+    			// set the overvoltage
+    			if(data_setParameter(V_CELL_UV, &lvFloatValue1))
+				{
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set v-cell-uv\n");
+					return lvRetValue;
+				}
+
+				lvFloatValue1 = LIFEPO4_V_STORAGE_DEFAULT;
+
+				// output to the user
+    			cli_printfWarning("WARNING: Setting v-storage to %.3f\n", lvFloatValue1);
+
+    			// set the overvoltage
+    			if(data_setParameter(V_STORAGE, &lvFloatValue1))
+				{
+					cli_printfError("batManagement_changedParameter ERROR: couldn't set v-storage\n");
+					return lvRetValue;
+				}
+
+    			lvRetValue = 0;
+    		}
+    		else
+    		{
+    			cli_printfError("ERROR: add new battery type correctly!!\n");
+    		}
+
+    	break;
 
 		default:
 			lvRetValue = 0;
@@ -1973,7 +2233,7 @@ int batManagement_updateMeasurementsOn(bool on)//, bool restart);
 	// check if semaphores are initialized
 	if(!gMeasureSemInitialized && !gCalcOtherSemInitialized)
 	{
-		cli_printf("batManagement_updateMeasurementsOn ERROR: semaphores not initialzed!\n");
+		cli_printfError("batManagement_updateMeasurementsOn ERROR: semaphores not initialzed!\n");
 		return 1;
 	}
 
@@ -1995,6 +2255,7 @@ int batManagement_updateMeasurementsOn(bool on)//, bool restart);
 		// measurements on
 		measurementsOn = true;
 
+		// do this and loop until the semaphore values are max 1
 		do
 		{
 			// read the semaphores
@@ -2014,9 +2275,11 @@ int batManagement_updateMeasurementsOn(bool on)//, bool restart);
 				// get the semaphore
 				sem_wait(&gCalcOtherSem);
 			}
-		}
-		while(semValueArr[0] > 1 || semValueArr[1] > 1);
+
+		// loop while this
+		}while(semValueArr[0] > 1 || semValueArr[1] > 1);
 	}
+	// if measurements should be off but are on
 	else if (!on && measurementsOn)
 	{
 		//cli_printf("decreasing semaphore!\n");
@@ -2027,6 +2290,7 @@ int batManagement_updateMeasurementsOn(bool on)//, bool restart);
 		// measurements off
 		measurementsOn = false;
 
+		// make sure the semaphore are at least 0
 		do
 		{
 			// read the semaphores
@@ -2095,7 +2359,7 @@ int batManagement_doMeasurement(void)
 	if(error != BCC_STATUS_SUCCESS)
 	{
 		// output to the user
-		cli_printf("batManagement_doMeasurement ERROR: failed to do measurement: %d\n", error);
+		cli_printfError("batManagement_doMeasurement ERROR: failed to do measurement: %d\n", error);
 	}
 
 	// save the error
@@ -2106,7 +2370,7 @@ int batManagement_doMeasurement(void)
 }
 
 /*!
- * @brief 	This function is used to check if n_cells is in line with the measurements
+ * @brief 	This function is used to check if n-cells is in line with the measurements
  * @note 	A measurements should be done first.
  *
  * @param   nCellsOK the address of the variable to become 1 if the cells are OK.
@@ -2194,7 +2458,7 @@ int batManagement_selfDischarge(bool on)
 		else
 		{
 			lvRetValue = -1;
-			cli_printf("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
+			cli_printfError("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
 		}
 
 		// loop through them
@@ -2211,14 +2475,15 @@ int batManagement_selfDischarge(bool on)
 				lvRetValue = -1;
 
 				// output to the user
-				cli_printf("batManagement_setBalancing ERROR: couldn't turn off driver for %d! %d\n", i+1, lvBccStatus);
+				cli_printfError("batManagement_setBalancing ERROR: couldn't turn off driver for %d! %d\n", i+1, lvBccStatus);
 				//return lvRetValue;
 			}	
 		}	
 
+		// set the value to 0
 	    if(batManagement_setNGetActiveBalancingCells(true, 0) == UINT8_MAX)
     	{
-    		cli_printf("batManagement_selfDischarge ERROR: can't set the activeBalancingCells with %d!\n", 0);
+    		cli_printfError("batManagement_selfDischarge ERROR: can't set the activeBalancingCells with %d!\n", 0);
     	}
 	}
 	// if on
@@ -2268,7 +2533,7 @@ int batManagement_setBalancing(bool on)
 		else
 		{
 			lvRetValue = -1;
-			cli_printf("batManagement_setBalancing ERROR: couldn't turn off CB driver! %d\n", lvBccStatus);
+			cli_printfError("batManagement_setBalancing ERROR: couldn't turn off CB driver! %d\n", lvBccStatus);
 			return lvRetValue;
 		}		
 
@@ -2286,11 +2551,12 @@ int batManagement_setBalancing(bool on)
 				lvRetValue = -1;
 
 				// output to the user
-				cli_printf("batManagement_setBalancing ERROR: couldn't turn off driver for %d! %d\n", i+1, lvBccStatus);
+				cli_printfError("batManagement_setBalancing ERROR: couldn't turn off driver for %d! %d\n", i+1, lvBccStatus);
 				//return lvRetValue;
 			}	
 		}	
 
+		// if error
 		if(lvRetValue != BCC_STATUS_SUCCESS)
 		{
 			// could not turn of the CB drivers
@@ -2303,7 +2569,8 @@ int batManagement_setBalancing(bool on)
     		cli_printf("batManagement_setBalancing ERROR: can't set the activeBalancingCells with %d!\n", 0);
     	}
 	}
-	else
+	// if it should be off
+ 	else
 	{
 		// set the handshake variable for balancing
 		batManagement_setNGetDisCharHandshakeVar(false, true, 1);
@@ -2345,6 +2612,56 @@ int batManagement_checkBalancing(void)
 }
 
 /*!
+ * @brief 	This function is used to check if a flight mode current is drawn (I_BATT > I_flight_mode)
+ * @note 	Will compare with the latest measured current.
+ *
+ * @param   flightModeCurrent the address of the variable to become 1 if the current is higher than I_flight_mode
+ * 			
+ * @return 	If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error. 
+ */
+int batManagement_checkFlightModeCurrent(bool *flightModeCurrent)
+{
+	int lvRetValue = -1;
+	float batteryCurrent;
+	uint8_t flightModeCurrentThreshold;
+
+	// check for NULL pointer
+	if(flightModeCurrent == NULL)
+	{
+		cli_printfError("batManagement_checkFlightModeCurrent ERROR: NULL pointer!\n");
+		return lvRetValue;
+	}
+
+	// set the value to 0 (if return, it will be 0)
+   	*flightModeCurrent = 0;
+
+	// get the flight mode current threshold
+	if(data_getParameter(I_FLIGHT_MODE, &flightModeCurrentThreshold, NULL) == NULL)
+    {
+       cli_printfError("batManagement_checkFlightModeCurrent ERROR: getting flight mode current went wrong!\n");
+       return lvRetValue;
+    } 
+
+	// get the battery current
+	if(data_getParameter(I_BATT, &batteryCurrent, NULL) == NULL)
+    {
+       cli_printfError("batManagement_checkFlightModeCurrent ERROR: getting battery current went wrong!\n");
+       return lvRetValue;
+    }
+
+    // check if the battery current is larger than the flight mode current
+    if((-1*batteryCurrent) > (float)flightModeCurrentThreshold)
+    {
+    	// set the value to 1
+    	*flightModeCurrent = 1;
+    }
+
+  	// return ok
+  	lvRetValue = 0;
+  	return lvRetValue;
+}
+
+/*!
  * @brief 	This function is used to check if the output voltage is at least OUTPUT_ON_VOLTAGE
  * 			
  * @return 	1 if output is active (>= OUTPUT_ON_VOLTAGE)
@@ -2358,7 +2675,7 @@ int batManagement_checkOutputVoltageActive(void)
 	// get the output voltage 
     if(data_getParameter(V_OUT, &outputVoltage, NULL) == NULL)
     {
-       cli_printf("batManagement_checkOutputVoltageActive ERROR: getting ouput voltage went wrong!\n");
+       cli_printfError("batManagement_checkOutputVoltageActive ERROR: getting ouput voltage went wrong!\n");
        return lvRetValue;
     } 
 
@@ -2393,8 +2710,8 @@ float batManagement_getHighestCellV(void)
 	// get the number of cells
     if(data_getParameter(N_CELLS, &nCells, NULL) == NULL)
     {
-       cli_printf("batManagement_getHighestCellV ERROR: getting cell count went wrong!\n");
-       nCells = N_CELLS_DEFAULT;      
+       cli_printfError("batManagement_getHighestCellV ERROR: getting cell count went wrong!\n");
+       nCells = N_CELLS_DEFAULT;
     } 
 
 	// check for which cell it needs to do this
@@ -2403,8 +2720,8 @@ float batManagement_getHighestCellV(void)
     	// get the cell voltage 
 	    if(data_getParameter((parameterKind_t)(V_CELL1+i), &cellVoltage, NULL) == NULL)
 	    {
-	       cli_printf("batManagement_getHighestCellV ERROR: getting cell%d voltage went wrong!\n", i+1);
-	       cellVoltage = 0;	      
+	       cli_printfError("batManagement_getHighestCellV ERROR: getting cell%d voltage went wrong!\n", i+1);
+	       cellVoltage = 0;
 	 	}
 
 	 	// check if it is the highest
@@ -2433,8 +2750,8 @@ float batManagement_getLowestCellV(void)
 	// get the number of cells
     if(data_getParameter(N_CELLS, &nCells, NULL) == NULL)
     {
-       cli_printf("batManagement_getHighestCellV ERROR: getting cell count went wrong!\n");
-       nCells = N_CELLS_DEFAULT;      
+       cli_printfError("batManagement_getHighestCellV ERROR: getting cell count went wrong!\n");
+       nCells = N_CELLS_DEFAULT;
     } 
 
 	// check for which cell it needs to do this
@@ -2443,8 +2760,8 @@ float batManagement_getLowestCellV(void)
     	// get the cell voltage 
 	    if(data_getParameter((parameterKind_t)(V_CELL1+i), &cellVoltage, NULL) == NULL)
 	    {
-	       cli_printf("batManagement_getHighestCellV ERROR: getting cell%d voltage went wrong!\n", i+1);
-	       cellVoltage = V_CELL1_MAX;	      
+	       cli_printfError("batManagement_getHighestCellV ERROR: getting cell%d voltage went wrong!\n", i+1);
+	       cellVoltage = V_CELL1_MAX;
 	 	}
 
 	 	// check if it is the highest
@@ -2477,7 +2794,7 @@ int batManagement_SetNReadEndOfCBCharge(bool set, int newValue)
 	// check if not initialized 
 	if(!gEndOfChargeValueMutexInitialized)
 	{
-		cli_printf("batManagement_SetNReadEndOfCBCharge ERROR mutex not initialzed!\n");
+		cli_printfError("batManagement_SetNReadEndOfCBCharge ERROR mutex not initialzed!\n");
 		return lvRetValue;
 	}
 
@@ -2521,7 +2838,7 @@ int batManagement_SetNReadChargeToStorage(bool set, bool newValue)
 	// check if not initialized 
 	if(!gChargeToStorageVarMutexInitialized)
 	{
-		cli_printf("batManagement_SetNReadEndOfCBCharge ERROR mutex not initialzed!\n");
+		cli_printfError("batManagement_SetNReadEndOfCBCharge ERROR mutex not initialzed!\n");
 		return lvRetValue;
 	}
 
@@ -2563,14 +2880,14 @@ int batManagement_saveFullChargeCap(void)
 	// get the remaining capacity 
     if(data_getParameter(A_REM, &remainingCap, NULL) == NULL)
     {
-       cli_printf("batManagement_saveFullChargeCap ERROR: getting A_REM went wrong!\n");
+       cli_printfError("batManagement_saveFullChargeCap ERROR: getting A_REM went wrong!\n");
        return lvRetValue;
  	}
 
 	// save the full charge capacity
 	if(data_setParameter(A_FULL, &remainingCap))
 	{
-		cli_printf("batManagement_saveFullChargeCap ERROR: couldn't set full charge cap\n");
+		cli_printfError("batManagement_saveFullChargeCap ERROR: couldn't set full charge cap\n");
 		return lvRetValue;
 	}
 
@@ -2585,10 +2902,11 @@ int batManagement_saveFullChargeCap(void)
  * @brief 	This function is to calculate the remaining capacity 
  * 			this will be used when an CC overflow occures
  * @note 	it will read and reset the CC registers
+ * @param 	clearingCCOverflow If not NULL this will be set true if the CC register is cleared.
  * 			
  * @return 	If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error. 
  */
-int batManagement_calcRemaningCharge(void)
+int batManagement_calcRemaningCharge(bool *clearingCCOverflow)
 {
 	int lvRetValue = -1;
 	float remainingCap, avgCurrent, deltaCharge;
@@ -2597,11 +2915,10 @@ int batManagement_calcRemaningCharge(void)
 	uint16_t lvBccFaultStatus[BCC_STAT_CNT]; 
 	uint16_t retRegVal;
 
-
 	// get the remaining capacity 
     if(data_getParameter(A_REM, &remainingCap, NULL) == NULL)
     {
-       cli_printf("batManagement_saveFullChargeCap ERROR: getting A_REM went wrong!\n");
+       cli_printfError("batManagement_saveFullChargeCap ERROR: getting A_REM went wrong!\n");
        return lvRetValue;
  	}
 
@@ -2612,7 +2929,7 @@ int batManagement_calcRemaningCharge(void)
  	if(lvRetValue)
  	{
  		// output and return
- 		cli_printf("batManagement_calcRemaningCharge ERROR: couldn't get delta charge!\n");
+ 		cli_printfError("batManagement_calcRemaningCharge ERROR: couldn't get delta charge!\n");
  		return lvRetValue;
  	}
 
@@ -2622,7 +2939,7 @@ int batManagement_calcRemaningCharge(void)
  	// set the new remaining charge 
     if(data_setParameter(A_REM, &remainingCap))
     {
-       cli_printf("batManagement_saveFullChargeCap ERROR: setting A_REM went wrong! %.3f\n", remainingCap);
+       cli_printfError("batManagement_saveFullChargeCap ERROR: setting A_REM went wrong! %.3f\n", remainingCap);
        return lvRetValue;
  	}
 
@@ -2636,14 +2953,22 @@ int batManagement_calcRemaningCharge(void)
 	if(lvBccStatus != BCC_STATUS_SUCCESS)
 	{
 		// return error 
-		cli_printf("batManagement_saveFullChargeCap ERROR: getting fault went wrong! %.3f\n", remainingCap);
+		cli_printfError("batManagement_saveFullChargeCap ERROR: getting fault went wrong! %.3f\n", remainingCap);
        	return lvRetValue;
 	}
 
 	// check for a CC overflow
 	if(lvBccFaultStatus[BCC_FS_FAULT3] & BCC_R_CC_OVR_FLT_MASK)
 	{
-		cli_printf("clearing CC overflow\n");
+		// check for NULL pointer
+		if(clearingCCOverflow != NULL)
+		{
+			// set it true
+			*clearingCCOverflow = true;
+		}
+		//cli_printf("clearing CC overflow\n");
+		
+		// remove the overflow bits and write the 
 
 		// reset the CC by writing the CC_OVT and CC_P_OVF, CC_N_OVF, SAMP_OVF bits
 		lvBccStatus = BCC_Reg_Update(&gBccDrvConfig, BCC_CID_DEV1, BCC_REG_ADC2_OFFSET_COMP_ADDR, 
@@ -2653,7 +2978,7 @@ int batManagement_calcRemaningCharge(void)
 		if(lvBccStatus != BCC_STATUS_SUCCESS)
 		{
 			// return error 
-			cli_printf("batManagement_saveFullChargeCap ERROR: clearing CC went wrong! %.3f\n", remainingCap);
+			cli_printfError("batManagement_saveFullChargeCap ERROR: clearing CC went wrong! %.3f\n", remainingCap);
 	       	return lvRetValue;
 		}
 
@@ -2672,10 +2997,19 @@ int batManagement_calcRemaningCharge(void)
 			if(lvBccStatus != BCC_STATUS_SUCCESS)
 			{
 				// return error 
-				cli_printf("batManagement_saveFullChargeCap ERROR: clearing fault went wrong! %.3f\n", remainingCap);
+				cli_printfError("batManagement_saveFullChargeCap ERROR: clearing fault went wrong! %.3f\n", remainingCap);
 		       	return lvRetValue;
 			}
 		}		
+	}
+	else
+	{
+		// check for NULL pointer
+		if(clearingCCOverflow != NULL)
+		{
+			// set it to false
+			*clearingCCOverflow = false;
+		}
 	}
 
  	// return 
@@ -2683,22 +3017,67 @@ int batManagement_calcRemaningCharge(void)
  	return lvRetValue;
 }
 
+/*
+ * @brief   This function can be used to calibrate the state of charge (SoC)
+ * @note    A predefined table and the lowest cell voltage will be used for this
+ * @note    can be called from mulitple threads
+ * @warning The battery (voltage) needs to be relaxed before this is used!
+ *
+ * @param   none
+ *
+ * @return  0 if succesfull, otherwise it will indicate the error
+ * 			Could return -1 when the current > sleepcurrent.
+ */
+int batManagement_calibrateStateOfCharge(void)
+{
+	// do the calibration with the current check on
+	return bcc_monitoring_calibrateSoC(true);
+}
+
 /*!
- * @brief 	This function is used to set the OCV interrupt timer. 
- * 			This function will be used to calculate the next OCV time, and set the timer.
- * 			If the functions isn't called with false, the time of the timer will increase with 50%
- * 			until the T_OCV_CYCLIC1 time is reached. 
- * 			To stop the timer and to reset the timer value, this should be called with false.
+ * @brief 	This function is used to output the cell voltages
  * 			
- * @param 	on true to calculate and set the next OCV timer, false to stop and reset the timer. 
+ * @param 	none
  *
  * @return 	If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error. 
  */
-int batManagement_setOCVTimer(bool on)
+int batManagement_outputCellVoltages(void)
 {
-	int lvRetValue = 0;
+	int i, lvRetValue = 0;
+	uint8_t nCells;
+	float cellVoltage; 
 
-	// TODO make this
+	// get the number of cells
+	if(data_getParameter(N_CELLS, &nCells, NULL) == NULL)
+    {
+       cli_printfError("main ERROR: getting n-cells went wrong! \n");
+       nCells = N_CELLS_DEFAULT;
+       lvRetValue = -1;
+    } 
+
+    // limit the value 
+    nCells &= UINT8_MAX;
+
+    // lock the printfmutex
+	cli_printLock(true);
+
+	// loop throught the amount of cells
+	for(i = 0; i < nCells; i++)
+	{
+		// get the cell voltage
+		if(data_getParameter((parameterKind_t)(V_CELL1+i), &cellVoltage, NULL) == NULL)
+	    {
+	       cli_printfError("main ERROR: getting cell%d voltage went wrong!\n", i+1);
+	       cellVoltage = 0.0;
+	       lvRetValue |= lvRetValue - 2;
+	    } 
+
+		// output the cell voltage
+		cli_printfTryLock("Cell%d voltage: %.3fV\n", i+1, cellVoltage);
+	}
+
+	// unlock the printfmutex
+	cli_printLock(false);
 
 	// return
 	return lvRetValue;
@@ -2752,7 +3131,7 @@ static int batManagement_MeasTaskFunc(int argc, char *argv[])
 			// set the LED to red blinking
 			//g_changeLedColorCallbackBatFuntionfp(RED, true);
 
-			cli_printf("batManagement ERROR: failed to update measurements! error: %d\n", bcc_status);
+			cli_printfError("batManagement ERROR: failed to update measurements! error: %d\n", bcc_status);
 		}
 
 		// if it did all the measurements
@@ -2776,7 +3155,7 @@ static int batManagement_MeasTaskFunc(int argc, char *argv[])
 		}
 
 		// sleep for little time
-		usleep(1); 
+		usleep(1);
 	}
 
 	// for compiler
@@ -2827,7 +3206,7 @@ static int batManagement_OtherCalcTaskFunc(int argc, char *argv[])
 		// check for errors
 		if(bcc_status != BCC_STATUS_SUCCESS)
 		{
-			cli_printf("batManagement ERROR: failed to update measurements! error: %d\n", bcc_status);
+			cli_printfError("batManagement ERROR: failed to update measurements! error: %d\n", bcc_status);
 		}
 
 	    // make the new gTargetTime time
@@ -2837,7 +3216,7 @@ static int batManagement_OtherCalcTaskFunc(int argc, char *argv[])
 		// get the new time interval
 		if(clock_gettime(CLOCK_REALTIME, &waitTime) == -1)
 		{
-			cli_printf("batManagement ERROR: failed to get waitTime time!\n");
+			cli_printfError("batManagement ERROR: failed to get waitTime time!\n");
 		}
 		
 		// make the waiting time base on the current time
@@ -2866,7 +3245,7 @@ static int batManagement_OtherCalcTaskFunc(int argc, char *argv[])
 			// get the new time interval
 			if(clock_gettime(CLOCK_REALTIME, &waitTime) == -1)
 			{
-				cli_printf("batManagement ERROR: failed to get waitTime time2!\n");
+				cli_printfError("batManagement ERROR: failed to get waitTime time2!\n");
 			}
 
 			//cli_printf("new cur: %d s %d ms\n", waitTime.tv_sec, waitTime.tv_nsec/1000000);
@@ -2926,7 +3305,7 @@ static int batManagement_OtherCalcTaskFunc(int argc, char *argv[])
 	    ret = nanosleep(&waitTime, &waitTime);
 	    if(ret)
 	    {
-	    	cli_printf("batManagement ERROR: meas nanosleep went wrong! error: %d time: %ds %dus\n", 
+	    	cli_printfError("batManagement ERROR: meas nanosleep went wrong! error: %d time: %ds %dus\n", 
 	    		errno, waitTime.tv_sec, waitTime.tv_nsec/1000);
 	    }
 	}
@@ -2949,10 +3328,11 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 	uint8_t balancingCells = 0;	
 	int error;
 	bcc_status_t lvBccStatus;
+	bool balancingDone = false;
+	uint8_t cellBalanceTimes[6] = {0, 0, 0, 0, 0, 0};
 	static bool driverOn = true;
 	static bool goToStorageVoltage = false;
 
-	// loop 
 	while(1)
 	{
 		// wait for the semaphore to be increased after the measuremetns are done 
@@ -2971,7 +3351,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 		    }
 		    else if (error)
 		    {
-		        cli_printf("batManagement_SelfDischargeTaskFunc ERROR: \nsem_trywait(&gDoSdChargeSem) error: %d\n", error);
+		        cli_printfError("batManagement_SelfDischargeTaskFunc ERROR: \nsem_trywait(&gDoSdChargeSem) error: %d\n", error);
 		        //cli_printf("EAGAIN = %d, EDEADLK = %d, EINTR = %d, EINVAL = &d\n", EAGAIN, EDEADLK, EINTR, EINVAL);
 		        //return error;
 		    }
@@ -2989,36 +3369,35 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 				// get the number of cells
 			    if(data_getParameter(N_CELLS, &nCells, NULL) == NULL)
 			    {
-			       cli_printf("batManagement_selfDischarge ERROR: getting cell count went wrong!\n");
-			       nCells = N_CELLS_DEFAULT;			      
+			       cli_printfError("batManagement_selfDischarge ERROR: getting cell count went wrong!\n");
+			       nCells = N_CELLS_DEFAULT;
 			    } 
 
 			    // check for errors
 			    if(nCells < 3 || 6 < nCells)
 			    {
-			    	cli_printf("batManagement_selfDischarge ERROR: getting cell count went wrong!\n");
+			    	cli_printfError("batManagement_selfDischarge ERROR: getting cell count went wrong!\n");
 			    	nCells = N_CELLS_DEFAULT;
-			    	//return lvRetValue;
 			    }
 
 			    // get the storage voltage
 			    if(data_getParameter(V_STORAGE, &dischargeVoltage, NULL) == NULL)
 			    {
-			       cli_printf("batManagement_selfDischarge ERROR: getting storage voltage went wrong!\n");
-			       dischargeVoltage = V_STORAGE_DEFAULT;			      
+			       cli_printfError("batManagement_selfDischarge ERROR: getting storage voltage went wrong!\n");
+			       dischargeVoltage = V_STORAGE_DEFAULT;
 			    } 
 
 			    // get the cell margin in mv
 				if(data_getParameter(V_CELL_MARGIN, &cellMarginMv, NULL) == NULL)
 			    {
-			       cli_printf("batManagement_selfDischarge ERROR: getting cell margin went wrong!\n");
-			       cellMarginMv = V_CELL_MARGIN_DEFAULT;			      
+			       cli_printfError("batManagement_selfDischarge ERROR: getting cell margin went wrong!\n");
+			       cellMarginMv = V_CELL_MARGIN_DEFAULT;
 			    } 
 
 			    // get the OCV slope
 			    if(data_getParameter(OCV_SLOPE, &ocvSlope, NULL) == NULL)
 			    {
-			       cli_printf("batManagement_selfDischarge ERROR: getting storage voltage went wrong!\n");			      
+			       cli_printfError("batManagement_selfDischarge ERROR: getting storage voltage went wrong!\n");
 			       ocvSlope = OCV_SLOPE_DEFAULT;
 			    } 
 
@@ -3032,7 +3411,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 				}
 				else
 				{
-					cli_printf("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
+					cli_printfError("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
 				}	
 
 				// reset the variable
@@ -3057,21 +3436,43 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 			    	 // get the storage voltage
 				    if(data_getParameter((parameterKind_t)(V_CELL1+i), &cellVoltage, NULL) == NULL)
 				    {
-				       cli_printf("batManagement_selfDischarge ERROR: getting cell%d voltage went wrong!\n", i);
-				       cellVoltage = 3.5;				      
+				       cli_printfError("batManagement_selfDischarge ERROR: getting cell%d voltage went wrong!\n", i);
+				       cellVoltage = 3.5;
 				    } 
 
 				    // output equation to the user
 				    cli_printf("Discharge when cell%d voltage: %.3f > %.3f\n", i+1, cellVoltage, (dischargeVoltage + ((float)cellMarginMv/1000)));
+
+				    // reset the amout of balance times
+				    cellBalanceTimes[i] = 0;
 
 				    // check if the CB driver should be on for this cell
 				    if(cellVoltage > (dischargeVoltage + ((float)cellMarginMv/1000)))
 				    {
 				    	// TODO use this formula? and check it?
 				    	// calculate the CB timer
-				    	//balanceMin = ((cellVoltage – dischargeVoltage)*RBAL)/(cellVoltage*ocvSlope);
-				    	balanceMin = 0xFF;
+				    	balanceMin = ((cellVoltage - dischargeVoltage)*RBAL)/(cellVoltage*ocvSlope/1000);
+				    	
+				    	cli_printf("Estimated cell%d balance minutes: %dmin\n", i+1, balanceMin);
+				    	//balanceMin = 0xFF;
 
+				    	// check if it is larger than the max
+				    	while(balanceMin > 511)
+				    	{
+				    		// decrease balanceMin with 511 
+				    		balanceMin -= 511;
+
+				    		// increase the amount of times for this cell
+				    		cellBalanceTimes[i]++;
+				    	}
+
+				    	// check if divided
+				    	// if(cellBalanceTimes[i])
+				    	// {
+				    	// 	cli_printf("cell%d first balance minutes: %dmin\n", i+1, balanceMin);
+				    	// 	cli_printf("after this time, %d times 511 balance minutes will be done\n", cellBalanceTimes[i]);
+				    	// }
+				    	
 				    	//cli_printf("setting CB %d on SD\n", index+1);
 
 				    	// write the cell register
@@ -3080,7 +3481,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 				    	// check for errors
 				    	if(lvBccStatus != BCC_STATUS_SUCCESS)
 				    	{
-				    		cli_printf("batManagement_selfDischarge ERROR: couldnt turn on cell%d balance: %d\n", i, lvRetValue);
+				    		cli_printfError("batManagement_selfDischarge ERROR: couldnt turn on cell%d balance: %d\n", i, lvRetValue);
 				    	}
 
 				    	// increase the balancing variable 
@@ -3089,14 +3490,12 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 				    else
 				    {
 				    	//cli_printf("setting CB %d off SD\n", index+1);
-
 				    	// write the cell register
 				    	lvBccStatus = BCC_CB_SetIndividual(&gBccDrvConfig, BCC_CID_DEV1, index, false, 0xFF);
-
 				    	// check for errors
 				    	if(lvBccStatus != BCC_STATUS_SUCCESS)
 				    	{
-				    		cli_printf("batManagement_selfDischarge ERROR: couldnt turn on cell%d balance: %d\n", i, lvRetValue);
+				    		cli_printfError("batManagement_selfDischarge ERROR: couldnt turn on cell%d balance: %d\n", i, lvRetValue);
 				    	}
 
 				    	// clear the bit in the balancing variable 
@@ -3132,7 +3531,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 					}
 					else
 					{
-						cli_printf("batManagement_selfDischarge ERROR: couldn't turn on CB driver!\n");
+						cli_printfError("batManagement_selfDischarge ERROR: couldn't turn on CB driver!\n");
 					}			
 
 			    	// set the global variable 
@@ -3142,7 +3541,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 			    	// set themn
 			    	if(batManagement_setNGetActiveBalancingCells(true, balancingCells) == UINT8_MAX)
 			    	{
-			    		cli_printf("batManagement_selfDischarge ERROR: can't set the activeBalancingCells with %d!\n", balancingCells);
+			    		cli_printfError("batManagement_selfDischarge ERROR: can't set the activeBalancingCells with %d!\n", balancingCells);
 			    	}
 			    }
 
@@ -3164,7 +3563,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 					}
 					else
 					{
-						cli_printf("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
+						cli_printfError("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
 					}		
 
 					// loop through them
@@ -3181,14 +3580,14 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 							lvRetValue = -1;
 
 							// output to the user
-							cli_printf("batManagement_setBalancing ERROR: couldn't turn off driver for %d! %d\n", i+1, lvBccStatus);
+							cli_printfError("batManagement_setBalancing ERROR: couldn't turn off driver for %d! %d\n", i+1, lvBccStatus);
 						}	
 					}	
 
 					// set the global variable 
 				    if(batManagement_setNGetActiveBalancingCells(true, 0) == UINT8_MAX)
 			    	{
-			    		cli_printf("batManagement_selfDischarge ERROR: can't set the activeBalancingCells with %d!\n", 0);
+			    		cli_printfError("batManagement_selfDischarge ERROR: can't set the activeBalancingCells with %d!\n", 0);
 			    	}
 			    }
 			}
@@ -3207,7 +3606,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 		    }
 		    else if (error)
 		    {
-		        cli_printf("batManagement_SelfDischargeTaskFunc ERROR: \nsem_trywait(&gDoCellBalanceSem) error: %d\n", error);
+		        cli_printfError("batManagement_SelfDischargeTaskFunc ERROR: \nsem_trywait(&gDoCellBalanceSem) error: %d\n", error);
 		    }
 	    }
 	   	else
@@ -3222,21 +3621,21 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 	    		// get the number of cells
 			    if(data_getParameter(N_CELLS, &nCells, NULL) == NULL)
 			    {
-			       cli_printf("batManagement_selfDischarge ERROR: getting cell count went wrong!\n");
+			       cli_printfError("batManagement_selfDischarge ERROR: getting cell count went wrong!\n");
 			       nCells = N_CELLS_DEFAULT;
 			    } 
 
 			    // get the cell margin in mv
 				if(data_getParameter(V_CELL_MARGIN, &cellMarginMv, NULL) == NULL)
 			    {
-			       cli_printf("batManagement_selfDischarge ERROR: getting cell margin went wrong!\n");
-			       cellMarginMv = V_CELL_MARGIN_DEFAULT;			      
+			       cli_printfError("batManagement_selfDischarge ERROR: getting cell margin went wrong!\n");
+			       cellMarginMv = V_CELL_MARGIN_DEFAULT;
 			    } 
 
 			    // get the OCV slope
 			    if(data_getParameter(OCV_SLOPE, &ocvSlope, NULL) == NULL)
 			    {
-			       cli_printf("batManagement_selfDischarge ERROR: getting storage voltage went wrong!\n");			      
+			       cli_printfError("batManagement_selfDischarge ERROR: getting storage voltage went wrong!\n");
 			       ocvSlope = OCV_SLOPE_DEFAULT;
 			    } 
 
@@ -3250,7 +3649,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 				}
 				else
 				{
-					cli_printf("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
+					cli_printfError("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
 				}		
 
 				// reset the variable
@@ -3274,20 +3673,42 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 			    	// get the cell voltage 
 				    if(data_getParameter((parameterKind_t)(V_CELL1+i), &cellVoltage, NULL) == NULL)
 				    {
-				       cli_printf("batManagement_selfDischarge ERROR: getting cell%d voltage went wrong!\n", i);
-				       cellVoltage = V_CELL1_DEFAULT;				      
+				       cli_printfError("batManagement_selfDischarge ERROR: getting cell%d voltage went wrong!\n", i+1);
+				       cellVoltage = V_CELL1_DEFAULT;
 				    } 
 
 				    // output equation to the user
-				    cli_printf("Balance when cell%d voltage: %.3f > %.3f\n", i+1, cellVoltage, (gLowestCellVoltage+((float)cellMarginMv/1000)));
+				    cli_printf("Balancing will be enabled for cell%d if %.3f > %.3f\n", i+1, cellVoltage, (gLowestCellVoltage+((float)cellMarginMv/1000)));
+
+				    // reset the amout of balance times
+				    cellBalanceTimes[i] = 0;
 
 				    // check if the CB driver should be on for this cell
 				    if(cellVoltage > (gLowestCellVoltage+((float)cellMarginMv/1000)))
 				    {
 				    	// TODO use this formula? and check it?
 				    	// calculate the CB timer
-				    	//balanceMin = ((cellVoltage – gLowestCellVoltage)*RBAL)/(cellVoltage*ocvSlope);
-				    	balanceMin = 0xFF;
+				    	balanceMin = ((cellVoltage - gLowestCellVoltage)*RBAL)/(cellVoltage*ocvSlope/1000);
+				    	//balanceMin = 0xFF;
+
+				    	cli_printf("Estimated cell%d balance minutes: %dmin\n", i+1, balanceMin);
+
+				    	// check if it is larger than the max
+				    	while(balanceMin > 511)
+				    	{
+				    		// decrease balanceMin with 511 
+				    		balanceMin -= 511;
+
+				    		// increase the amount of times for this cell
+				    		cellBalanceTimes[i]++;
+				    	}
+
+				    	// check if divided
+				    	// if(cellBalanceTimes[i])
+				    	// {
+				    	// 	cli_printf("cell%d first balance minutes: %dmin\n", i+1, balanceMin);
+				    	// 	cli_printf("after this time, %d times 511 balance minutes will be done\n", cellBalanceTimes[i]);
+				    	// }
 
 				    	//cli_printf("setting CB %d on CBon\n", index +1);
 				    	// write the cell register
@@ -3296,7 +3717,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 				    	// check for errors
 				    	if(lvBccStatus != BCC_STATUS_SUCCESS)
 				    	{
-				    		cli_printf("batManagement_selfDischarge ERROR: couldnt turn on cell%d balance: %d\n", i, lvRetValue);
+				    		cli_printfError("batManagement_selfDischarge ERROR: couldnt turn on cell%d balance: %d\n", i, lvRetValue);
 				    	}
 
 				    	// increase the balancing variable 
@@ -3311,7 +3732,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 				    	// check for errors
 				    	if(lvBccStatus != BCC_STATUS_SUCCESS)
 				    	{
-				    		cli_printf("batManagement_selfDischarge ERROR: couldnt turn off cell%d balance: %d\n", i, lvRetValue);
+				    		cli_printfError("batManagement_selfDischarge ERROR: couldnt turn off cell%d balance: %d\n", i, lvRetValue);
 				    	}
 
 				    	// clear the bit in the balancing variable 
@@ -3319,23 +3740,39 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 				    }
 			    }
 
-			    // output to the user
-			    // cli_printf("setting cell balance on for "BYTE_TO_6BINARY_PATTERN" = %d\n", 
-			    cli_printf("setting cell balance on for cell: ");
-
-			    // check which cells have CB on
-			    for (i = 0; i < 6; i++)
+			    // check if cells are balanced
+			    if(balancingCells)
 			    {
-			    	// check if on
-			    	if(balancingCells & (1 << i))
-			    	{
-			    		// print the cell number
-			    		cli_printf("%d, ", i+1);
-			    	}
-			    }
+			    	// lock the mutex to print this together
+			    	cli_printLock(true);
 
-			    // remove the ","
-			    cli_printf("\b\b \n");
+			    	// output to the user
+				    // cli_printf("setting cell balance on for "BYTE_TO_6BINARY_PATTERN" = %d\n", 
+				    cli_printfTryLock("Setting cell balance on for cell: ");
+
+				    // check which cells have CB on
+				    for (i = 0; i < 6; i++)
+				    {
+				    	// check if on
+				    	if(balancingCells & (1 << i))
+				    	{
+				    		// print the cell number
+				    		cli_printfTryLock("%d, ", i+1);
+				    	}
+				    }
+
+		        	// remove the ","
+	    	    	cli_printfTryLock("\b\b \n");
+
+	    	    	// unlock the mutex to print this together
+			    	cli_printLock(false);
+			    }
+			    // if no cells are balanced
+			    else
+			    {
+			    	// output that no cells need to be balanced
+			    	cli_printf("No cells need to be balanced\n");
+			    }  
 
 			    //cli_printf("balancingCells = %d\n", balancingCells);
 
@@ -3354,7 +3791,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 					}
 					else
 					{
-						cli_printf("batManagement_selfDischarge ERROR: couldn't turn on CB driver!\n");
+						cli_printfError("batManagement_selfDischarge ERROR: couldn't turn on CB driver!\n");
 					}			
 
 			    	// set the global variable 
@@ -3362,7 +3799,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 
 			    	if(batManagement_setNGetActiveBalancingCells(true, balancingCells) == UINT8_MAX)
 			    	{
-			    		cli_printf("batManagement_selfDischarge ERROR: can't set the activeBalancingCells with %d!\n", balancingCells);
+			    		cli_printfError("batManagement_selfDischarge ERROR: can't set the activeBalancingCells with %d!\n", balancingCells);
 			    	}
 			    }
 
@@ -3386,7 +3823,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 					}
 					else
 					{
-						cli_printf("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
+						cli_printfError("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
 					}	
 
 					// loop through them
@@ -3404,15 +3841,14 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 							lvRetValue = -1;
 
 							// output to the user
-							cli_printf("batManagement_setBalancing ERROR: couldn't turn off driver for %d! %d\n", i+1, lvBccStatus);
-							//return lvRetValue;
+							cli_printfError("batManagement_setBalancing ERROR: couldn't turn off driver for %d! %d\n", i+1, lvBccStatus);
 						}	
 					}	
 
 					// set the active balance variable 
 				    if(batManagement_setNGetActiveBalancingCells(true, 0) == UINT8_MAX)
 			    	{
-			    		cli_printf("batManagement_selfDischarge ERROR: can't set the activeBalancingCells with %d!\n", 0);
+			    		cli_printfError("batManagement_selfDischarge ERROR: can't set the activeBalancingCells with %d!\n", 0);
 			    	}
 	    		}
 	    	}
@@ -3427,8 +3863,8 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 				// get the storage voltage
 			    if(data_getParameter(V_STORAGE, &dischargeVoltage, NULL) == NULL)
 			    {
-			       cli_printf("batManagement_selfDischarge ERROR: getting storage voltage went wrong!\n");
-			       dischargeVoltage = V_STORAGE_DEFAULT;			      
+			       cli_printfError("batManagement_selfDischarge ERROR: getting storage voltage went wrong!\n");
+			       dischargeVoltage = V_STORAGE_DEFAULT;
 			    } 
 			}
 			else
@@ -3439,57 +3875,127 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 			}
 
 			// go through each ell
-			for(i = 0; i< 6; i++)
+			for(i = 0; i < 6; i++)
 			{
+				// check if this cell has cell balancing active
 				if(batManagement_setNGetActiveBalancingCells(false, 0) & (1<<i))
 				{
+					// get the number of cells
+				    if(data_getParameter(N_CELLS, &nCells, NULL) == NULL)
+				    {
+				       cli_printfError("batManagement_selfDischarge ERROR: getting cell count went wrong!\n");
+				       nCells = N_CELLS_DEFAULT;
+				    } 
+
+			    	// set the bcc index
+			    	if(i >= 2)
+			        {
+			            // calculate the BCC pin index
+			            index = (6-nCells) + i;
+			        }
+			        else
+			        {
+			            // it is the first 2 cells
+			            index = i;
+			        }
+
+					/*
+
 					// get the cell voltage
 					if(data_getParameter((parameterKind_t)(V_CELL1+i), &cellVoltage, NULL) == NULL)
 				    {
-				       cli_printf("batManagement_selfDischarge ERROR: getting cell%d voltage went wrong!\n", i);
-				       cellVoltage = V_CELL1_DEFAULT;				      
+				       cli_printfError("batManagement_selfDischarge ERROR: getting cell%d voltage went wrong!\n", i);
+				       cellVoltage = V_CELL1_DEFAULT;
 				    } 
 
 				    // check if the cell voltage is not higher than the to discharge to voltage
 				    if(cellVoltage <= dischargeVoltage)
+
+				    */
+
+			        // check if the balance time has timed out
+				    if(bcc_monitoring_checkBalancingDone(&gBccDrvConfig, index, &balancingDone))
 				    {
+				    	cli_printfError("batManagement_selfDischarge ERROR: could not check if balancing is done\n");
+				    	cli_printf("Setting balancing to be done for cell%d\n", i+1);
+				    	balancingDone = true;
+				    }
 
-				    	// get the number of cells
-					    if(data_getParameter(N_CELLS, &nCells, NULL) == NULL)
-					    {
-					       cli_printf("batManagement_selfDischarge ERROR: getting cell count went wrong!\n");
-					       nCells = N_CELLS_DEFAULT;					      
-					    } 
+				    // check if balancing time is done
+				    if(balancingDone)
+				    {
+				    	// check if the balancing needs to be on for more minutes
+				    	if(cellBalanceTimes[i])
+				    	{
+				    		// turn on cell balancing for 511 minutes for that cell
+				    		lvBccStatus = BCC_CB_SetIndividual(&gBccDrvConfig, BCC_CID_DEV1, 
+				    			index, true, 511);
+				    	
+					    	// check for errors
+					    	if(lvBccStatus != BCC_STATUS_SUCCESS)
+					    	{
+					    		cli_printfError("batManagement_selfDischarge ERROR: couldnt turn on cell%d balance: %d\n", i, lvRetValue);
+					    	}
 
-				    	// set the bcc index
-				    	if(i >= 2)
-				        {
-				            // calculate the BCC pin index
-				            index = (6-nCells) + i;
-				        }
-				        else
-				        {
-				            // it is the first 2 cells
-				            index = i;
-				        }
+					    	// decrease the number of cell balance times
+					    	cellBalanceTimes[i]--;
+				    	}
+				    	else
+				    	{
+				    		// output to the user
+				    		cli_printf("Balancing done for cell%d\n", i+1);
+
+				    		// clear the bit in the variable
+					    	balancingCells = batManagement_setNGetActiveBalancingCells(false, 0) & ~(1<<i);
+
+					    	// set the new variable
+					    	if(batManagement_setNGetActiveBalancingCells(true, balancingCells) == UINT8_MAX)
+					    	{
+					    		cli_printfError("batManagement_selfDischarge ERROR: can't set the activeBalancingCells2 with %d!\n", balancingCells);
+					    	}
+				    	}
 
 				        //cli_printf("setting CB %d off check\n", index +1);
 
 				    	// turn off cell balancing
-				    	lvBccStatus = BCC_CB_SetIndividual(&gBccDrvConfig, BCC_CID_DEV1, index, false, 0xFF);
-				    	if(lvBccStatus != BCC_STATUS_SUCCESS)
-				    	{
-				    		cli_printf("batManagement_selfDischarge ERROR: could not set cell CB %d\n", lvBccStatus);
-				    	}
+				    	// lvBccStatus = BCC_CB_SetIndividual(&gBccDrvConfig, BCC_CID_DEV1, index, false, 0xFF);
+				    	// if(lvBccStatus != BCC_STATUS_SUCCESS)
+				    	// {
+				    	// 	cli_printfError("batManagement_selfDischarge ERROR: could not set cell CB %d\n", lvBccStatus);
+				    	// }				    	
+				    }
+				    // if the balance timer is not done
+				    else
+				    {
+				    	// get the cell voltage
+						if(data_getParameter((parameterKind_t)(V_CELL1+i), &cellVoltage, NULL) == NULL)
+					    {
+					       cli_printfError("batManagement_selfDischarge ERROR: getting cell%d voltage went wrong!\n", i);
+					       cellVoltage = V_CELL1_DEFAULT;
+					    } 
 
-				    	// clear the bit in the variable
-				    	balancingCells = batManagement_setNGetActiveBalancingCells(false, 0) & ~(1<<i);
+					    // check if the cell voltage is not higher than the to discharge to voltage
+					    if(cellVoltage <= dischargeVoltage)
+					    {
+					    	// output to the user
+				    		cli_printf("Balancing done for cell%d due to voltage reached\n", i+1);
 
-				    	// set the new variable
-				    	if(batManagement_setNGetActiveBalancingCells(true, balancingCells) == UINT8_MAX)
-				    	{
-				    		cli_printf("batManagement_selfDischarge ERROR: can't set the activeBalancingCells2 with %d!\n", balancingCells);
-				    	}
+				    		// clear the bit in the variable
+					    	balancingCells = batManagement_setNGetActiveBalancingCells(false, 0) & ~(1<<i);
+
+					    	// set the new variable
+					    	if(batManagement_setNGetActiveBalancingCells(true, balancingCells) == UINT8_MAX)
+					    	{
+					    		cli_printfError("batManagement_selfDischarge ERROR: can't set the activeBalancingCells2 with %d!\n", balancingCells);
+					    	}
+
+					    	// turn off cell balancing for that cell
+					    	lvBccStatus = BCC_CB_SetIndividual(&gBccDrvConfig, BCC_CID_DEV1, index, false, 0xFF);
+					    	if(lvBccStatus != BCC_STATUS_SUCCESS)
+					    	{
+					    		cli_printfError("batManagement_selfDischarge ERROR: could not set cell CB %d\n", lvBccStatus);
+					    	}
+					    }
 				    }
 				}
 			}
@@ -3506,7 +4012,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 				}
 				else
 				{
-					cli_printf("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
+					cli_printfError("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
 				}			
 			}
 		}
@@ -3524,7 +4030,7 @@ static int batManagement_SelfDischargeTaskFunc(int argc, char *argv[])
 				}
 				else
 				{
-					cli_printf("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
+					cli_printfError("batManagement_selfDischarge ERROR: couldn't turn off CB driver!\n");
 				}				
 			}
 			
@@ -3576,7 +4082,7 @@ static void batManagement_calcSendInterval(uint16_t measMs)
 		// so the duration of the measurements is not neglected 
 		if(clock_gettime(CLOCK_REALTIME, &gTargetTime) == -1)
 		{
-			cli_printf("batManagement ERROR: failed to get gTargetTime time!\n");
+			cli_printfError("batManagement ERROR: failed to get gTargetTime time!\n");
 		}
 
 		// make the cycletime for ms
@@ -3655,7 +4161,7 @@ static bcc_status_t BatManagement_initializeBCC(void)
 	// check for error
     if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printf("BatManagement_initializeBCC ERROR: failed to verify com: %d\n", lvRetValue);
+        cli_printfError("BatManagement_initializeBCC ERROR: failed to verify com: %d\n", lvRetValue);
         return lvRetValue;
     }
 
@@ -3665,13 +4171,13 @@ static bcc_status_t BatManagement_initializeBCC(void)
      // check for error
     if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printf("BatManagement_initializeBCC ERROR: failed to initalize BCC: %d\n", lvRetValue);
+        cli_printfError("BatManagement_initializeBCC ERROR: failed to initalize BCC: %d\n", lvRetValue);
         return lvRetValue;
     }
-    else
-    {
-    	//cli_printf("BCC init succeeded!\n");
-    }
+    // else
+    // {
+    // 	//cli_printf("BCC init succeeded!\n");
+    // }
 
     // get the battery temperature enable variable 
 	dataReturn = (int32_t*)data_getParameter(SENSOR_ENABLE, &nCells, NULL);
@@ -3682,7 +4188,7 @@ static bcc_status_t BatManagement_initializeBCC(void)
     	// set the default value
     	nCells = SENSOR_ENABLE_DEFAULT;
 
-    	cli_printf("BatManagement_initializeBCC ERROR: couldn't get SENSOR_ENABLE! setting default\n");
+    	cli_printfError("BatManagement_initializeBCC ERROR: couldn't get SENSOR_ENABLE! setting default\n");
     }
     // set the config bits
     configBits = 1 << ANX_C_BATT;
@@ -3697,7 +4203,7 @@ static bcc_status_t BatManagement_initializeBCC(void)
     // check for error
     if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printf("BatManagement_initializeBCC ERROR: failed to set batt temperature measurement: %d\n", lvRetValue);
+        cli_printfError("BatManagement_initializeBCC ERROR: failed to set batt temperature measurement: %d\n", lvRetValue);
         return lvRetValue;
     }
 
@@ -3705,7 +4211,7 @@ static bcc_status_t BatManagement_initializeBCC(void)
     if(!nCells)
     {
     	// output to the user
-    	cli_printf("WARNING: battery temperature sensor is disabled!\n");
+    	cli_printfWarning("WARNING: battery temperature sensor is disabled!\n");
     	cli_printf("If this needs to be enabled write: \"bms set sensor-enable 1\" in the terminal\n");
     }
 
@@ -3723,7 +4229,7 @@ static bcc_status_t BatManagement_initializeBCC(void)
     // check for error
     if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printf("BatManagement_initializeBCC ERROR: failed to set PCB temp BCC: %d\n", lvRetValue);
+        cli_printfError("BatManagement_initializeBCC ERROR: failed to set PCB temp BCC: %d\n", lvRetValue);
         return lvRetValue;
     }
 
@@ -3738,7 +4244,7 @@ static bcc_status_t BatManagement_initializeBCC(void)
 	//cli_printf("PCBOV: %d\n", (PCBOV & 0xFF));
 
     // make it millivolt and div by 11
-    PCBUV = 0;
+    PCBUV = 0;//((PCBUV & 0xFF) * 1000)/(float)VOLTDIV_BATT_OUT;
     PCBOV = ((PCBOV & 0xFF) * 1000)/(float)VOLTDIV_BATT_OUT;
 
     //cli_printf("PCBUV: %d\n", PCBUV);
@@ -3751,7 +4257,7 @@ static bcc_status_t BatManagement_initializeBCC(void)
     // check for error
     if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printf("BatManagement_initializeBCC ERROR: failed to set PCB temp BCC: %d\n", lvRetValue);
+        cli_printfError("BatManagement_initializeBCC ERROR: failed to set PCB temp BCC: %d\n", lvRetValue);
         return lvRetValue;
     }
 
@@ -3764,7 +4270,7 @@ static bcc_status_t BatManagement_initializeBCC(void)
     // check for error
     if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printf("BatManagement_initializeBCC ERROR: failed to set BAT temp BCC: %d\n", lvRetValue);
+        cli_printfError("BatManagement_initializeBCC ERROR: failed to set BAT temp BCC: %d\n", lvRetValue);
         return lvRetValue;
     }
 
@@ -3779,9 +4285,11 @@ static bcc_status_t BatManagement_initializeBCC(void)
     // check for error
     if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printf("BatManagement_initializeBCC ERROR: failed to set cell TH BCC: %d\n", lvRetValue);
+        cli_printfError("BatManagement_initializeBCC ERROR: failed to set cell TH BCC: %d\n", lvRetValue);
         return lvRetValue;
     }
+
+    // TODO set AN4 threshold value (bat output threshold) (PCB threshold?)
 
     // get the measurement cycle for in the sleep mode
     data_getParameter(T_CYCLIC, &measCycle, NULL);
@@ -3792,7 +4300,7 @@ static bcc_status_t BatManagement_initializeBCC(void)
     // check for errors
     if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printf("BatManagement_initializeBCC ERROR: failed to set cell odd or even BCC: %d\n", lvRetValue);
+        cli_printfError("BatManagement_initializeBCC ERROR: failed to set cell odd or even BCC: %d\n", lvRetValue);
         return lvRetValue;
     }
 
@@ -3805,7 +4313,7 @@ static bcc_status_t BatManagement_initializeBCC(void)
 	// check for errors
     if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printf("BatManagement_initializeBCC ERROR: failed to set cell odd or even BCC: %d\n", lvRetValue);
+        cli_printfError("BatManagement_initializeBCC ERROR: failed to set cell odd or even BCC: %d\n", lvRetValue);
         return lvRetValue;
     }
 
@@ -3829,7 +4337,7 @@ static bcc_status_t batManagement_setBatTempTHState(bool chargingMode)
 	// check which threshold to set
 	if(!chargingMode)
 	{
-		 // get the battery temperatures thresholds
+		// get the battery temperatures thresholds
 	    data_getParameter(C_CELL_UT, &lowerTH, NULL);
 	    data_getParameter(C_CELL_OT, &upperTH, NULL);
 	}
@@ -3871,7 +4379,7 @@ static bool batManagement_setNGetChargingState(bool set, bool setValue)
 	// check if mutex is not initialized
 	if(!chargingStateMutexInitialized)
 	{
-		cli_printf("batManagement_setNGetChargingState ERROR: mutex not initialzed!\n");
+		cli_printfError("batManagement_setNGetChargingState ERROR: mutex not initialzed!\n");
 		while(1);
 	}
 
@@ -3903,7 +4411,7 @@ static bool batManagement_setNGetChargingState(bool set, bool setValue)
 		if(lvBccStatus != BCC_STATUS_SUCCESS)
 		{
 			// ouput to the user
-			cli_printf("batManagement_setNGetChargingState ERROR: couldn't set the right temp TH: %d\n", lvBccStatus);
+			cli_printfError("batManagement_setNGetChargingState ERROR: couldn't set the right temp TH: %d\n", lvBccStatus);
 		}
 	}
 

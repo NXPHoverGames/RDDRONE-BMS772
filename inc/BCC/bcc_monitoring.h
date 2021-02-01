@@ -214,6 +214,30 @@ bcc_status_t bcc_monitoring_checkNCells(bcc_drv_config_t* const drvConfig, bool 
 bcc_status_t bcc_monitoring_getOutputVoltage(bcc_drv_config_t* const drvConfig);
 
 /*
+ * @brief   This function is used to get the current
+ * 			it will read the current without reading the other measurements
+ * @note    A measurement should be done first
+ *
+ * @param   drvConfig the address the BCC driver configuration
+ * @param   openLoadDetected the address of the value that is 1 if there is an open load
+ *
+ * @return  bcc_status_t Error code
+ */
+bcc_status_t bcc_monitoring_getBattCurrent(bcc_drv_config_t* const drvConfig, uint32_t rShunt);
+
+/*
+ * @brief   This function is used to get the value for the ISense pins open load detected
+ * @note    This function will not contain much imformation/comments 
+ *          for more information see the MC3372B_SafetyManual on docstore.nxp.com
+ *
+ * @param   drvConfig the address the BCC driver configuration
+ * @param   openLoadDetected the address of the value that is 1 if there is an open load
+ *
+ * @return  bcc_status_t Error code
+ */
+bcc_status_t bcc_monitoring_getIsenseOpenLoad(bcc_drv_config_t* const drvConfig, bool* openLoadDetected);
+
+/*
  * @brief 	This function increases the semaphore so the bcc_monitoring_updateMeasurements 
  * 			function will do the rest of the calculations
  * 			Developed by C. van Mierlo. \n
@@ -256,6 +280,31 @@ int bcc_monitoring_calcDCharge(bcc_drv_config_t* const drvConfig, uint16_t *samp
     float *avgCurrentAdr, float *deltaChargeAdr, bool resetCC);
 
 /*
+ * @brief   This function can be used to calibrate the state of charge (SoC)
+ * @note    A predefined table and the lowest cell voltage will be used for this
+ * @note    can be called from mulitple threads
+ * @warning The battery (voltage) needs to be relaxed before this is used!
+ *
+ * @param   currentCheck if true the current check will be done,
+ *          Keep this default on true, except for a power-up check
+ *
+ * @return  0 if succesfull, otherwise it will indicate the error
+ */
+int bcc_monitoring_calibrateSoC(bool currentCheck);
+
+/*
+ * @brief   This function is used to check if balancing is done
+ *
+ * @param   drvConfig the address the BCC driver configuration
+ * @param   bccIndex index of the BCC cell (not 2 or 3 with a 3 cell battery): cells: 1, 2, 3, ... -> 0, 1, .. 5 
+ * @param   done address of the variable to become true if balancing is done.
+ *
+ * @return  0 if succesfull, otherwise it will indicate the error
+ */
+int bcc_monitoring_checkBalancingDone(bcc_drv_config_t* const drvConfig, 
+	uint8_t bccIndex, bool *done);
+
+/*
  * @brief   This function is used to enable or disable the display of the measurements
  *
  * @param   showCommand which measurements to enable or disable
@@ -265,7 +314,8 @@ int bcc_monitoring_calcDCharge(bcc_drv_config_t* const drvConfig, uint16_t *samp
  */
 void bcc_monitoring_setShowMeas(showCommands_t showCommand, bool value);
 
-static const mvSoC_t cellmvVsSOCLookupTable[] =
+// this is the OCV/SoC table for a LiPo 
+static const mvSoC_t cellmvVsSOCLiPoLookupTable[60] =
 {
 	{ 4200, 100},
 	{ 4187, 99},
@@ -393,10 +443,46 @@ static const mvSoC_t cellmvVsSOCLookupTable[] =
 	//{ 3370, 1},
 	//{ 3352, 0},
 	//{ 3333, 0},
-	{ 3313, 0},
+	{ 3313, 0}
 	//{ 3300, 0},
 };
 
+// this is the OCV/SoC table for a LiFePO4  
+static const mvSoC_t cellmvVsSOCLiFePO4LookupTable[] =
+{
+	{3650, 100},			
+	{3610, 99}, 		
+	{3460, 95}, 		
+	{3320, 90}, 		
+	{3310, 80}, 		
+	{3300, 70}, 		
+	{3290, 60}, 		
+	{3280, 50}, 		
+	{3270, 40}, 		
+	{3250, 30}, 		
+	{3220, 20}, 		
+	{3200, 17}, 		
+	{3120, 14}, 		
+	{3000,  9}, 		
+	{2500,  0}	
+};
+
+// this array contains the pointers to the OCV/SoC tables 
+// use with BATTERY_TYPE variable
+// example: cellmvVsSOCLookupTableAll[batteryType][row].milliVolt 
+static const mvSoC_t *cellmvVsSOCLookupTableAll[] =
+{
+	&cellmvVsSOCLiPoLookupTable[0],
+	&cellmvVsSOCLiFePO4LookupTable[0]
+};
+
+// this array contains the size of the OCV/SoC tables 
+// use with BATTERY_TYPE variable
+static const uint8_t cellmvVsSOCLookupTableAllSize[] = 
+{
+	sizeof(cellmvVsSOCLiPoLookupTable)/sizeof(mvSoC_t),
+	sizeof(cellmvVsSOCLiFePO4LookupTable)/sizeof(mvSoC_t)
+};
 /*******************************************************************************
  * EOF
  ******************************************************************************/

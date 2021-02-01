@@ -1,4 +1,6 @@
-/* 
+/****************************************************************************
+ * nxp_bms/BMS_v1/inc/ledState.h
+ *
  * BSD 3-Clause License
  * 
  * Copyright 2020 NXP
@@ -101,7 +103,7 @@ typedef enum {
 /*!
  * @brief 	this function initialized the RGB LED and it will set the LED to green blinking
  * 			
- * @param 	None
+ * @param 	startColor the starting color from the LEDColor_t enum
  *
  * @return 	If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error:
  * @example if(ledState_initialize())
@@ -109,7 +111,7 @@ typedef enum {
  *				// do something with the error
  *			}
  */
-int ledState_initialize(void);
+int ledState_initialize(LEDColor_t startColor);
 
 
 /*!

@@ -48,6 +48,7 @@
 #include <termios.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include "data.h"
 #include "cli.h"
@@ -106,6 +107,7 @@
  ****************************************************************************/
 //typedef enum {HELP = 0, GET = 1, SET = 2, SHOW = 3, WRONG = 4}commands_t;
 
+typedef enum {RED, GREEN, YELLOW}printColor_t;
 /****************************************************************************
  * private data
  ****************************************************************************/
@@ -122,7 +124,6 @@ static const char *gChargeStatesArray[] =
 	//"INIT", "NORMAL", "CHARGE", "SLEEP", "OCV", "FAULT", "SELF_DISCHARGE", "DEEP_SLEEP"
 	FOR_EACH_CHARGE_STATE(GENERATE_STRING)
 };
-
 
 // the string array for the parameters
 static const char *gGetSetParameters[PARAMETER_ARRAY_SIZE] = {
@@ -162,81 +163,6 @@ const parameterKind_t nonWritableParameters[] =
 	NONE 
 };
 
-//! these are the datatypes for each parameter in the right sequence
-const char *parametersTypes[] = 
-{
-  "float",
-  "float",
-  "float",
-  "float",
-  "float",
-  "bool",
-  "float",
-  "float",
-  "float",
-  "float",
-  "float",
-  "uint8",
-  "uint8",
-  "uint8",
-  "uint8",
-  "int32",
-  "char*",
-  "float",
-  "float",
-  "float",
-  "float",
-  "float",
-  "float",
-  "float",
-  "float",
-  "float",
-  "uint16",
-  "uint16",
-  "uint8",
-  "uint16",
-  "uint16",
-  "uint8",
-  "uint8",
-  "float",
-  "float",
-  "float",
-  "float",
-  "float",
-  "float",
-  "float",
-  "uint16",
-  "uint8",
-  "uint8",
-  "uint8",
-  "uint16",
-  "uint16",
-  "float",
-  "float",
-  "uint8",
-  "int32",
-  "int32",
-  "float",
-  "float",
-  "float",
-  "float",
-  "uint8",
-  "bool",
-  "bool",
-  "uint8",
-  "uint16",
-  "uint8",
-  "int32",
-  "int32",
-  "uint8",
-  "uint8",
-  "uint16",
-  "uint8",
-  "uint16",
-  "uint8",
-  "uint8"
-};
-
 //states_t *gStateAdr;
 //pthread_mutex_t *gStateMutexAdr;
 bool gCliInitialized = false;
@@ -260,6 +186,8 @@ void printParameters(void);
 
 //! this prints all the parameters from FOR_EACH_PARAMETER with the value
 void printAllParameterValues(void);
+
+int cli_printfColor(printColor_t color, const char *fmt, va_list argp);
 
 /****************************************************************************
  * public Functions
@@ -291,10 +219,8 @@ int cli_initialize(getMainStateCallbackBatFuntion p_getMainStateCallbackBatFunti
 		gGetChargeStateCallbackBatFuntionfp = p_getChargeStateCallbackBatFuntion;
 		gUserCommandCallbackBatFuntionfp = p_userCommandCallbackBatFuntion;
 
-
 		// set that it is initialized
 		gCliInitialized = true;
-
 	}
 
 	// return
@@ -363,11 +289,12 @@ int cli_processCommands(int argc, char **argv)
 	float lvFloatVal;
 	char *lvPStringVal;
 	int32_t lvIntVal = 0;
+	uint64_t lvUint64Val = 0;
 
 	// check if initialized
 	if(!gCliInitialized)
 	{
-		cli_printf("CLI isn't initialized, please initialize cli\n");
+		cli_printfError("CLI ERROR: isn't initialized, please initialize cli\n");
 		return lvRetValue;
 	}
 
@@ -475,7 +402,8 @@ int cli_processCommands(int argc, char **argv)
  		// too little or too much commands
  		default:
  			// there is an error
-			cli_printf("Wrong input!\ttry \"bms help\"\n");
+			cli_printfError("Wrong input!\t");
+			cli_printf("try \"bms help\"\n");
 			return lvRetValue;
  		break;
  	}
@@ -486,10 +414,12 @@ int cli_processCommands(int argc, char **argv)
  		// in case of a wrong input (should've already be filtered out)
  		case CLI_WRONG: 
  			// there is an error
-			cli_printf("Wrong input!\ttry \"bms help\"\n");
+			cli_printfError("Wrong input!\t");
+			cli_printf("try \"bms help\"\n");
 			break;
 		// in case the user wants the help
 		case CLI_HELP:
+
 			// print the help
 			if(lvSendParameters)
 			{
@@ -593,31 +523,64 @@ int cli_processCommands(int argc, char **argv)
 					{
 						// if it is a floating point
 						case FLOATVAL:
+
 							// get the value
 							if(data_getParameter(lvParameter, &lvFloatVal, NULL) == NULL)
+							{
 								// something went wrong
-								cli_printf("Error CLI: data_getParameter\n");
+								cli_printfError("CLI ERROR: data_getParameter\n");
+							}
 							else
+							{
+								// print it
 								cli_printf("%.3f", lvFloatVal);
+							}
 						break;
 						// if it is a string
 						case STRINGVAL:
+
 							// get the value
 							lvPStringVal = data_getParameter(lvParameter, NULL, NULL);
 							if(lvPStringVal == NULL)
+							{
 								// something went wrong
-								cli_printf("Error CLI: data_getParameter\n");
+								cli_printfError("CLI ERROR: data_getParameter\n");
+							}
 							else
+							{
+								// print it
 								cli_printf("%s", lvPStringVal);
+							}
+						break;
+						case UINT64VAL:
+							// get the value
+							if(data_getParameter(lvParameter, &lvUint64Val, NULL) == NULL)
+							{	
+								// something went wrong
+								cli_printfError("CLI ERROR: data_getParameter\n");
+							}
+							else
+							{
+								// print it
+								cli_printf("%" PRIu64, lvUint64Val);
+								//cli_printf("%"PRIu64"", lvUint64Val);
+							}
+						
 						break;
 						// if it is a integer (max int32_t)
 						default:
+
 							// get the value
 							if(data_getParameter(lvParameter, &lvIntVal, NULL) == NULL)
+							{	
 								// something went wrong
-								cli_printf("Error CLI: data_getParameter\n");
+								cli_printfError("CLI ERROR: data_getParameter\n");
+							}
 							else
+							{
+								// print it
 								cli_printf("%d", lvIntVal);
+							}
 						break;
 					}
 
@@ -639,6 +602,7 @@ int cli_processCommands(int argc, char **argv)
 					// check if the charge state needs to be outputted as well
 					if(gGetMainStateCallbackBatFuntionfp() == CHARGE)
 					{
+						// print the state and the charge state
 						cli_printf("\"%s-%s\"\n", gStatesArray[(int)(gGetMainStateCallbackBatFuntionfp())], 
 							gChargeStatesArray[(int)(gGetChargeStateCallbackBatFuntionfp())]);
 					}
@@ -649,6 +613,7 @@ int cli_processCommands(int argc, char **argv)
 					}
 				}
 			}
+			// if it is a set command
 			else if (lvCommands == CLI_SET && lvFoundParam)
 			{
 				// set the parameter to the user
@@ -692,9 +657,10 @@ int cli_processCommands(int argc, char **argv)
 								if(lvFloatVal == 0 && (errno == ERANGE || errno == EINVAL))
 								{
 									// inform user and return
-									cli_printf("Error conversion!\n");
+									cli_printfError("CLI ERROR: conversion error!\n");
 									lvRetValue = -1;
-	
+									
+
 									return lvRetValue;
 								}
 
@@ -702,12 +668,21 @@ int cli_processCommands(int argc, char **argv)
 								if(data_setParameter(lvParameter, &lvFloatVal))
 								{
 									// if failed
-									cli_printf("Failed!\tMaybe outside minimum or maximum\n");
+									cli_printfError("Failed!\tMaybe outside minimum or maximum\n");
 								}
 								else
 								{ 	
-									// if succeeded
-									cli_printf("succeeded!\n");
+									// get the parameter
+									if(data_getParameter(lvParameter, &lvFloatVal, NULL) == NULL)
+									{
+										// something went wrong
+										cli_printfError("CLI ERROR: data_getParameter\n");
+									}
+									else
+									{
+										// if succeeded
+										cli_printfGreen("succeeded! %.3f is set!\n", lvFloatVal);
+									}
 								}
 
 							break;
@@ -730,15 +705,81 @@ int cli_processCommands(int argc, char **argv)
 								if(data_setParameter(lvParameter, lvValueString))
 								{	
 									//  if failed
-									cli_printf("Failed!\n");
+									cli_printfError("Failed!\n");
 								}
 								else
 								{	
-									// if succeeded
-									cli_printf("succeeded!\n");
+									// get the set value
+									lvPStringVal = data_getParameter(lvParameter, NULL, NULL);
+									
+									// check for errors
+									if(lvPStringVal == NULL)
+									{
+										// something went wrong
+										cli_printfError("CLI ERROR: data_getParameter\n");
+									}
+									else
+									{
+										// output to the user that it worked!
+										cli_printfGreen("succeeded! %s is set!\n", lvValueString);
+									}
 								}
 
 							break;
+							case UINT64VAL:
+								// get the value
+
+								// check for a negative number
+								if(lvValueString[0] == '-')
+								{
+									// if failed output to the user
+									cli_printfError("Failed!\tParameter is of type unsigned, no negatives allowed\n");
+									
+									// break out so the value is not set!
+									break; 
+								}
+
+								// convert string to float
+								// watch out this returns a long int!
+								lvUint64Val = strtoull(lvValueString, NULL, 10);
+
+								// inform user
+								cli_printf("setting %s with \"%" PRIu64 "\"...\n", lvParameterString, lvUint64Val);
+
+								// check for errors
+								if(lvUint64Val == 0 && (errno == ERANGE || errno == EINVAL))
+								{
+									// inform user and return
+									cli_printfError("CLI ERROR: conversion error!\n");
+									lvRetValue = -1;
+
+									return lvRetValue;
+								}
+
+								// set the parameter and check if failed
+								if(data_setParameter(lvParameter, &lvUint64Val))
+								{	
+									// if failed
+									cli_printfError("Failed!\tMaybe outside minimum or maximum\n");
+								}
+								else
+								{	
+									// get the parameter
+									if(data_getParameter(lvParameter, &lvUint64Val, NULL) == NULL)
+									{
+										// something went wrong
+										cli_printfError("CLI ERROR: data_getParameter\n");
+									}
+									else
+									{
+										// if succeeded
+										cli_printfGreen("succeeded! %" PRIu64 " is set!\n", lvUint64Val);
+									}
+									
+								}
+
+							break;					
+
 							// if it is a integer (max int32_t)
 							default:
 								// get the value
@@ -754,22 +795,81 @@ int cli_processCommands(int argc, char **argv)
 								if(lvIntVal == 0 && (errno == ERANGE || errno == EINVAL))
 								{
 									// inform user and return
-									cli_printf("Error conversion!\n");
-									lvRetValue = -1;	
+									cli_printfError("CLI ERROR: conversion error!\n");
+									lvRetValue = -1;
 
 									return lvRetValue;
+								}
+
+								// check if it is a UINT8
+								if(data_getType(lvParameter) == UINT8VAL)
+								{
+									// check for a negative number
+									if(lvValueString[0] == '-')
+									{
+										// if failed output to the user
+										cli_printfError("Failed!\tParameter is of type unsigned, no negatives allowed\n");
+										
+										// break out so the value is not set!
+										break; 
+									}
+
+									// check if the value is not higher than the max UINT8 value
+									if(lvIntVal > UINT8_MAX)
+									{
+										// if failed output to the user
+										cli_printfError("Failed!\tParameter does not fit in datatype %d > UINT8_MAX (%d)\n", 
+											lvIntVal, UINT8_MAX);
+										
+										// break out so the value is not set!
+										break; 
+									}
+								}
+								// check if it is a UINT16
+								else if(data_getType(lvParameter) == UINT16VAL)
+								{
+									// check for a negative number
+									if(lvValueString[0] == '-')
+									{
+										// if failed output to the user
+										cli_printfError("Failed!\tParameter is of type unsigned, no negatives allowed\n");
+										
+										// break out so the value is not set!
+										break; 
+									}
+									
+									// check if the value is not higher than the max UINT8 value
+									if(lvIntVal > UINT16_MAX)
+									{
+										// if failed output to the user
+										cli_printfError("Failed!\tParameter does not fit in datatype %d > UINT16_MAX (%d)\n",
+										lvIntVal, UINT16_MAX);
+										
+										// break out so the value is not set!
+										break; 
+									}
 								}
 
 								// set the parameter and check if failed
 								if(data_setParameter(lvParameter, &lvIntVal))
 								{	
-									//  if failed
-									cli_printf("Failed!\tMaybe outside minimum or maximum\n");
+									// if failed
+									cli_printfError("Failed!\tMaybe outside minimum or maximum\n");
 								}
 								else
 								{	
-									// if succeeded
-									cli_printf("succeeded!\n");
+									// get the parameter
+									if(data_getParameter(lvParameter, &lvIntVal, NULL) == NULL)
+									{
+										// something went wrong
+										cli_printfError("CLI ERROR: data_getParameter\n");
+									}
+									else
+									{
+										// if succeeded
+										cli_printfGreen("succeeded! %d is set!\n", lvIntVal);
+									}
+									
 								}
 							break;
 						}
@@ -777,13 +877,15 @@ int cli_processCommands(int argc, char **argv)
 					// if it is one of the parameters that shouldn't be written
 					else
 					{
-						cli_printf("%s may not be written!\n", lvParameterString);
+						// print that it may not be written
+						cli_printfError("Failed %s may not be written!\n", lvParameterString);
 					}
 				}
 				// the user wants to set the state (command to go somewhere)
 				else
 				{
-					cli_printf("%s may not be written!\n", lvParameterString);
+					// print that it may not be written
+					cli_printfError("Failed %s may not be written!\n", lvParameterString);
 				}
 			}
 
@@ -871,7 +973,7 @@ int cli_printf(FAR const IPTR char *fmt, ...)
   		// get the time
 		if(clock_gettime(CLOCK_REALTIME, &waitTime) == -1)
 		{
-			cli_printf("cli ERROR: failed to get time!\n");
+			cli_printfError("CLI ERROR: failed to get time!\n");
 		}
 
 		// add the time 
@@ -927,6 +1029,99 @@ int cli_printf(FAR const IPTR char *fmt, ...)
 }
 
 /*!
+ * @brief 	this function is the same as cli_printf(), but it will print the message in red
+ * 			
+ * @param 	fmt This is the string that contains the text to be written to stdout. 
+ * 			It can optionally contain embedded format tags that are replaced by 
+ * 			the values specified in subsequent additional arguments and formatted as requested. 
+ * 			Format tags prototype is %[flags][width][.precision][length]specifier
+ *
+ * @param 	the arguments of the function
+ *
+ * @return 	If successful, the total number of characters written is returned. 
+ *			On failure, a negative number is returned.
+ */
+int cli_printfError(FAR const IPTR char *fmt, ...)
+{
+	int lvRetValue;
+	va_list ap;
+
+	// initialze variable list ap
+ 	va_start(ap, fmt);
+
+ 	// do the printf
+	lvRetValue = cli_printfColor(RED, fmt, ap);
+
+	// end the variable list
+	va_end(ap);
+
+	// return to the user
+	return lvRetValue;
+}
+
+/*!
+ * @brief 	this function is the same as cli_printf(), but it will print the message in orange
+ * 			
+ * @param 	fmt This is the string that contains the text to be written to stdout. 
+ * 			It can optionally contain embedded format tags that are replaced by 
+ * 			the values specified in subsequent additional arguments and formatted as requested. 
+ * 			Format tags prototype is %[flags][width][.precision][length]specifier
+ *
+ * @param 	the arguments of the function
+ *
+ * @return 	If successful, the total number of characters written is returned. 
+ *			On failure, a negative number is returned.
+ */
+int cli_printfWarning(FAR const IPTR char *fmt, ...)
+{
+	int lvRetValue;
+	va_list ap;
+
+	// initialze variable list ap
+ 	va_start(ap, fmt);
+
+ 	// do the printf
+	lvRetValue = cli_printfColor(YELLOW, fmt, ap);
+
+	// end the variable list
+	va_end(ap);
+
+	// return to the user
+	return lvRetValue;
+}
+
+/*!
+ * @brief 	this function is the same as cli_printf(), but it will print the message in green
+ * 			
+ * @param 	fmt This is the string that contains the text to be written to stdout. 
+ * 			It can optionally contain embedded format tags that are replaced by 
+ * 			the values specified in subsequent additional arguments and formatted as requested. 
+ * 			Format tags prototype is %[flags][width][.precision][length]specifier
+ *
+ * @param 	the arguments of the function
+ *
+ * @return 	If successful, the total number of characters written is returned. 
+ *			On failure, a negative number is returned.
+ */
+int cli_printfGreen(FAR const IPTR char *fmt, ...)
+{
+	int lvRetValue;
+	va_list ap;
+
+	// initialze variable list ap
+ 	va_start(ap, fmt);
+
+ 	// do the printf
+	lvRetValue = cli_printfColor(GREEN, fmt, ap);
+
+	// end the variable list
+	va_end(ap);
+
+	// return to the user
+	return lvRetValue;
+}
+
+/*!
  * @brief 	this function is the same as cli_printf(), but with no mutex lock
  * @warning should be used with cli_printLock()
  * 			
@@ -943,7 +1138,7 @@ int cli_printf(FAR const IPTR char *fmt, ...)
 int cli_printfNoLock(FAR const IPTR char *fmt, ...)
 {
 	va_list ap;
-  	int     lvRetValue; 
+  	int lvRetValue; 
 
 	// initialze variable list ap
  	va_start(ap, fmt);
@@ -1060,38 +1255,41 @@ void printHelp(void)
 	// print the help
 	cli_printf("This is the bms cli (command line interface) help\n");
 	cli_printf("These commands can be used with the bms:\n");
-	cli_printf("bms help                \t--this command shows this help\n");
-	cli_printf("bms help parameters     \t--this command shows the <parameter> list\n");
-	cli_printf("bms help show-meas      \t--this command shows the <show-meas> list\n");
-	cli_printf("bms get <parameter>     \t--this command gets a parameter value.\n");
-	cli_printf("                        \t  parameter is the parameter you want\n");
-	cli_printf("bms get all 		    \t--this command gets all the parameters\n");
-	cli_printf("                        \t  including the values\n");	
-	cli_printf("bms set <parameter> <x> \t--this command can be used to set a parameter\n");
-	cli_printf("                        \t  WARNING this could lead to unsave operations!\n");
-	cli_printf("                        \t  WARNING only use this command in a safe manner!\n");
-	cli_printf("                        \t  parameter is the parameter you want to set\n");
-	cli_printf("                        \t  x is the new value of the parameter you want to set\n");
-	cli_printf("                        \t  to enter a decimal value use \".\" as seperator\n");
-	cli_printf("                        \t  to enter a string with spaces use \"input string\"\n");
-	cli_printf("bms show <show-meas> <x>\t--this command can be used to show the cyclic measurement results\n");
-	cli_printf("                        \t  show-meas is the to measurement to enable or disable visibility\n");
-	cli_printf("                        \t  if x is 1 the measurement is shown, if 0 it will be disabled\n");
-	cli_printf("bms reset               \t--this command will reset the fault when in the fault state\n");
-	cli_printf("bms sleep               \t--with this command it will go to the sleep state\n");
-	cli_printf("                       	\t  from the normal or the self_discharge state\n");
-	cli_printf("                        \t  NOTE: if current is drawn it will transition to the normal state\n");
-	cli_printf("bms wake                \t--this command will wake the BMS in the sleep state\n");
-	cli_printf("bms deepsleep           \t--with this command it will go to the deep sleep state\n");
-	cli_printf("                        \t  from the sleep state or the charge state (from charge not implemented yet)\n");
-	cli_printf("bms save                \t--this command will save the current settings (parameters) to flash\n");
-	cli_printf("bms load                \t--this command will load the saved settings (parameters) from flash\n");
-	cli_printf("bms default             \t--this command will load the default settings\n");
+	cli_printf("bms help                  --this command shows this help\n");
+	cli_printf("bms help parameters       --this command shows the <parameter> list\n");
+	cli_printf("bms help show-meas        --this command shows the <show-meas> list\n");
+	cli_printf("bms get <parameter>       --this command gets a parameter value.\n");
+	cli_printf("                            parameter is the parameter you want\n");
+	cli_printf("bms get all               --this command gets all the parameters\n");
+	cli_printf("                            including the values\n");	
+	cli_printf("bms set <parameter> <x>   --this command can be used to set a parameter\n");
+	cli_printf("                            WARNING this could lead to unsave operations!\n");
+	cli_printf("                            WARNING only use this command in a safe manner!\n");
+	cli_printf("                            parameter is the parameter you want to set\n");
+	cli_printf("                            x is the new value of the parameter you want to set\n");
+	cli_printf("                            to enter a decimal value use \".\" as seperator\n");
+	cli_printf("                            to enter a string with spaces use \"input string\"\n");
+	cli_printf("bms show <show-meas> <x>  --this command can be used to show the cyclic measurement results\n");
+	cli_printf("                            show-meas is the to measurement to enable or disable visibility\n");
+	cli_printf("                            if x is 1 the measurement is shown, if 0 it will be disabled\n");
+	cli_printf("bms reset                 --this command will reset the fault when in the fault state\n");
+	cli_printf("bms sleep                 --with this command it will go to the sleep state\n");
+	cli_printf("                       	    from the normal or the self_discharge state\n");
+	cli_printf("                            NOTE: if current is drawn it will transition to the normal state\n");
+	cli_printf("bms wake                  --this command will wake the BMS in the sleep state\n");
+	cli_printf("bms deepsleep             --with this command it will go to the deep sleep state\n");
+	cli_printf("                            from the sleep state or the charge state\n");
+	cli_printf("bms save                  --this command will save the current settings (parameters) to flash\n");
+	cli_printf("bms load                  --this command will load the saved settings (parameters) from flash\n");
+	cli_printf("bms default               --this command will load the default settings\n");
+	cli_printf("reboot                    --this command will reboot the microcontroller\n");
+	cli_printf("                            this command should be used without the word bms in front of it\n\n");
 	cli_printf("some parameters have a letter in front of the \"-\", this indicates the type of parameter\n");
 	cli_printf("a - capacity\n");
 	cli_printf("c - temperature (celcius)\n");
 	cli_printf("e - energy\n");
 	cli_printf("i - current\n");
+	cli_printf("m - mass\n");
 	cli_printf("n - number\n");
 	cli_printf("s - status\n");
 	cli_printf("t - time\n");
@@ -1151,7 +1349,7 @@ void printParameters(void)
 		cli_printf("\r" VT100_FMT_CURSORRT, 22);
 
 		// make sure you stay in the array
-		if(i < (sizeof(parametersTypes)/sizeof(char*)))
+		if(i < NONE)
 		{
 			cli_printf("%s", data_getUnit(i));
 		}
@@ -1192,9 +1390,9 @@ void printParameters(void)
 		cli_printf("\r" VT100_FMT_CURSORRT, 35);
 
 		// make sure you stay in the array
-		if(i < (sizeof(parametersTypes)/sizeof(char*)))
+		if(i < NONE)
 		{
-			cli_printf("%s\n", parametersTypes[i]);
+			cli_printf("%s\n", data_getTypeString(i));
 		}
 		else
 		{
@@ -1214,6 +1412,7 @@ void printAllParameterValues(void)
 	float lvFloatVal = 0.0;
 	char *lvPStringVal;
 	int32_t lvIntVal;
+	uint64_t lvUint64Val;
 
 	// standard message
 	cli_printf("These are the parameters with the values:\n");
@@ -1221,8 +1420,9 @@ void printAllParameterValues(void)
 	// loop though the parameters
 	for(i = 0; i < NONE; i++)
 	{
-		// reset the intvalue
+		// reset the intvalues
 		lvIntVal = 0;
+		lvUint64Val = 0;
 
 		// change each character of the string parameters to lowercase for the user input
 		// convert all underscores to upderscores
@@ -1255,29 +1455,60 @@ void printAllParameterValues(void)
 			case FLOATVAL:
 				// get the value
 				if(data_getParameter(i, &lvFloatVal, NULL) == NULL)
+				{
 					// something went wrong
-					cli_printf("Error CLI: data_getParameter\n");
+					cli_printfError("CLI ERROR: data_getParameter\n");
+				}
 				else
+				{
 					cli_printf("%.3f", lvFloatVal);
+				}
+
 			break;
 			// if it is a string
 			case STRINGVAL:
 				// get the value
 				lvPStringVal = data_getParameter(i, NULL, NULL);
+
+				// check if it went wrong
 				if(lvPStringVal == NULL)
+				{
 					// something went wrong
-					cli_printf("Error CLI: data_getParameter\n");
+					cli_printfError("CLI ERROR: data_getParameter\n");
+				}
 				else
+				{
 					cli_printf("%s", lvPStringVal);
+				}
+
+			break;
+			// if it is a uint64_t value
+			case UINT64VAL:
+				// get the value
+				if(data_getParameter(i, &lvUint64Val, NULL) == NULL)
+				{
+					// something went wrong
+					cli_printfError("CLI ERROR: data_getParameter\n");
+				}
+				else
+				{
+					cli_printf("%" PRIu64, lvUint64Val);
+				}
+
 			break;
 			// if it is a integer (max int32_t)
 			default:
 				// get the value
 				if(data_getParameter(i, &lvIntVal, NULL) == NULL)
+				{
 					// something went wrong
-					cli_printf("Error CLI: data_getParameter\n");
+					cli_printfError("CLI ERROR: data_getParameter\n");
+				}
 				else
+				{
 					cli_printf("%d", lvIntVal);
+				}
+
 			break;
 		}
 
@@ -1286,7 +1517,7 @@ void printAllParameterValues(void)
 
 		// output the unit
 		// make sure you stay in the array
-		if(i < (sizeof(parametersTypes)/sizeof(char*)))
+		if(i < NONE)
 		{
 			cli_printf("%s\n", data_getUnit(i));
 		}
@@ -1294,8 +1525,98 @@ void printAllParameterValues(void)
 		{
 			cli_printf("-\n");
 		}
+
 	}
 
 	// return
 	return;
+}
+
+int cli_printfColor(printColor_t color, const char *fmt, va_list argp)
+{
+	int lvRetValue;
+	//va_list argp;
+	struct timespec waitTime;
+	char colorSequence[7];
+
+	// check which color it is
+	switch(color)
+	{
+		case RED: 
+			// set  the red color string
+			sprintf(colorSequence, "\e[31m");
+		break;
+		case GREEN:
+			// set  the green color string
+			sprintf(colorSequence, "\e[32m");
+		break;
+		case YELLOW: 
+			// set  the yellow color string
+			sprintf(colorSequence, "\e[33m");
+		break;
+		default: 	
+			// set the normal color string
+			sprintf(colorSequence, "\e[39m");
+		break;
+	}
+
+  	// check if mutex is initialzed 
+  	if(gCliPrintLockInitialized)
+  	{
+  		// get the time
+		if(clock_gettime(CLOCK_REALTIME, &waitTime) == -1)
+		{
+			cli_printf("%sCLI ERROR: failed to get time!\e[39m\n", "\e[31m");
+		}
+
+		// add the time 
+		waitTime.tv_sec 	+= 	(int)(CLI_TIMED_LOCK_WAIT_TIME_MS / 1000) + 
+								((waitTime.tv_nsec + (CLI_TIMED_LOCK_WAIT_TIME_MS % 1000) * MS_TO_NS_MULT) / (NSEC_MAX+1)); 
+  	 	waitTime.tv_nsec 	= 	(waitTime.tv_nsec + (CLI_TIMED_LOCK_WAIT_TIME_MS % 1000) * MS_TO_NS_MULT) % (NSEC_MAX+1) ; 
+
+  		// lock the mutex
+		lvRetValue = pthread_mutex_timedlock(&gCliPrintLock, &waitTime);
+
+		// check if succesfull
+		if(!lvRetValue)
+		{
+		 	// print the red color sequence
+ 			lvRetValue |= printf("%s", colorSequence);
+
+		 	// do the printf
+			lvRetValue = vprintf(fmt, argp);
+
+			// print the normal color sequence
+	 		lvRetValue |= printf("\e[39m");
+
+			// unlock the mutex
+			pthread_mutex_unlock(&gCliPrintLock);
+  		}
+  		else
+  		{  			
+		 	// print the red color sequence
+ 			lvRetValue |= printf("%s", colorSequence);
+
+		 	// do the printf
+			lvRetValue = vprintf(fmt, argp);
+
+			// print the normal color sequence
+	 		lvRetValue |= printf("\e[39m");
+  		}
+	}
+
+  	else
+  	{
+	 	// print the red color sequence
+ 		lvRetValue = printf("%s", colorSequence);
+
+	 	// do the printf
+		lvRetValue = vprintf(fmt, argp);
+
+		// print the normal color sequence
+ 		lvRetValue |= printf("\e[39m");
+  	}
+	
+	// return to the user
+	return lvRetValue;
 }

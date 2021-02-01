@@ -73,7 +73,7 @@
  ******************************************************************************/
 
 /*! @brief 0 degree Celsius converted to Kelvin. */
-#define NTC_DEGC_0      273.15
+#define NTC_DEGC_0      	273.15
 
 #define LAST_CELL_BITVALUE 	5
 #define ALL_CELL_MASK 		0x3F
@@ -136,7 +136,7 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 				if(lvRetValue != BCC_STATUS_SUCCESS)
 				{
 					// report to user
-					cli_printf("bcc_configuration ERROR: couldn't write lower threshold! %d \n", lvRetValue);
+					cli_printfError("bcc_configuration ERROR: couldn't write lower threshold! %d \n", lvRetValue);
 				}
 
 				// read the register
@@ -146,14 +146,14 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 				if(lvRetValue != BCC_STATUS_SUCCESS)
 				{
 					// report to user
-					cli_printf("bcc_configuration ERROR: couldn't read lower threshold! %d \n", lvRetValue);
+					cli_printfError("bcc_configuration ERROR: couldn't read lower threshold! %d \n", lvRetValue);
 				}
 
  				// check if it didn't work
  				if(regVal != retRegVal)
  				{
  					// report to user
- 					cli_printf("bcc_configuration ERROR: couldn't set the lower temp threshold! %d != %d \n", regVal, retRegVal);
+ 					cli_printfError("bcc_configuration ERROR: couldn't set the lower temp threshold! %d != %d \n", regVal, retRegVal);
  				}
 
  			}
@@ -171,7 +171,7 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 				if(lvRetValue != BCC_STATUS_SUCCESS)
 				{
 					// report to user
-					cli_printf("bcc_configuration ERROR: couldn't write upper threshold! %d \n", lvRetValue);
+					cli_printfError("bcc_configuration ERROR: couldn't write upper threshold! %d \n", lvRetValue);
 				}
 
 				// read the register
@@ -181,14 +181,14 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 				if(lvRetValue != BCC_STATUS_SUCCESS)
 				{
 					// report to user
-					cli_printf("bcc_configuration ERROR: couldn't read upper threshold! %d \n", lvRetValue);
+					cli_printfError("bcc_configuration ERROR: couldn't read upper threshold! %d \n", lvRetValue);
 				}
 
  				// check if it didn't work
  				if(regVal != retRegVal)
  				{
  					// report to user
- 					cli_printf("bcc_configuration ERROR: couldn't set the upper temp threshold! %d != %d \n", regVal, retRegVal);
+ 					cli_printfError("bcc_configuration ERROR: couldn't set the upper temp threshold! %d != %d \n", regVal, retRegVal);
  				}
  			}
  		}
@@ -243,7 +243,7 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 	if(lvRetValue != BCC_STATUS_SUCCESS)
 	{
 		// report to user
-		cli_printf("bcc_configuration ERROR: couldn't update GPIO_CFG1! %d \n", lvRetValue);
+		cli_printfError("bcc_configuration ERROR: couldn't update GPIO_CFG1! %d \n", lvRetValue);
 	}
 
 	// read the register
@@ -253,7 +253,7 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 	if(lvRetValue != BCC_STATUS_SUCCESS)
 	{
 		// report to user
-		cli_printf("bcc_configuration ERROR: couldn't read GPIO_CFG1! %d \n", lvRetValue);
+		cli_printfError("bcc_configuration ERROR: couldn't read GPIO_CFG1! %d \n", lvRetValue);
 	}
 
 	// check if it didn't work
@@ -263,7 +263,7 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 		lvRetValue = BCC_STATUS_PARAM_RANGE;
 		
 		// report to user
-		cli_printf("bcc_configuration ERROR: couldn't set GPIO_CFG1! %d != %d \n", regVal, (retRegVal & regMask));
+		cli_printfError("bcc_configuration ERROR: couldn't set GPIO_CFG1! %d != %d \n", regVal, (retRegVal &regMask));
 	}
 
  	return lvRetValue;
@@ -315,7 +315,7 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 				if(lvRetValue != BCC_STATUS_SUCCESS)
 				{
 					// report to user
-					cli_printf("bcc_configuration ERROR: couldn't write lower threshold! %d \n", lvRetValue);
+					cli_printfError("bcc_configuration ERROR: couldn't write lower threshold! %d \n", lvRetValue);
 				}
 
 				// read the register
@@ -327,14 +327,14 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 				if(lvRetValue != BCC_STATUS_SUCCESS)
 				{
 					// report to user
-					cli_printf("bcc_configuration ERROR: couldn't read lower threshold! %d \n", lvRetValue);
+					cli_printfError("bcc_configuration ERROR: couldn't read lower threshold! %d \n", lvRetValue);
 				}
 
  				// check if it didn't work
  				if(regVal != retRegVal)
  				{
  					// report to user
- 					cli_printf("bcc_configuration ERROR: couldn't set the lower temp threshold! %d != %d \n", regVal, retRegVal);
+ 					cli_printfError("bcc_configuration ERROR: couldn't set the lower temp threshold! %d != %d \n", regVal, retRegVal);
  				}
 
  			}
@@ -354,7 +354,7 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 				if(lvRetValue != BCC_STATUS_SUCCESS)
 				{
 					// report to user
-					cli_printf("bcc_configuration ERROR: couldn't write upper threshold! %d \n", lvRetValue);
+					cli_printfError("bcc_configuration ERROR: couldn't write upper threshold! %d \n", lvRetValue);
 				}
 
 				// read the register
@@ -366,14 +366,14 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 				if(lvRetValue != BCC_STATUS_SUCCESS)
 				{
 					// report to user
-					cli_printf("bcc_configuration ERROR: couldn't read upper threshold! %d \n", lvRetValue);
+					cli_printfError("bcc_configuration ERROR: couldn't read upper threshold! %d \n", lvRetValue);
 				}
 
  				// check if it didn't work
  				if(regVal != retRegVal)
  				{
  					// report to user
- 					cli_printf("bcc_configuration ERROR: couldn't set the upper temp threshold! %d != %d \n", regVal, retRegVal);
+ 					cli_printfError("bcc_configuration ERROR: couldn't set the upper temp threshold! %d != %d \n", regVal, retRegVal);
  				}
  			}
  		}
@@ -414,7 +414,7 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 	if(lvRetValue != BCC_STATUS_SUCCESS)
 	{
 		// report to user
-		cli_printf("bcc_configuration ERROR: couldn't read cell voltage thresholds! %d \n", lvRetValue);
+		cli_printfError("bcc_configuration ERROR: couldn't read cell voltage thresholds! %d \n", lvRetValue);
 	}
 	else
 	{
@@ -456,7 +456,7 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 		if(lvRetValue != BCC_STATUS_SUCCESS)
 		{
 			// report to user
-			cli_printf("bcc_configuration ERROR: write TH_CTx failed! error: %d \n", lvRetValue);
+			cli_printfError("bcc_configuration ERROR: write TH_CTx failed! error: %d \n", lvRetValue);
 		}
 
 		// read the register
@@ -467,14 +467,14 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 		if(lvRetValue != BCC_STATUS_SUCCESS)
 		{
 			// report to user
-			cli_printf("bcc_configuration ERROR: read TH_CTx failed! error: %d \n", lvRetValue);
+			cli_printfError("bcc_configuration ERROR: read TH_CTx failed! error: %d \n", lvRetValue);
 		}
 
 		// check if it didn't work
 		if(regVal != retRegVal)
 		{
 			// report to user
-			cli_printf("bcc_configuration ERROR: couldn't set the cell voltage thresholds! %d != %d \n", regVal, retRegVal);
+			cli_printfError("bcc_configuration ERROR: couldn't set the cell voltage thresholds! %d != %d \n", regVal, retRegVal);
 		}
 	}
 
@@ -507,7 +507,7 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 	if(lvRetValue != BCC_STATUS_SUCCESS)
 	{
 		// report to user
-		cli_printf("bcc_configuration ERROR: write TH_ISENSE failed! error: %d \n", lvRetValue);
+		cli_printfError("bcc_configuration ERROR: write TH_ISENSE failed! error: %d \n", lvRetValue);
 	}
 
 	// write the registervalue
@@ -517,14 +517,14 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 	if(lvRetValue != BCC_STATUS_SUCCESS)
 	{
 		// report to user
-		cli_printf("bcc_configuration ERROR: read TH_ISENSE failed! error: %d \n", lvRetValue);
+		cli_printfError("bcc_configuration ERROR: read TH_ISENSE failed! error: %d \n", lvRetValue);
 	}
 
 	// check if it didn't work
 	if(regVal != retRegVal)
 	{
 		// report to user
-		cli_printf("bcc_configuration ERROR: couldn't set the I sense threshold! %d != %d \n", regVal, retRegVal);
+		cli_printfError("bcc_configuration ERROR: couldn't set the I sense threshold! %d != %d \n", regVal, retRegVal);
 	}
 
 	// return to the user
@@ -549,25 +549,34 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 
  	// calculate the new time
  	if(newTimeS == 1)
+	{
  		// set to 1s
  		regVal = BCC_CYCLIC_TIMER_1S;
+	}
  	else if (newTimeS < 4)
+	{
  		// set to 2s
  		regVal = BCC_CYCLIC_TIMER_2S;
+	}
  	else if (newTimeS < 8)
+	{
  		// set to 4s
  		regVal = BCC_CYCLIC_TIMER_4S;
+	}
  	else 
+	{
  		// set to 8s
  		regVal = BCC_CYCLIC_TIMER_8S;
+	}
 
  	// update the register
  	lvRetValue = BCC_Reg_Update(drvConfig, cid, BCC_REG_SYS_CFG1_ADDR, BCC_RW_CYCLIC_TIMER_MASK, regVal);
 
+ 	// check for errors
  	if(lvRetValue != BCC_STATUS_SUCCESS)
 	{
 		// report to user
-		cli_printf("bcc_configuration ERROR: update cyclic_timer failed! error: %d \n", lvRetValue);
+		cli_printfError("bcc_configuration ERROR: update cyclic_timer failed! error: %d \n", lvRetValue);
 	}
 
  	// return to the user
@@ -617,7 +626,7 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
  	if(lvRetValue != BCC_STATUS_SUCCESS)
 	{
 		// report to user
-		cli_printf("bcc_configuration ERROR: write ODD cells failed! error: %d \n", lvRetValue);
+		cli_printfError("bcc_configuration ERROR: write ODD cells failed! error: %d \n", lvRetValue);
 	}
 
 	// read the register to check it
@@ -627,14 +636,14 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
  	if(lvRetValue != BCC_STATUS_SUCCESS)
 	{
 		// report to user
-		cli_printf("bcc_configuration ERROR: read ODD failed! error: %d \n", lvRetValue);
+		cli_printfError("bcc_configuration ERROR: read ODD failed! error: %d \n", lvRetValue);
 	}
 
 	// check if worked
  	if(regVal != (retRegVal & BCC_RW_NUMB_ODD_MASK))
 	{
 		// report to user
-		cli_printf("bcc_configuration ERROR: update ODD cells failed! %d != %d\n", regVal, (retRegVal & BCC_RW_NUMB_ODD_MASK));
+		cli_printfError("bcc_configuration ERROR: update ODD cells failed! %d != %d\n", regVal, (retRegVal &BCC_RW_NUMB_ODD_MASK));
 	}
 
 	// reset the regval
@@ -644,16 +653,16 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 	for(i = 0; i < newCellCount; i++)
 	{
 		// check if it is the first 2 cells
-        if(i >= 2)
-        {
-            // calculate the BCC pin index
-            regVal |= 1 << ((6-newCellCount) + i);
-        }
-        else
-        {
-            // it is the first 2 cells
-            regVal |= 1 << i;
-        }		
+		if(i >= 2)
+		{
+		    // calculate the BCC pin index
+		    regVal |= 1 << ((6-newCellCount) + i);
+		}
+		else
+		{
+		    // it is the first 2 cells
+		    regVal |= 1 << i;
+		}		
 	}
 
 	//cli_printf("bccCells: %d\n", regVal);
@@ -665,7 +674,7 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
  	if(lvRetValue != BCC_STATUS_SUCCESS)
 	{
 		// report to user
-		cli_printf("bcc_configuration ERROR: write th en cells failed! error: %d \n", lvRetValue);
+		cli_printfError("bcc_configuration ERROR: write th en cells failed! error: %d \n", lvRetValue);
 	}
 
 	// read the register to check it
@@ -675,14 +684,14 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
  	if(lvRetValue != BCC_STATUS_SUCCESS)
 	{
 		// report to user
-		cli_printf("bcc_configuration ERROR: read th en failed! error: %d \n", lvRetValue);
+		cli_printfError("bcc_configuration ERROR: read th en failed! error: %d \n", lvRetValue);
 	}
 
 	// check if worked
  	if(regVal != (retRegVal & 0x3F))
 	{
 		// report to user
-		cli_printf("bcc_configuration ERROR: update th en failed! %d != %d\n", regVal, (retRegVal & 0x3F));
+		cli_printfError("bcc_configuration ERROR: update th en failed! %d != %d\n", regVal, (retRegVal &0x3F));
 	}
 
  	// return to the user

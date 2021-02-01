@@ -24,7 +24,7 @@ NXP does not convey any license under its patent rights nor the rights of others
 NXP has battery emulators that may be used during testing:
 https://www.nxp.com/design/development-boards/analog-toolbox/6-cell-battery-pack-to-supply-mc33772-evbs:BATT-6EMULATOR.
 
-This readme files will explain how to get the right nuttx and nuttx-apps repository with the BMS3.4 patches and build the BMS software (create a binary file).
+This readme files will explain how to get the right nuttx and nuttx-apps repository with the BMS3.6 patches and build the BMS software (create a binary file).
 This will work best on a linux machine, you could use a virtual machine for it.
 
 See this webpage for the NuttX quickstart guide: https://nuttx.apache.org/docs/latest/quickstart/quickstart.html.
@@ -57,7 +57,7 @@ git clone https://github.com/apache/incubator-nuttx-apps.git apps
 ## Checkout the right commit
 In the apps directory, checkout the right commit and branch.
 ```bash
-(cd apps; git checkout 7a85bc75dcf5632154a09e75cfc431b6e25df463 -b bms772)
+(cd apps; git checkout nuttx-10.0.0 -b bms772)
 ```
 ## Get the BMS in the nuttx-apps
 Make a nxp_bms folder in the apps and the BMS_v1 folder in that folder
@@ -70,23 +70,23 @@ Clone this repository in that folder
 ```
 Checkout the public regulated data types.
 ```bash
-(cd apps/nxp_bms/BMS_v1; git clone https://github.com/PX4/public_regulated_data_types)
+(cd apps/nxp_bms/BMS_v1; git clone https://github.com/uavcan/public_regulated_data_types)
 ```
 ## Apply the patches
 Apply the patch to the nuttx-apps.
 ```bash
-(cd apps; patch -p1 < nxp_bms/BMS_v1/Patchfiles/0001-apps-patch-BMS3.4.patch)
+(cd apps; patch -p1 < nxp_bms/BMS_v1/Patchfiles/0001-apps-patch-BMS3.6.patch)
 ```
 Go the nuttx folder and checkout the right NuttX commit.
 ```bash
 cd nuttx
 ```
 ```bash
-git checkout 1115f0104bd404454b72e9e02f4583febb0fe162 -b bms772
+git checkout nuttx-10.0.0 -b bms772
 ```
 Add the nuttx patch.
 ```bash
-patch -p1 < ../apps/nxp_bms/BMS_v1/Patchfiles/0001-nuttx-patch-BMS3.4.patch
+patch -p1 < ../apps/nxp_bms/BMS_v1/Patchfiles/0001-nuttx-patch-BMS3.6.patch
 ```
 ## Install the Kconfig tools and the crosscompiler if needed
 When this is your first NuttX project, you need to install the Kconfig tools and the cross compiler. Otherwise you can skip this part and continue with "configure and make the binary".
@@ -156,9 +156,15 @@ sudo apt install gcc-arm-none-eabi
 
 ## Configure and make the binary
 Configure the BMS.
+For normal use:
+```bash
+tools/configure.sh -e rddrone-bms772:bms
+```
+For debug purposes:
 ```bash
 tools/configure.sh -e rddrone-bms772:bmsdebug
 ```
+
 Make the binary with: 
 ```bash
 make

@@ -49,6 +49,7 @@
 #include <nuttx/i2c/i2c_master.h>
 #include "a1007.h"
 #include "cli.h"
+#include "gpio.h"
 
 /****************************************************************************
  * Defines
@@ -97,7 +98,33 @@ int a1007_initialize(void)
   // check if not initialized 
   if(!gA1007Initialized)
   {
-    cli_printf("SELF-TEST START: A1007\n");
+    cli_printf("SELF-TEST A1007: START\n");
+
+    // wake up the A1007 with the wakeup pin
+    // write the pin to high
+    lvRetValue = gpio_writePin(AUTH_WAKE, 1);
+
+    // check if it went wrong
+    if(lvRetValue)
+    {
+      cli_printfError("A1007 ERROR: writing AUTH_WAKE high went wrong!\n");
+      cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
+      return lvRetValue;
+    }
+
+    // sleep for 50us for the wakeup pulse
+    usleep(50);
+
+    // write the pin to low
+    lvRetValue = gpio_writePin(AUTH_WAKE, 0);
+
+    // check if it went wrong
+    if(lvRetValue)
+    {
+      cli_printfError("A1007 ERROR: writing AUTH_WAKE low went wrong!\n");
+      cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
+      return lvRetValue;
+    }
 
     // set the register address of the i2c slave configuration
     writeVal[0] = STATUS_COMMAND_REG_ADR1;
@@ -113,7 +140,7 @@ int a1007_initialize(void)
       lvRetValue = -errno;  
 
       // output to the user
-      cli_printf("A1007 ERROR: Can't open i2c device, error: %d\n", lvRetValue);
+      cli_printfError("A1007 ERROR: Can't open i2c device, error: %d\n", lvRetValue);
 
       // return error
       return lvRetValue; 
@@ -137,17 +164,15 @@ int a1007_initialize(void)
     i2c_transfer.msgv = (struct i2c_msg_s *)i2c_msg;  
     i2c_transfer.msgc = 2;  
       
-    // for (trytime = 0; trytime < 20; trytime++)  
-    // {      
+    // read the status command register    
     /* do the i2C transfer to read the register */  
     lvRetValue = ioctl(fd, I2CIOC_TRANSFER, (unsigned long)&i2c_transfer);  
 
     // check for errors
     if (lvRetValue < 0)  
     {  
-
       // output to the user
-      cli_printf("A1007 ERROR: Can't do i2c tranfer, error: %d\n", lvRetValue);
+      cli_printfError("A1007 ERROR: Can't do i2c tranfer, error: %d\n", lvRetValue);
 
       // close the file descriptor
       close(fd);  
@@ -156,14 +181,17 @@ int a1007_initialize(void)
       return lvRetValue;  
     }
 
+    // there is a device with that slave address
+
     // close the file descriptor
     close(fd);  
 
-    // check if there are no wrong status bits
+    // check if there are wrong status bits (the lower 4 bits should be 0)
+    // very weak detection
     if((regVal[1] & STATUS_COMMAND_REG_VAL_MASK) != 0)
     {
       // output to the user
-      cli_printf("A1007 ERROR: status command has wrong bits!\n");
+      cli_printfError("A1007 ERROR: status command has wrong bits!\n");
 
       cli_printf("Can't verify A1007 chip!\n");
 
@@ -174,7 +202,7 @@ int a1007_initialize(void)
     }
 
     //cli_printf("A1007 I2C communication verified!\n");
-    cli_printf("SELF-TEST PASS:  A1007\n");
+    cli_printf("SELF-TEST A1007: \e[32mPASS\e[39m\n");
 
     // set that it is initialzed
     gA1007Initialized = true;

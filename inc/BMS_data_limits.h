@@ -97,10 +97,12 @@
 #ifndef INT32_MAX
 #define INT32_MAX							2147483647
 #endif
-
-#define FLOAT_MULTIPIER 					10
+#ifndef UNT64_MAX
+#define UNT64_MAX							18446744073709551615 
+#endif
 
 // minimum and maximum values
+// WARNING max value is INT32_MAX to limit on otherwise don't check for max!
 #define	C_BATT_MAX							100					//!< [C]
 #define	C_BATT_MIN							(-40)				//!< [C] 
 #define	V_OUT_MAX							30					//!< [V]
@@ -117,9 +119,9 @@
 #define	P_AVG_MIN							(-3780)				//!< [W]    
 #define	E_USED_MAX							500					//!< [Wh]
 #define	E_USED_MIN							(-500)				//!< [Wh]    
-#define	A_REM_MAX							INT16_MAX			//!< [Ah] // was FLOAT16_MAX
+#define	A_REM_MAX							1000				//!< [Ah] // was FLOAT16_MAX
 #define	A_REM_MIN							0					//!< [Ah]
-#define	A_FULL_MAX							INT16_MAX			//!< [Ah] // was FLOAT16_MAX
+#define	A_FULL_MAX							A_REM_MAX			//!< [Ah] // was FLOAT16_MAX
 #define	A_FULL_MIN							0.00001				//!< [Ah]  
 #define	T_FULL_MAX							INT16_MAX			//!< [h]  // was FLOAT16_MAX
 #define	T_FULL_MIN							0					//!< [h]   
@@ -133,7 +135,7 @@
 //#define	S_CHARGE_STDEV_MIN				0					//!< [%]  
 #define	BATT_ID_MAX							UINT8_MAX			//!< [-]
 #define	BATT_ID_MIN							0					//!< [-]
-#define	MODEL_ID_MAX						INT32_MAX			//!< [-]  // was INT32_MAX
+#define	MODEL_ID_MAX						INT32_MAX//UNT64_MAX			//!< [-]  // was INT32_MAX
 #define	MODEL_ID_MIN						0					//!< [-]
 #define	MODEL_NAME_MAX						0					//!< [-]  // for the generic macro
 #define	MODEL_NAME_MIN						0					//!< [-]  // for the generic macro
@@ -184,12 +186,14 @@
 #define C_CELL_UT_MIN						(-40)				//!< [C] 
 #define C_CELL_UT_CHARGE_MAX				20					//!< [C] 
 #define C_CELL_UT_CHARGE_MIN				(-40)				//!< [C] 
-#define A_FACTORY_MAX 						UINT16_MAX			//!< [Ah]
+#define A_FACTORY_MAX 						A_REM_MAX			//!< [Ah]
 #define A_FACTORY_MIN						0.00001				//!< [Ah]
 #define T_BMS_TIMEOUT_MAX					UINT16_MAX			//!< [s] 
 #define T_BMS_TIMEOUT_MIN					1					//!< [s] 		
-#define T_FAULT_TIMEOUT_MAX					60					//!< [s] 
-#define T_FAULT_TIMEOUT_MIN					60					//!< [s] 
+#define T_FAULT_TIMEOUT_MAX					UINT16_MAX			//!< [s] 
+#define T_FAULT_TIMEOUT_MIN					0					//!< [s] 
+#define T_SLEEP_TIMEOUT_MAX					UINT8_MAX			//!< [h]
+#define T_SLEEP_TIMEOUT_MIN					0					//!< [h]
 #define T_CHARGE_DETECT_MAX					UINT8_MAX			//!< [s] 
 #define T_CHARGE_DETECT_MIN					1					//!< [s] 
 #define T_CB_DELAY_MAX						UINT8_MAX			//!< [s] 
@@ -200,8 +204,14 @@
 #define I_CHARGE_FULL_MIN					1					//!< [mA]
 #define I_CHARGE_MAX_MAX					100					//!< [A]
 #define I_CHARGE_MAX_MIN					0					//!< [A]
+#define I_CHARGE_NOMINAL_MAX				I_CHARGE_MAX_MAX	//!< [A]					
+#define I_CHARGE_NOMINAL_MIN				0					//!< [A]					
 #define	I_OUT_MAX_MAX						600					//!< [A]
 #define	I_OUT_MAX_MIN						0					//!< [A]
+#define I_OUT_NOMINAL_MAX					I_OUT_MAX_MAX		//!< [A]					
+#define I_OUT_NOMINAL_MIN					0					//!< [A]					
+#define I_FLIGHT_MODE_MAX					UINT8_MAX			//!< [A]
+#define I_FLIGHT_MODE_MIN					0					//!< [A]
 #define V_CELL_MARGIN_MAX					UINT8_MAX			//!< [mV]
 #define V_CELL_MARGIN_MIN					1					//!< [mV]
 #define T_OCV_CYCLIC0_MAX					INT32_MAX			//!< [s] //was INT32_MAX
@@ -214,18 +224,26 @@
 #define C_PCB_OT_MIN						20					//!< [C] 
 #define V_STORAGE_MAX						5 					//!< [V]
 #define V_STORAGE_MIN						0 					//!< [V]
-#define OCV_SLOPE_MAX 						0.1 				//!< [V/A.min]
-#define OCV_SLOPE_MIN 						0.0001				//!< [V/A.min]
+#define OCV_SLOPE_MAX 						100 				//!< [mV/A.min]
+#define OCV_SLOPE_MIN 						0.1					//!< [mV/A.min]
 #define BATT_EOL_MAX	 					100 				//!< [%]
 #define BATT_EOL_MIN	 					0					//!< [%]
+#define BATTERY_TYPE_MAX 					1					//!< [-]
+#define BATTERY_TYPE_MIN 					0					//!< [-]
 #define SENSOR_ENABLE_MAX	 				1					//!< [-]
 #define SENSOR_ENABLE_MIN	 				0					//!< [-]
 #define SELF_DISCHARGE_ENABLE_MAX			1					//!< [-]
 #define SELF_DISCHARGE_ENABLE_MIN			0					//!< [-]
+#define FLIGHT_MODE_ENABLE_MAX 				1					//!< [-]
+#define FLIGHT_MODE_ENABLE_MIN 				0					//!< [-]
 #define UAVCAN_NODE_STATIC_ID_MAX			255					//!< [-]
 #define UAVCAN_NODE_STATIC_ID_MIN			0					//!< [-]
-#define UAVCAN_SUBJECT_ID_MAX				32767				//!< [-]
-#define UAVCAN_SUBJECT_ID_MIN				0					//!< [-]
+#define UAVCAN_ESS_SUB_ID_MAX				65535				//!< [-]
+#define UAVCAN_ESS_SUB_ID_MIN				0					//!< [-]
+#define UAVCAN_BS_SUB_ID_MAX				65535				//!< [-]
+#define UAVCAN_BS_SUB_ID_MIN				0					//!< [-]
+#define UAVCAN_BP_SUB_ID_MAX				65535				//!< [-]
+#define UAVCAN_BP_SUB_ID_MIN				0					//!< [-]
 #define UAVCAN_FD_MODE_MAX					1					//!< [-]
 #define UAVCAN_FD_MODE_MIN					0					//!< [-]
 #define UAVCAN_BITRATE_MAX	 				1000000				//!< [bit/s]
@@ -247,6 +265,8 @@
 #define T_SHORT_MIN							1					//!< [us]	
 #define I_BAL_MAX							UINT8_MAX			//!< [mA]
 #define I_BAL_MIN							0					//!< [mA]
+#define M_MASS_MAX							100					//!< [kg]
+#define M_MASS_MIN							0					//!< [kg]
 
 /*******************************************************************************
  * Types

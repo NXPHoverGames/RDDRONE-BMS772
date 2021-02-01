@@ -121,12 +121,12 @@ valueType_t data_getType(parameterKind_t parameterKind);
  *        		data_initializeData should have been called once
  *     
  * @param    	parameterKind the parameter value it wants, from the parameterKind enum in BMS_data_types.h
- * @param    	outData pointer to the value that needs to become the parameter value, could be int32_t, float or char*
+ * @param    	outData pointer to the value that needs to become the parameter value, could be int64_t, float or char*
  * @param    	outLenght pointer to the value that needs to become the lenght of the data (in bytes) 
  *              only used with characters, otherwise it may be NULL
  *
  * @retval    	a void pointer to the value 
- * @example   	int32_t lvGetParam; 
+ * @example   	int64_t lvGetParam; 
  *            	uint8_t *pReadUint8_tData = NULL;
  *            	pReadUint8_tData = data_getParameter(STATE_OF_CHARGE, &lvGetParam, NULL);
  *            	if(pReadUint8_tData != NULL)
@@ -157,7 +157,6 @@ void* data_getParameter(parameterKind_t parameterKind, void* outData, uint16_t* 
  * 
  * @param  		parameterKind the setting it wants to set from the parameterKind enum in BMS_data_types.h
  * @param  		inNewValue a pointer to the value it will be
-
  *
  * @retval 		is -1 when something went wrong, 0 when it went right
  * @example:  	int32_t newValue = 3; or float newValue = 3.3
@@ -233,15 +232,26 @@ void* data_getAdr(parameterKind_t parameterKind);
 
 
 /*!
- * @brief		function to get the unit as a strings of a certain parameter * 
- *		 
- * @param 		parameterKind the parameter of which the unit should be returned, 
- * 				from the parameterKind enum in BMS_data_types.h
+ * @brief   function to get the unit as a strings of a certain parameter 
+ *     
+ * @param   parameterKind the parameter of which the unit should be returned, 
+ *          from the parameterKind enum in BMS_data_types.h
  *
- * @retval 		an char pointer addres to the value
- * 				
+ * @retval  a char pointer (string) of the value
+ *        
  */
 char* data_getUnit(parameterKind_t parameterKind);
+
+/*!
+ * @brief   function to get the type as a strings of a certain parameter  
+ *     
+ * @param   parameterKind the parameter of which the type should be returned, 
+ *          from the parameterKind enum in BMS_data_types.h
+ *
+ * @retval  a char pointer (string) of the value
+ *        
+ */
+char* data_getTypeString(parameterKind_t parameterKind);
 
 /*!
  * @brief   function to set a bit in the status flags (status_flags)

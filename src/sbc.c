@@ -233,14 +233,14 @@ int sbc_initialize(void)
 	// check if initialized 
 	if(!gSbcInitialized)
 	{
-		cli_printf("SELF-TEST START: SBC\n");
+		cli_printf("SELF-TEST SBC: START\n");
 		//cli_printf("initializing SBC!\n");
 
 		// check the SBC 
 		if(sbc_verifySbc())
 		{
 			// output to the user and return
-			cli_printf("SBC ERROR: Failed to verify the SBC!\n");
+			cli_printfError("SBC ERROR: Failed to verify the SBC!\n");
 			
 			// return error
 			lvRetValue = -1;
@@ -263,7 +263,7 @@ int sbc_initialize(void)
 		if(lvRetValue)
 		{
 			// output to the user
-			cli_printf("SBC ERROR: failed to read SBC_CONF_CTRL_REG! %d\n", lvRetValue);
+			cli_printfError("SBC ERROR: failed to read SBC_CONF_CTRL_REG! %d\n", lvRetValue);
 
 			// return the error
 			return lvRetValue;
@@ -284,7 +284,7 @@ int sbc_initialize(void)
 		if(lvRetValue)
 		{
 			// output to the user
-			cli_printf("SBC ERROR: failed to write START_UP_CTRL_REG! %d\n", lvRetValue);
+			cli_printfError("SBC ERROR: failed to write START_UP_CTRL_REG! %d\n", lvRetValue);
 
 			// return the error
 			return lvRetValue;
@@ -318,7 +318,7 @@ int sbc_initialize(void)
 			if(!(rxData[1] & (1 << MTPNV_STATUS_NVMPS_BIT)))
 			{
 				// output to the user
-				cli_printf("NVMPS can't be overwitten!!!\n");
+				cli_printfError("SBC ERROR: NVMPS can't be overwritten!!!\n");
 
 				cli_printf("Please apply the next things continuously for at least 1.1sec \n");
 				cli_printf("during battery power-up:\n");
@@ -348,7 +348,7 @@ int sbc_initialize(void)
 		// get the time 
 		if(clock_gettime(CLOCK_REALTIME, &sampleTime))
         {
-            cli_printf("SBC ERROR: failed to get sample time! errno: %d\n", errno);
+            cli_printfError("SBC ERROR: failed to get sample time! errno: %d\n", errno);
 
             // than use sleep for 20 miliseconds
             sleep(1000*20);
@@ -360,7 +360,7 @@ int sbc_initialize(void)
 			// get the time to check for an overflow
 			if(clock_gettime(CLOCK_REALTIME, &currentTime) == -1)
 			{
-				cli_printf("SBC ERROR: failed to get currentTime! errno: %d\n", errno);
+				cli_printfError("SBC ERROR: failed to get currentTime! errno: %d\n", errno);
 
 				// return error
 				lvRetValue = -1;
@@ -377,7 +377,7 @@ int sbc_initialize(void)
 		if(!gpio_readPin(RST_N))
 		{
 			// return error
-			cli_printf("SBC ERROR: Timeout happend! RST_N pin: %d\n", gpio_readPin(RST_N));
+			cli_printfError("SBC ERROR: Timeout happend! RST_N pin: %d\n", gpio_readPin(RST_N));
 
 			// return error
 			lvRetValue = -1;
@@ -398,7 +398,7 @@ int sbc_initialize(void)
 		if(lvRetValue)
 		{
 			// output to the user
-			cli_printf("SBC ERROR: failed to read wake status! %d\n", lvRetValue);
+			cli_printfError("SBC ERROR: failed to read wake status! %d\n", lvRetValue);
 
 			// return the error
 			return lvRetValue;
@@ -420,7 +420,7 @@ int sbc_initialize(void)
 		if(lvRetValue)
 		{
 			// output to the user
-			cli_printf("SBC ERROR: failed to read wake status! %d\n", lvRetValue);
+			cli_printfError("SBC ERROR: failed to read wake status! %d\n", lvRetValue);
 
 			// return the error
 			return lvRetValue;
@@ -434,7 +434,7 @@ int sbc_initialize(void)
 		if(WAKE_PIN_ENABLE_REG_VAL != (rxData[1] & WAKE_PIN_EN_WRITE_MASK))
 		{
 			// print to the user
-			cli_printf("SBC ERROR: failed to verify wake status! %d != %d\n", WAKE_PIN_ENABLE_REG_VAL, (rxData[1] & WAKE_PIN_EN_WRITE_MASK));
+			cli_printfError("SBC ERROR: failed to verify wake status! %d != %d\n", WAKE_PIN_ENABLE_REG_VAL, (rxData[1] & WAKE_PIN_EN_WRITE_MASK));
 
 			// return error
 			lvRetValue = -1;
@@ -444,7 +444,7 @@ int sbc_initialize(void)
 		// get the CAN FD mode 
 		if(data_getParameter(UAVCAN_FD_MODE, &rxData2[0], NULL) == NULL)
 	    {
-	       cli_printf("SBC ERROR: couldn't get CANFD mode\n");
+	       cli_printfError("SBC ERROR: couldn't get CANFD mode\n");
 	       rxData2[0] = UAVCAN_FD_MODE_DEFAULT;
 	    } 
 		
@@ -459,7 +459,7 @@ int sbc_initialize(void)
 		if(lvRetValue)
 		{
 			// output to the user
-			cli_printf("SBC ERROR: failed to write CAN CTRL! %d\n", lvRetValue);
+			cli_printfError("SBC ERROR: failed to write CAN CTRL! %d\n", lvRetValue);
 
 			// return the error
 			return lvRetValue;
@@ -479,7 +479,7 @@ int sbc_initialize(void)
 		if(lvRetValue)
 		{
 			// output to the user
-			cli_printf("SBC ERROR: failed to write CAN CTRL! %d\n", lvRetValue);
+			cli_printfError("SBC ERROR: failed to write CAN CTRL! %d\n", lvRetValue);
 
 			// return the error
 			return lvRetValue;
@@ -494,7 +494,7 @@ int sbc_initialize(void)
 		   (rxData[1] & CAN_CTRL_WRITE_MASK))
 		{
 			// print to the user
-			cli_printf("SBC ERROR: failed to verify CAN control! %d != %d\n", 
+			cli_printfError("SBC ERROR: failed to verify CAN control! %d != %d\n", 
 				((CAN_CTRL_REG_VAL) | (rxData2[0] << CAN_CTRL_CFDC_BIT)), 
 				(rxData[1] & CAN_CTRL_WRITE_MASK));
 
@@ -515,7 +515,7 @@ int sbc_initialize(void)
 		if(lvRetValue)
 		{
 			// output to the user
-			cli_printf("SBC ERROR: failed to read REGULATOR_CTRL_REG! %d\n", lvRetValue);
+			cli_printfError("SBC ERROR: failed to read REGULATOR_CTRL_REG! %d\n", lvRetValue);
 
 			// return the error
 			return lvRetValue;
@@ -544,7 +544,7 @@ int sbc_initialize(void)
 			if(lvRetValue)
 			{
 				// output to the user
-				cli_printf("SBC ERROR: failed to read REGULATOR_CTRL_REG! %d\n", lvRetValue);
+				cli_printfError("SBC ERROR: failed to read REGULATOR_CTRL_REG! %d\n", lvRetValue);
 
 				// return the error
 				return lvRetValue;
@@ -558,7 +558,7 @@ int sbc_initialize(void)
 			if(lvRetValue)
 			{
 				// output to the user
-				cli_printf("SBC ERROR: failed to write REGULATOR_CTRL_REG! %d\n", lvRetValue);
+				cli_printfError("SBC ERROR: failed to write REGULATOR_CTRL_REG! %d\n", lvRetValue);
 
 				// return the error
 				return lvRetValue;
@@ -574,7 +574,7 @@ int sbc_initialize(void)
 			{
 				// error
 				// output to the user
-				cli_printf("SBC ERROR: failed to verify REGULATOR_CTRL_REG! %d\n", lvRetValue);
+				cli_printfError("SBC ERROR: failed to verify REGULATOR_CTRL_REG! %d\n", lvRetValue);
 
 				// return the error
 				lvRetValue = -1;
@@ -591,7 +591,7 @@ int sbc_initialize(void)
 		if(lvRetValue)
 		{
 			// output to the user
-			cli_printf("SBC ERROR: failed to set SBC to normal mode! %d\n", lvRetValue);
+			cli_printfError("SBC ERROR: failed to set SBC to normal mode! %d\n", lvRetValue);
 
 			// return the error
 			return lvRetValue;
@@ -602,7 +602,7 @@ int sbc_initialize(void)
 		// the SBC is initialized 
 		gSbcInitialized = true;
 
-		cli_printf("SELF-TEST PASS:  SBC\n");
+		cli_printf("SELF-TEST SBC: \e[32mPASS\e[39m\n");
 	}
 	else
 	{
@@ -638,11 +638,14 @@ int sbc_verifySbc(void)
 	if(lvRetValue)
 	{
 		// output to the user
-		cli_printf("SBC ERROR: failed to read ID! %d\n", lvRetValue);
+		cli_printfError("SBC ERROR: failed to read ID! %d\n", lvRetValue);
 
 		// return the error
 		return lvRetValue;
 	}
+
+	// make it be wrong again
+	lvRetValue = -1;
 
 	// check if the returned ID is expected
 	if(rxData[1] == UJA1169TK_F_3_ID)
@@ -690,7 +693,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 			if(lvRetValue)
 			{
 				// output to the user
-				cli_printf("SBC ERROR: failed to read wake status! %d\n", lvRetValue);
+				cli_printfError("SBC ERROR: failed to read wake status! %d\n", lvRetValue);
 
 				// return the error
 				return lvRetValue;
@@ -699,7 +702,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 			if((rxData[1] & 3) == 0)
 			{
 				// error 
-				cli_printf("SBC error: Wake isn't configured!\n");
+				cli_printfError("SBC ERROR: Wake isn't configured!\n");
 				lvRetValue = -1;
 
 				// return
@@ -718,7 +721,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 			if(lvRetValue)
 			{
 				// output to the user
-				cli_printf("SBC ERROR: failed to read SBC_CONF_CTRL_REG! %d\n", lvRetValue);
+				cli_printfError("SBC ERROR: failed to read SBC_CONF_CTRL_REG! %d\n", lvRetValue);
 
 				// return the error
 				return lvRetValue;
@@ -728,7 +731,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 			if(rxData[1] & (1 << SBC_CONF_CTRL_SLPC_BIT))
 			{
 				// error
-				cli_printf("SBC error: SBC CONF isn't configured!\n");
+				cli_printfError("SBC ERROR: SBC CONF isn't configured!\n");
 				lvRetValue = -1;
 
 				// return
@@ -746,7 +749,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 			if(lvRetValue)
 			{
 				// output to the user
-				cli_printf("SBC ERROR: failed to read GLOBAL_EVENT_STAT_REG_ADR! %d\n", lvRetValue);
+				cli_printfError("SBC ERROR: failed to read GLOBAL_EVENT_STAT_REG_ADR! %d\n", lvRetValue);
 
 				// return the error
 				return lvRetValue;
@@ -777,7 +780,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 					if(lvRetValue)
 					{
 						// output to the user
-						cli_printf("SBC ERROR: failed to read WAKE_PIN_EVENT_STAT_REG_ADR! %d\n", 
+						cli_printfError("SBC ERROR: failed to read WAKE_PIN_EVENT_STAT_REG_ADR! %d\n", 
 							lvRetValue);
 
 						// return the error
@@ -803,7 +806,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 						if(lvRetValue)
 						{
 							// output to the user
-							cli_printf("SBC ERROR: failed to write WAKE_PIN_EVENT_STAT_REG_ADR! %d\n", 
+							cli_printfError("SBC ERROR: failed to write WAKE_PIN_EVENT_STAT_REG_ADR! %d\n", 
 								lvRetValue);
 
 							// return the error
@@ -821,7 +824,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 						if(lvRetValue)
 						{
 							// output to the user
-							cli_printf("SBC ERROR: failed to read WAKE_PIN_EVENT_STAT_REG_ADR! %d\n", 
+							cli_printfError("SBC ERROR: failed to read WAKE_PIN_EVENT_STAT_REG_ADR! %d\n", 
 								lvRetValue);
 
 							// return the error
@@ -833,7 +836,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 						if(rxData[1] & WAKE_PIN_EVENT_STAT_MASK)
 						{
 							// output to the user
-							cli_printf("SBC ERROR: failed to reset WAKE_PIN_EVENT_STAT_REG_ADR! %d\n", 
+							cli_printfError("SBC ERROR: failed to reset WAKE_PIN_EVENT_STAT_REG_ADR! %d\n", 
 								rxData[1] & WAKE_PIN_EVENT_STAT_MASK);
 
 							lvRetValue = -1;
@@ -858,7 +861,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 					if(lvRetValue)
 					{
 						// output to the user
-						cli_printf("SBC ERROR: failed to read TRANSC_EVENT_STAT_REG_ADR! %d\n", 
+						cli_printfError("SBC ERROR: failed to read TRANSC_EVENT_STAT_REG_ADR! %d\n", 
 							lvRetValue);
 
 						// return the error
@@ -884,7 +887,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 						if(lvRetValue)
 						{
 							// output to the user
-							cli_printf("SBC ERROR: failed to write WAKE_PIN_EVENT_STAT_REG_ADR! %d\n", 
+							cli_printfError("SBC ERROR: failed to write WAKE_PIN_EVENT_STAT_REG_ADR! %d\n", 
 								lvRetValue);
 
 							// return the error
@@ -902,7 +905,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 						if(lvRetValue)
 						{
 							// output to the user
-							cli_printf("SBC ERROR: failed to read TRANSC_EVENT_STAT_REG_ADR! %d\n", 
+							cli_printfError("SBC ERROR: failed to read TRANSC_EVENT_STAT_REG_ADR! %d\n", 
 								lvRetValue);
 
 							// return the error
@@ -914,7 +917,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 						if(rxData[1] & TRANSC_EVENT_STAT_MASK)
 						{
 							// output to the user
-							cli_printf("SBC ERROR: failed to reset TRANSC_EVENT_STAT_REG_ADR! %d\n", 
+							cli_printfError("SBC ERROR: failed to reset TRANSC_EVENT_STAT_REG_ADR! %d\n", 
 								rxData[1] & TRANSC_EVENT_STAT_MASK);
 
 							lvRetValue = -1;
@@ -941,7 +944,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 					if(lvRetValue)
 					{
 						// output to the user
-						cli_printf("SBC ERROR: failed to read SUPPLY_EVENT_STAT_REG_ADR! %d\n", 
+						cli_printfError("SBC ERROR: failed to read SUPPLY_EVENT_STAT_REG_ADR! %d\n", 
 							lvRetValue);
 
 						// return the error
@@ -967,7 +970,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 						if(lvRetValue)
 						{
 							// output to the user
-							cli_printf("SBC ERROR: failed to write SUPPLY_EVENT_STAT_REG_ADR! %d\n", 
+							cli_printfError("SBC ERROR: failed to write SUPPLY_EVENT_STAT_REG_ADR! %d\n", 
 								lvRetValue);
 
 							// return the error
@@ -986,7 +989,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 						if(lvRetValue)
 						{
 							// output to the user
-							cli_printf("SBC ERROR: failed to read SUPPLY_EVENT_STAT_REG_ADR! %d\n", 
+							cli_printfError("SBC ERROR: failed to read SUPPLY_EVENT_STAT_REG_ADR! %d\n", 
 								lvRetValue);
 
 							// return the error
@@ -997,7 +1000,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 						if(rxData[1] & SUPPLY_EVENT_STAT_MASK)
 						{
 							// output to the user
-							cli_printf("SBC ERROR: failed to reset SUPPLY_EVENT_STAT_REG_ADR! %d\n", 
+							cli_printfError("SBC ERROR: failed to reset SUPPLY_EVENT_STAT_REG_ADR! %d\n", 
 								rxData[1] & SUPPLY_EVENT_STAT_MASK);
 
 							lvRetValue = -1;
@@ -1022,7 +1025,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 					if(lvRetValue)
 					{
 						// output to the user
-						cli_printf("SBC ERROR: failed to read SYS_EVENT_STAT_REG_ADR! %d\n", 
+						cli_printfError("SBC ERROR: failed to read SYS_EVENT_STAT_REG_ADR! %d\n", 
 							lvRetValue);
 
 						// return the error
@@ -1048,7 +1051,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 						if(lvRetValue)
 						{
 							// output to the user
-							cli_printf("SBC ERROR: failed to write WAKE_PIN_EVENT_STAT_REG_ADR! %d\n", 
+							cli_printfError("SBC ERROR: failed to write WAKE_PIN_EVENT_STAT_REG_ADR! %d\n", 
 								lvRetValue);
 
 							// return the error
@@ -1066,7 +1069,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 						if(lvRetValue)
 						{
 							// output to the user
-							cli_printf("SBC ERROR: failed to read SYS_EVENT_STAT_REG_ADR! %d\n", 
+							cli_printfError("SBC ERROR: failed to read SYS_EVENT_STAT_REG_ADR! %d\n", 
 								lvRetValue);
 
 							// return the error
@@ -1077,7 +1080,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 						if(rxData[1] & SYS_EVENT_STAT_MASK)
 						{
 							// output to the user
-							cli_printf("SBC ERROR: failed to reset SYS_EVENT_STAT_REG_ADR! %d\n", 
+							cli_printfError("SBC ERROR: failed to reset SYS_EVENT_STAT_REG_ADR! %d\n", 
 								rxData[1] & SYS_EVENT_STAT_MASK);
 
 							lvRetValue = -1;
@@ -1100,7 +1103,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 				if(lvRetValue)
 				{
 					// output to the user
-					cli_printf("SBC ERROR: failed to read GLOBAL_EVENT_STAT_REG_ADR! %d\n", 
+					cli_printfError("SBC ERROR: failed to read GLOBAL_EVENT_STAT_REG_ADR! %d\n", 
 						lvRetValue);
 
 					// return the error
@@ -1111,7 +1114,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 				if(rxData[1] & GLOBAL_EVENT_STAT_MASK)
 				{
 					// output to the user
-					cli_printf("SBC ERROR: failed to reset GLOBAL_EVENT_STAT_REG_ADR! %d\n", 
+					cli_printfError("SBC ERROR: failed to reset GLOBAL_EVENT_STAT_REG_ADR! %d\n", 
 						rxData[1] & GLOBAL_EVENT_STAT_MASK);
 
 					lvRetValue = -1;
@@ -1159,7 +1162,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 	// check for errors
 	if(lvRetValue)
 	{
-		cli_printf("SBC ERROR: failed to set mode! %d\n", lvRetValue);
+		cli_printfError("SBC ERROR: failed to set mode! %d\n", lvRetValue);
 	}
 
 	// check the mode 
@@ -1172,7 +1175,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 	// check for errors
 	if(lvRetValue)
 	{
-		cli_printf("SBC ERROR: failed to set mode! %d\n", lvRetValue);
+		cli_printfError("SBC ERROR: failed to set mode! %d\n", lvRetValue);
 	}
 
 #ifdef DEBUG_SBC_SPI
@@ -1182,7 +1185,7 @@ int sbc_setSbcMode(sbc_mode_t newMode)
 	// check for errors
 	if((rxData[1] & MODE_CONTROL_WRITE_MASK) != txData[1])
 	{
-		cli_printf("SBC ERROR: Couldn't verify SBC mode! %d != %d\n", (rxData[1] & MODE_CONTROL_WRITE_MASK), txData[1]);
+		cli_printfError("SBC ERROR: Couldn't verify SBC mode! %d != %d\n", (rxData[1] & MODE_CONTROL_WRITE_MASK), txData[1]);
 	}
 
 	// return to the user
@@ -1212,7 +1215,7 @@ int sbc_setCANFDMode(bool on)
 	if(lvRetValue)
 	{
 		// output to the user
-		cli_printf("SBC ERROR: failed to read CAN CTRL! %d\n", lvRetValue);
+		cli_printfError("SBC ERROR: failed to read CAN CTRL! %d\n", lvRetValue);
 
 		// return the error
 		return lvRetValue;
@@ -1229,7 +1232,7 @@ int sbc_setCANFDMode(bool on)
 	if(lvRetValue)
 	{
 		// output to the user
-		cli_printf("SBC ERROR: failed to write CAN CTRL! %d\n", lvRetValue);
+		cli_printfError("SBC ERROR: failed to write CAN CTRL! %d\n", lvRetValue);
 
 		// return the error
 		return lvRetValue;
@@ -1267,7 +1270,7 @@ int programNVMPSRegisters(void)
 	if(lvRetValue)
 	{
 		// output to the user
-		cli_printf("SBC ERROR: failed to write START_UP_CTRL_REG! %d\n", lvRetValue);
+		cli_printfError("SBC ERROR: failed to write START_UP_CTRL_REG! %d\n", lvRetValue);
 
 		// return the error
 		return lvRetValue;
@@ -1286,7 +1289,7 @@ int programNVMPSRegisters(void)
 	if(lvRetValue)
 	{
 		// output to the user
-		cli_printf("SBC ERROR: failed to write SBC_CONF_CTRL_REG! %d\n", lvRetValue);
+		cli_printfError("SBC ERROR: failed to write SBC_CONF_CTRL_REG! %d\n", lvRetValue);
 
 		// return the error
 		return lvRetValue;
@@ -1354,7 +1357,7 @@ int programNVMPSRegisters(void)
 	if(lvRetValue)
 	{
 		// output to the user
-		cli_printf("SBC ERROR: failed to write CRC! %d\n", lvRetValue);
+		cli_printfError("SBC ERROR: failed to write CRC! %d\n", lvRetValue);
 
 		// return the error
 		return lvRetValue;

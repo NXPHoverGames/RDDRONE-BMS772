@@ -168,6 +168,51 @@ int cli_processCommands(int argc, char **argv);
 int cli_printf(FAR const IPTR char *fmt, ...);
 
 /*!
+ * @brief 	this function is the same as cli_printf(), but it will print the message in red
+ * 			
+ * @param 	fmt This is the string that contains the text to be written to stdout. 
+ * 			It can optionally contain embedded format tags that are replaced by 
+ * 			the values specified in subsequent additional arguments and formatted as requested. 
+ * 			Format tags prototype is %[flags][width][.precision][length]specifier
+ *
+ * @param 	the arguments of the function
+ *
+ * @return 	If successful, the total number of characters written is returned. 
+ *			On failure, a negative number is returned.
+ */
+int cli_printfError(FAR const IPTR char *fmt, ...);
+
+/*!
+ * @brief 	this function is the same as cli_printf(), but it will print the message in orange
+ * 			
+ * @param 	fmt This is the string that contains the text to be written to stdout. 
+ * 			It can optionally contain embedded format tags that are replaced by 
+ * 			the values specified in subsequent additional arguments and formatted as requested. 
+ * 			Format tags prototype is %[flags][width][.precision][length]specifier
+ *
+ * @param 	the arguments of the function
+ *
+ * @return 	If successful, the total number of characters written is returned. 
+ *			On failure, a negative number is returned.
+ */
+int cli_printfWarning(FAR const IPTR char *fmt, ...);
+
+/*!
+ * @brief 	this function is the same as cli_printf(), but it will print the message in green
+ * 			
+ * @param 	fmt This is the string that contains the text to be written to stdout. 
+ * 			It can optionally contain embedded format tags that are replaced by 
+ * 			the values specified in subsequent additional arguments and formatted as requested. 
+ * 			Format tags prototype is %[flags][width][.precision][length]specifier
+ *
+ * @param 	the arguments of the function
+ *
+ * @return 	If successful, the total number of characters written is returned. 
+ *			On failure, a negative number is returned.
+ */
+int cli_printfGreen(FAR const IPTR char *fmt, ...);
+
+/*!
  * @brief 	this function is the same as cli_printf(), but with no mutex lock
  * @warning should be used with cli_printLock()
  * 			

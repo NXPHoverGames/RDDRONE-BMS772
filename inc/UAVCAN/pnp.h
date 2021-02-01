@@ -53,6 +53,7 @@
 #ifndef UAVCAN_PNP_H_
 #define UAVCAN_PNP_H_
 
+#define NUNAVUT_ASSERT
 #include <canard.h>
 
 
