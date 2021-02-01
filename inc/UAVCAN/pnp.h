@@ -65,7 +65,7 @@ int32_t PNPProcess(CanardInstance* ins, CanardTransfer* transfer);
 
 CanardNodeID PNPGetNodeID();
 
-const CanardPortID PNPGetPortID();
+CanardPortID PNPGetPortID(CanardInstance* ins);
 
 
 
