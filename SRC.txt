@@ -1,0 +1,11 @@
+This is the software content register
+List of used libraries:
+	- Libcanard
+		MIT license
+		https://github.com/UAVCAN/libcanard/blob/master/LICENSE 
+	- Public_regulated_data_types
+		MIT license
+		https://github.com/UAVCAN/public_regulated_data_types/blob/master/LICENSE 
+	- Apache nuttx
+		Apache license 2.0
+		https://github.com/apache/incubator-nuttx/blob/master/LICENSE
