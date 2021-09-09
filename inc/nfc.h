@@ -3,7 +3,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020 NXP
+ * Copyright 2020-2021 NXP
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -35,7 +35,7 @@
  **     Project     : SmartBattery_RDDRONE_BMS772
  **     Processor   : S32K144
  **     Version     : 1.00
- **     Date   		: 2020-08-25
+ **     Date        : 2020-08-25
  **     Abstract    :
  **        nfc module.
  **        This module contains all functions needed for using nfc
@@ -70,31 +70,46 @@
  * public functions
  ******************************************************************************/
 /*!
- * @brief 	This function will initialze the NFC
- * 			it will test the i2C connection with the chip and read the slave address
- * 		
- * @return 	0 if ok, -1 if there is an error
+ * @brief   This function will initialze the NFC
+ *          it will test the i2C connection with the chip and read the slave address
+ *
+ * @param   skipSelfTest if this is true it will skip the self-test
+ *    
+ * @return  0 if ok, -1 if there is an error
  * @example 
- * 			if(nfc_initialize())
- *			{
- *				// do something with the error
- *			}
+ *          if(nfc_initialize(false))
+ *          {
+ *            // do something with the error
+ *          }
  */
-int nfc_initialize(void);
+int nfc_initialize(bool skipSelfTest);
 
 /*!
- * @brief 	This function can be used to set the hard power-down (HPD) mode of the NFC 
- * 		
- * @param 	HPD if true, the microcontroller will set the NFC chip in hard power-down mode. 
- * 			if false, it will disable this mode.
- * @return 	0 if ok, -1 if there is an error
+ * @brief   This function can be used to set the hard power-down (HPD) mode of the NFC 
+ *      
+ * @param   HPD if true, the microcontroller will set the NFC chip in hard power-down mode. 
+ *          if false, it will disable this mode.
+ * @return  0 if ok, -1 if there is an error
  * @example 
- * 			if(nfc_setHPD())
- *			{
- *				// do something with the error
- *			}
+ *          if(nfc_setHPD())
+ *          {
+ *              // do something with the error
+ *          }
  */
 int nfc_setHPD(bool HPD);
+
+/*!
+ * @brief   This function can be used to update the BMS parameter to the NTAG
+ * @note  Blocking
+ *    
+ * @param   setOutdatedText If true it will set the text "outdated, please tap again!",
+ *              If false, it will update the NTAG with the latest BMS data.
+ * @param   wakingUpMessage If true it will set the waking up text (for sleep mode)
+ *              If false, it will set the charge-relaxation string. 
+ *
+ * @return  0 if ok, -1 if there is an error
+ */
+int nfc_updateBMSStatus(bool setOutdatedText, bool wakingUpMessage);
 
 /*******************************************************************************
  * EOF

@@ -2,7 +2,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020 NXP 
+ * Copyright 2020-2021 NXP 
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -38,13 +38,20 @@
 // To avoid conflicts with definitions given in the source DSDL file, all entities created by the code generator
 // are named with an underscore at the end, like foo_bar_().
 //
-// Generator:     nunavut-0.5.1 (serialization was enabled)
-// Source file:   /home/hovergames/nuttx/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/file/407.Modify.1.0.uavcan
-// Generated at:  2020-11-18 09:48:55.764098 UTC
+// Generator:     nunavut-1.1.0 (serialization was enabled)
+// Source file:   /home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/file/407.Modify.1.0.uavcan
+// Generated at:  2021-04-12 07:47:53.512291 UTC
 // Is deprecated: yes
 // Fixed port-ID: 407
 // Full name:     uavcan.file.Modify
 // Version:       1.0
+//
+// Language Options
+//     target_endianness:  any
+//     omit_float_serialization_support:  False
+//     enable_serialization_asserts:  False
+//     enable_override_variable_array_capacity:  True
+
 //           _____  ______ _____  _____  ______ _____       _______ ______ _____
 //          |  __ `|  ____|  __ `|  __ `|  ____/ ____|   /`|__   __|  ____|  __ `
 //          | |  | | |__  | |__) | |__) | |__ | |       /  `  | |  | |__  | |  | |
@@ -62,6 +69,19 @@
 #include <uavcan/file/Path_1_0.h>
 #include <stdbool.h>
 #include <stdlib.h>
+
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_TARGET_ENDIANNESS == 1693710260,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/file/407.Modify.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_OMIT_FLOAT_SERIALIZATION_SUPPORT == 0,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/file/407.Modify.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_ENABLE_SERIALIZATION_ASSERTS == 0,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/file/407.Modify.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_ENABLE_OVERRIDE_VARIABLE_ARRAY_CAPACITY == 1,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/file/407.Modify.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
 
 #ifdef __cplusplus
 extern "C" {
@@ -127,24 +147,33 @@ static inline int8_t uavcan_file_Modify_Request_1_0_serialize_(
         return -NUNAVUT_ERROR_INVALID_ARGUMENT;
     }
 
+
     const size_t capacity_bytes = *inout_buffer_size_bytes;
+#ifndef uavcan_file_Modify_Request_1_0_DISABLE_SERIALIZATION_BUFFER_CHECK_
+
     if ((8U * (size_t) capacity_bytes) < 1840UL)
     {
         return -NUNAVUT_ERROR_SERIALIZATION_BUFFER_TOO_SMALL;
     }
+#endif
+
     // Notice that fields that are not an integer number of bytes long may overrun the space allocated for them
     // in the serialization buffer up to the next byte boundary. This is by design and is guaranteed to be safe.
     size_t offset_bits = 0U;
 
+
+
+
+
     {   // saturated bool preserve_source
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 1ULL) <= (capacity_bytes * 8U));
         buffer[offset_bits / 8U] = obj->preserve_source ? 1U : 0U;
         offset_bits += 1U;
     }
 
+
+
+
     {   // saturated bool overwrite_destination
-        NUNAVUT_ASSERT((offset_bits + 1ULL) <= (capacity_bytes * 8U));
         if (obj->overwrite_destination)
         {
             buffer[offset_bits / 8U] = (uint8_t)(buffer[offset_bits / 8U] | (1U << (offset_bits % 8U)));
@@ -156,8 +185,10 @@ static inline int8_t uavcan_file_Modify_Request_1_0_serialize_(
         offset_bits += 1U;
     }
 
+
+
+
     {   // void30
-        NUNAVUT_ASSERT((offset_bits + 30ULL) <= (capacity_bytes * 8U));
         const int8_t _err0_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, 30U);  // Optimize?
         if (_err0_ < 0)
         {
@@ -166,26 +197,20 @@ static inline int8_t uavcan_file_Modify_Request_1_0_serialize_(
         offset_bits += 30UL;
     }
 
+
     if (offset_bits % 8U != 0U)  // Pad to 8 bits. TODO: Eliminate redundant padding checks.
     {
         const uint8_t _pad0_ = (uint8_t)(8U - offset_bits % 8U);
-        NUNAVUT_ASSERT(_pad0_ > 0);
         const int8_t _err1_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, _pad0_);  // Optimize?
         if (_err1_ < 0)
         {
             return _err1_;
         }
         offset_bits += _pad0_;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     }
 
     {   // uavcan.file.Path.1.0 source
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 904ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes0_ = 113UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes0_) <= capacity_bytes);
         int8_t _err2_ = uavcan_file_Path_1_0_serialize_(
             &obj->source, &buffer[offset_bits / 8U], &_size_bytes0_);
         if (_err2_ < 0)
@@ -193,32 +218,23 @@ static inline int8_t uavcan_file_Modify_Request_1_0_serialize_(
             return _err2_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes0_ * 8U) >= 8ULL);
-        NUNAVUT_ASSERT((_size_bytes0_ * 8U) <= 904ULL);
         offset_bits += _size_bytes0_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
+
 
     if (offset_bits % 8U != 0U)  // Pad to 8 bits. TODO: Eliminate redundant padding checks.
     {
         const uint8_t _pad1_ = (uint8_t)(8U - offset_bits % 8U);
-        NUNAVUT_ASSERT(_pad1_ > 0);
         const int8_t _err3_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, _pad1_);  // Optimize?
         if (_err3_ < 0)
         {
             return _err3_;
         }
         offset_bits += _pad1_;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     }
 
     {   // uavcan.file.Path.1.0 destination
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 904ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes1_ = 113UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes1_) <= capacity_bytes);
         int8_t _err4_ = uavcan_file_Path_1_0_serialize_(
             &obj->destination, &buffer[offset_bits / 8U], &_size_bytes1_);
         if (_err4_ < 0)
@@ -226,30 +242,26 @@ static inline int8_t uavcan_file_Modify_Request_1_0_serialize_(
             return _err4_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes1_ * 8U) >= 8ULL);
-        NUNAVUT_ASSERT((_size_bytes1_ * 8U) <= 904ULL);
         offset_bits += _size_bytes1_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
+
 
     if (offset_bits % 8U != 0U)  // Pad to 8 bits. TODO: Eliminate redundant padding checks.
     {
         const uint8_t _pad2_ = (uint8_t)(8U - offset_bits % 8U);
-        NUNAVUT_ASSERT(_pad2_ > 0);
         const int8_t _err5_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, _pad2_);  // Optimize?
         if (_err5_ < 0)
         {
             return _err5_;
         }
         offset_bits += _pad2_;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     }
     // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
 
-    NUNAVUT_ASSERT(offset_bits >= 48ULL);
-    NUNAVUT_ASSERT(offset_bits <= 1840ULL);
 
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
+
+
+
     *inout_buffer_size_bytes = (size_t) (offset_bits / 8U);
 
     return NUNAVUT_SUCCESS;
@@ -282,12 +294,16 @@ static inline int8_t uavcan_file_Modify_Request_1_0_deserialize_(
         return -NUNAVUT_ERROR_INVALID_ARGUMENT;
     }
 
+
     const size_t capacity_bytes = *inout_buffer_size_bytes;
     const size_t capacity_bits = capacity_bytes * (size_t) 8U;
     size_t offset_bits = 0U;
 
+
+
+
+
     // saturated bool preserve_source
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     if (offset_bits < capacity_bits)
     {
         out_obj->preserve_source = (buffer[offset_bits / 8U] & 1U) != 0U;
@@ -297,6 +313,9 @@ static inline int8_t uavcan_file_Modify_Request_1_0_deserialize_(
         out_obj->preserve_source = false;
     }
     offset_bits += 1U;
+
+
+
 
     // saturated bool overwrite_destination
     if (offset_bits < capacity_bits)
@@ -309,17 +328,18 @@ static inline int8_t uavcan_file_Modify_Request_1_0_deserialize_(
     }
     offset_bits += 1U;
 
+
+
+
     // void30
     offset_bits += 30;
+
 
     offset_bits = (offset_bits + 7U) & ~(size_t) 7U;  // Align on 8 bits.
 
     // uavcan.file.Path.1.0 source
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     {
         size_t _size_bytes2_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         const int8_t _err6_ = uavcan_file_Path_1_0_deserialize_(
             &out_obj->source, &buffer[offset_bits / 8U], &_size_bytes2_);
         if (_err6_ < 0)
@@ -329,14 +349,12 @@ static inline int8_t uavcan_file_Modify_Request_1_0_deserialize_(
         offset_bits += _size_bytes2_ * 8U;  // Advance by the size of the nested serialized representation.
     }
 
+
     offset_bits = (offset_bits + 7U) & ~(size_t) 7U;  // Align on 8 bits.
 
     // uavcan.file.Path.1.0 destination
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     {
         size_t _size_bytes3_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         const int8_t _err7_ = uavcan_file_Path_1_0_deserialize_(
             &out_obj->destination, &buffer[offset_bits / 8U], &_size_bytes3_);
         if (_err7_ < 0)
@@ -346,10 +364,11 @@ static inline int8_t uavcan_file_Modify_Request_1_0_deserialize_(
         offset_bits += _size_bytes3_ * 8U;  // Advance by the size of the nested serialized representation.
     }
 
+
     offset_bits = (offset_bits + 7U) & ~(size_t) 7U;  // Align on 8 bits.
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
+
     *inout_buffer_size_bytes = (size_t) (nunavutChooseMin(offset_bits, capacity_bits) / 8U);
-    NUNAVUT_ASSERT(capacity_bytes >= *inout_buffer_size_bytes);
+
 
     return NUNAVUT_SUCCESS;
 }
@@ -365,10 +384,12 @@ static inline void uavcan_file_Modify_Request_1_0_initialize_(uavcan_file_Modify
         size_t size_bytes = 0;
         const uint8_t buf = 0;
         const int8_t err = uavcan_file_Modify_Request_1_0_deserialize_(out_obj, &buf, &size_bytes);
-        NUNAVUT_ASSERT(err >= 0);
+
         (void) err;
     }
 }
+
+
 
 #define uavcan_file_Modify_Response_1_0_FULL_NAME_             "uavcan.file.Modify.Response"
 #define uavcan_file_Modify_Response_1_0_FULL_NAME_AND_VERSION_ "uavcan.file.Modify.Response.1.0"
@@ -415,22 +436,26 @@ static inline int8_t uavcan_file_Modify_Response_1_0_serialize_(
         return -NUNAVUT_ERROR_INVALID_ARGUMENT;
     }
 
+
     const size_t capacity_bytes = *inout_buffer_size_bytes;
+#ifndef uavcan_file_Modify_Response_1_0_DISABLE_SERIALIZATION_BUFFER_CHECK_
+
     if ((8U * (size_t) capacity_bytes) < 16UL)
     {
         return -NUNAVUT_ERROR_SERIALIZATION_BUFFER_TOO_SMALL;
     }
+#endif
+
     // Notice that fields that are not an integer number of bytes long may overrun the space allocated for them
     // in the serialization buffer up to the next byte boundary. This is by design and is guaranteed to be safe.
     size_t offset_bits = 0U;
 
+
+
+
+
     {   // uavcan.file.Error.1.0 error
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 16ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes4_ = 2UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes4_) <= capacity_bytes);
         int8_t _err8_ = uavcan_file_Error_1_0_serialize_(
             &obj->_error, &buffer[offset_bits / 8U], &_size_bytes4_);
         if (_err8_ < 0)
@@ -438,28 +463,25 @@ static inline int8_t uavcan_file_Modify_Response_1_0_serialize_(
             return _err8_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes4_ * 8U) == 16ULL);
         offset_bits += _size_bytes4_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
+
 
     if (offset_bits % 8U != 0U)  // Pad to 8 bits. TODO: Eliminate redundant padding checks.
     {
         const uint8_t _pad3_ = (uint8_t)(8U - offset_bits % 8U);
-        NUNAVUT_ASSERT(_pad3_ > 0);
         const int8_t _err9_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, _pad3_);  // Optimize?
         if (_err9_ < 0)
         {
             return _err9_;
         }
         offset_bits += _pad3_;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     }
     // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
 
-    NUNAVUT_ASSERT(offset_bits == 16ULL);
 
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
+
+
     *inout_buffer_size_bytes = (size_t) (offset_bits / 8U);
 
     return NUNAVUT_SUCCESS;
@@ -492,16 +514,18 @@ static inline int8_t uavcan_file_Modify_Response_1_0_deserialize_(
         return -NUNAVUT_ERROR_INVALID_ARGUMENT;
     }
 
+
     const size_t capacity_bytes = *inout_buffer_size_bytes;
     const size_t capacity_bits = capacity_bytes * (size_t) 8U;
     size_t offset_bits = 0U;
 
+
+
+
+
     // uavcan.file.Error.1.0 error
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     {
         size_t _size_bytes5_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         const int8_t _err10_ = uavcan_file_Error_1_0_deserialize_(
             &out_obj->_error, &buffer[offset_bits / 8U], &_size_bytes5_);
         if (_err10_ < 0)
@@ -511,10 +535,11 @@ static inline int8_t uavcan_file_Modify_Response_1_0_deserialize_(
         offset_bits += _size_bytes5_ * 8U;  // Advance by the size of the nested serialized representation.
     }
 
+
     offset_bits = (offset_bits + 7U) & ~(size_t) 7U;  // Align on 8 bits.
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
+
     *inout_buffer_size_bytes = (size_t) (nunavutChooseMin(offset_bits, capacity_bits) / 8U);
-    NUNAVUT_ASSERT(capacity_bytes >= *inout_buffer_size_bytes);
+
 
     return NUNAVUT_SUCCESS;
 }
@@ -530,10 +555,12 @@ static inline void uavcan_file_Modify_Response_1_0_initialize_(uavcan_file_Modif
         size_t size_bytes = 0;
         const uint8_t buf = 0;
         const int8_t err = uavcan_file_Modify_Response_1_0_deserialize_(out_obj, &buf, &size_bytes);
-        NUNAVUT_ASSERT(err >= 0);
+
         (void) err;
     }
 }
+
+
 
 #ifdef __cplusplus
 }

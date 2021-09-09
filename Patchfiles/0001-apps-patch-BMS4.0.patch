@@ -1,0 +1,2853 @@
+From 0b40927a82369ccb204eb4d476bbc1c7a2f9110c Mon Sep 17 00:00:00 2001
+From: Cis van Mierlo <cis.van.mierlo@nxp.com>
+Date: Fri, 3 Sep 2021 11:07:02 +0200
+Subject: [PATCH] apps patch BMS4.0
+
+---
+ .../{libcanard => libcanardv0}/.gitignore     |   0
+ canutils/{libcanard => libcanardv0}/Kconfig   |  12 +-
+ canutils/{libcanard => libcanardv0}/Make.defs |   4 +-
+ canutils/{libcanard => libcanardv0}/Makefile  |  32 +-
+ canutils/libcanardv1/.gitignore               |   2 +
+ canutils/libcanardv1/Kconfig                  |  27 +
+ canutils/libcanardv1/Make.defs                |  39 ++
+ canutils/libcanardv1/Makefile                 |  85 +++
+ canutils/slcan/Kconfig                        |  21 +
+ canutils/slcan/Make.defs                      |  39 ++
+ canutils/slcan/Makefile                       |  49 ++
+ canutils/slcan/slcan.c                        | 489 +++++++++++++++++
+ canutils/slcan/slcan.h                        |  32 ++
+ examples/{canard => canardv0}/Kconfig         |  22 +-
+ examples/{canard => canardv0}/Make.defs       |   4 +-
+ examples/{canard => canardv0}/Makefile        |   6 +-
+ examples/{canard => canardv0}/canard_main.c   |  16 +-
+ examples/canardv1/.gitignore                  |  11 +
+ examples/canardv1/Kconfig                     |  49 ++
+ examples/canardv1/Make.defs                   |  39 ++
+ examples/canardv1/Makefile                    |  48 ++
+ examples/canardv1/canard_main.c               | 418 ++++++++++++++
+ examples/canardv1/o1heap.c                    | 508 ++++++++++++++++++
+ examples/canardv1/o1heap.h                    | 143 +++++
+ examples/canardv1/socketcan.c                 | 171 ++++++
+ examples/canardv1/socketcan.h                 |  69 +++
+ nxp_bms/Make.defs                             |  35 ++
+ nxp_bms/Makefile                              |  75 +++
+ system/spi/spi_common.c                       |   2 +-
+ system/spi/spi_exch.c                         |   2 +-
+ 30 files changed, 2399 insertions(+), 50 deletions(-)
+ rename canutils/{libcanard => libcanardv0}/.gitignore (100%)
+ rename canutils/{libcanard => libcanardv0}/Kconfig (69%)
+ rename canutils/{libcanard => libcanardv0}/Make.defs (95%)
+ rename canutils/{libcanard => libcanardv0}/Makefile (71%)
+ create mode 100644 canutils/libcanardv1/.gitignore
+ create mode 100644 canutils/libcanardv1/Kconfig
+ create mode 100644 canutils/libcanardv1/Make.defs
+ create mode 100644 canutils/libcanardv1/Makefile
+ create mode 100644 canutils/slcan/Kconfig
+ create mode 100644 canutils/slcan/Make.defs
+ create mode 100644 canutils/slcan/Makefile
+ create mode 100644 canutils/slcan/slcan.c
+ create mode 100644 canutils/slcan/slcan.h
+ rename examples/{canard => canardv0}/Kconfig (58%)
+ rename examples/{canard => canardv0}/Make.defs (95%)
+ rename examples/{canard => canardv0}/Makefile (94%)
+ rename examples/{canard => canardv0}/canard_main.c (97%)
+ create mode 100644 examples/canardv1/.gitignore
+ create mode 100644 examples/canardv1/Kconfig
+ create mode 100644 examples/canardv1/Make.defs
+ create mode 100644 examples/canardv1/Makefile
+ create mode 100644 examples/canardv1/canard_main.c
+ create mode 100644 examples/canardv1/o1heap.c
+ create mode 100644 examples/canardv1/o1heap.h
+ create mode 100644 examples/canardv1/socketcan.c
+ create mode 100644 examples/canardv1/socketcan.h
+ create mode 100644 nxp_bms/Make.defs
+ create mode 100644 nxp_bms/Makefile
+
+diff --git a/canutils/libcanard/.gitignore b/canutils/libcanardv0/.gitignore
+similarity index 100%
+rename from canutils/libcanard/.gitignore
+rename to canutils/libcanardv0/.gitignore
+diff --git a/canutils/libcanard/Kconfig b/canutils/libcanardv0/Kconfig
+similarity index 69%
+rename from canutils/libcanard/Kconfig
+rename to canutils/libcanardv0/Kconfig
+index dfb760752..db32d813b 100644
+--- a/canutils/libcanard/Kconfig
++++ b/canutils/libcanardv0/Kconfig
+@@ -3,22 +3,22 @@
+ # see the file kconfig-language.txt in the NuttX tools repository.
+ #
+ 
+-config CANUTILS_LIBCANARD
+-	bool "libcanard UAVCAN Library"
++config CANUTILS_LIBCANARDV0
++	bool "libcanard UAVCAN v0 Library"
+ 	default n
+ 	depends on CAN && CAN_EXTID
+ 	---help---
+-		Enable the libcanard UAVCAN library.
++		Enable the libcanard UAVCAN v0 library.
+ 
+-if CANUTILS_LIBCANARD
++if CANUTILS_LIBCANARDV0
+ 
+-config LIBCANARD_URL
++config LIBCANARDV0_URL
+ 	string "libcanard URL"
+ 	default "https://github.com/UAVCAN/libcanard/archive"
+ 	---help---
+ 		libcanard URL.
+ 
+-config LIBCANARD_VERSION
++config LIBCANARDV0_VERSION
+ 	string "libcanard Version"
+ 	default "5ad65c6a4efda60cda7a8f0512da0f465822bbb8"
+ 	---help---
+diff --git a/canutils/libcanard/Make.defs b/canutils/libcanardv0/Make.defs
+similarity index 95%
+rename from canutils/libcanard/Make.defs
+rename to canutils/libcanardv0/Make.defs
+index f859947e1..5a2ea1b4e 100644
+--- a/canutils/libcanard/Make.defs
++++ b/canutils/libcanardv0/Make.defs
+@@ -34,6 +34,6 @@
+ #
+ ############################################################################
+ 
+-ifeq ($(CONFIG_CANUTILS_LIBCANARD),y)
+-CONFIGURED_APPS += $(APPDIR)/canutils/libcanard
++ifeq ($(CONFIG_CANUTILS_LIBCANARDV0),y)
++CONFIGURED_APPS += $(APPDIR)/canutils/libcanardv0
+ endif
+diff --git a/canutils/libcanard/Makefile b/canutils/libcanardv0/Makefile
+similarity index 71%
+rename from canutils/libcanard/Makefile
+rename to canutils/libcanardv0/Makefile
+index b08ee45df..c4fbe3d24 100644
+--- a/canutils/libcanard/Makefile
++++ b/canutils/libcanardv0/Makefile
+@@ -39,38 +39,38 @@ WGET = wget
+ UNPACK = unzip
+ PACKEXT = .zip
+ 
+-LIBCANARD_URL = $(patsubst "%",%,$(strip $(CONFIG_LIBCANARD_URL)))
+-LIBCANARD_VERSION = $(patsubst "%",%,$(strip $(CONFIG_LIBCANARD_VERSION)))
+-LIBCANARD_UNPACKNAME = libcanard-$(LIBCANARD_VERSION)
+-LIBCANARD_PACKNAME = $(LIBCANARD_UNPACKNAME)$(PACKEXT)
+-LIBCANARD_SRCDIR = $(LIBCANARD_UNPACKNAME)
+-LIBCANARD_DRVDIR = $(LIBCANARD_SRCDIR)$(DELIM)drivers$(DELIM)nuttx
++LIBCANARDV0_URL = $(patsubst "%",%,$(strip $(CONFIG_LIBCANARDV0_URL)))
++LIBCANARDV0_VERSION = $(patsubst "%",%,$(strip $(CONFIG_LIBCANARDV0_VERSION)))
++LIBCANARDV0_UNPACKNAME = libcanard-$(LIBCANARDV0_VERSION)
++LIBCANARDV0_PACKNAME = $(LIBCANARDV0_UNPACKNAME)$(PACKEXT)
++LIBCANARDV0_SRCDIR = $(LIBCANARDV0_UNPACKNAME)
++LIBCANARDV0_DRVDIR = $(LIBCANARDV0_SRCDIR)$(DELIM)drivers$(DELIM)nuttx
+ 
+ APPS_INCDIR = $(APPDIR)$(DELIM)include$(DELIM)canutils
+ 
+ CFLAGS += -std=c99 -DCANARD_ASSERT=DEBUGASSERT
+ CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPS_INCDIR)}
+ 
+-CSRCS = $(LIBCANARD_SRCDIR)$(DELIM)canard.c $(LIBCANARD_DRVDIR)$(DELIM)canard_nuttx.c
++CSRCS = $(LIBCANARDV0_SRCDIR)$(DELIM)canard.c $(LIBCANARDV0_DRVDIR)$(DELIM)canard_nuttx.c
+ 
+-$(LIBCANARD_PACKNAME):
++$(LIBCANARDV0_PACKNAME):
+ 	@echo "Downloading: $@"
+-	$(Q) $(WGET) -O $@ $(LIBCANARD_URL)$(DELIM)$(LIBCANARD_VERSION)$(PACKEXT)
++	$(Q) $(WGET) -O $@ $(LIBCANARDV0_URL)$(DELIM)$(LIBCANARDV0_VERSION)$(PACKEXT)
+ 
+-$(LIBCANARD_UNPACKNAME): $(LIBCANARD_PACKNAME)
++$(LIBCANARDV0_UNPACKNAME): $(LIBCANARDV0_PACKNAME)
+ 	@echo "Unpacking: $< -> $@"
+ 	$(call DELDIR, $@)
+ 	$(Q) $(UNPACK) $<
+ 	$(Q) touch $@
+ 
+-$(LIBCANARD_SRCDIR)$(DELIM)canard.h: $(LIBCANARD_UNPACKNAME)
++$(LIBCANARDV0_SRCDIR)$(DELIM)canard.h: $(LIBCANARDV0_UNPACKNAME)
+ 
+-$(LIBCANARD_DRVDIR)$(DELIM)canard_nuttx.h: $(LIBCANARD_UNPACKNAME)
++$(LIBCANARDV0_DRVDIR)$(DELIM)canard_nuttx.h: $(LIBCANARDV0_UNPACKNAME)
+ 
+-$(APPS_INCDIR)$(DELIM)canard.h: $(LIBCANARD_SRCDIR)$(DELIM)canard.h
++$(APPS_INCDIR)$(DELIM)canard.h: $(LIBCANARDV0_SRCDIR)$(DELIM)canard.h
+ 	$(Q) cp $< $@
+ 
+-$(APPS_INCDIR)$(DELIM)canard_nuttx.h: $(LIBCANARD_DRVDIR)$(DELIM)canard_nuttx.h
++$(APPS_INCDIR)$(DELIM)canard_nuttx.h: $(LIBCANARDV0_DRVDIR)$(DELIM)canard_nuttx.h
+ 	$(Q) cp $< $@
+ 
+ context:: $(APPS_INCDIR)$(DELIM)canard.h $(APPS_INCDIR)$(DELIM)canard_nuttx.h
+@@ -81,7 +81,7 @@ clean::
+ distclean::
+ 	$(call DELFILE, $(APPS_INCDIR)$(DELIM)canard.h)
+ 	$(call DELFILE, $(APPS_INCDIR)$(DELIM)canard_nuttx.h)
+-	$(call DELDIR, $(LIBCANARD_UNPACKNAME))
+-	$(call DELFILE, $(LIBCANARD_PACKNAME))
++	$(call DELDIR, $(LIBCANARDV0_UNPACKNAME))
++	$(call DELFILE, $(LIBCANARDV0_PACKNAME))
+ 
+ include $(APPDIR)/Application.mk
+diff --git a/canutils/libcanardv1/.gitignore b/canutils/libcanardv1/.gitignore
+new file mode 100644
+index 000000000..5ca33bd27
+--- /dev/null
++++ b/canutils/libcanardv1/.gitignore
+@@ -0,0 +1,2 @@
++/.built
++/libcanard-*
+diff --git a/canutils/libcanardv1/Kconfig b/canutils/libcanardv1/Kconfig
+new file mode 100644
+index 000000000..f3c8d88dd
+--- /dev/null
++++ b/canutils/libcanardv1/Kconfig
+@@ -0,0 +1,27 @@
++#
++# For a description of the syntax of this configuration file,
++# see the file kconfig-language.txt in the NuttX tools repository.
++#
++
++config CANUTILS_LIBCANARDV1
++	bool "libcanard UAVCAN v1 Library"
++	default n
++	depends on NET_CAN
++	---help---
++		Enable the libcanard UAVCAN v1 library.
++
++if CANUTILS_LIBCANARDV1
++
++config LIBCANARDV1_URL
++	string "libcanard URL"
++	default "https://github.com/UAVCAN/libcanard/archive"
++	---help---
++		libcanard URL.
++
++config LIBCANARDV1_VERSION
++	string "libcanard Version"
++	default "cde670347425023480a1417fcd603b27c8eb06c1"
++	---help---
++		libcanard version.
++
++endif
+diff --git a/canutils/libcanardv1/Make.defs b/canutils/libcanardv1/Make.defs
+new file mode 100644
+index 000000000..eb9929970
+--- /dev/null
++++ b/canutils/libcanardv1/Make.defs
+@@ -0,0 +1,39 @@
++############################################################################
++# apps/canutils/libcanardv1/Make.defs
++# Adds selected applications to apps/ build
++#
++#   Copyright (C) 2016 Omni Hoverboards Inc. All rights reserved.
++#   Author: Paul Alexander Patience <paul-a.patience@polymtl.ca>
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions
++# are met:
++#
++# 1. Redistributions of source code must retain the above copyright
++#    notice, this list of conditions and the following disclaimer.
++# 2. Redistributions in binary form must reproduce the above copyright
++#    notice, this list of conditions and the following disclaimer in
++#    the documentation and/or other materials provided with the
++#    distribution.
++# 3. Neither the name NuttX nor the names of its contributors may be
++#    used to endorse or promote products derived from this software
++#    without specific prior written permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
++# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
++# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
++# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
++# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
++# OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
++# AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
++# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
++# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++# POSSIBILITY OF SUCH DAMAGE.
++#
++############################################################################
++
++ifeq ($(CONFIG_CANUTILS_LIBCANARDV1),y)
++CONFIGURED_APPS += $(APPDIR)/canutils/libcanardv1
++endif
+diff --git a/canutils/libcanardv1/Makefile b/canutils/libcanardv1/Makefile
+new file mode 100644
+index 000000000..433740967
+--- /dev/null
++++ b/canutils/libcanardv1/Makefile
+@@ -0,0 +1,85 @@
++############################################################################
++# apps/canutils/libcanard/Makefile
++#
++#   Copyright (C) 2016 Omni Hoverboards Inc. All rights reserved.
++#   Authors: Paul Alexander Patience <paul-a.patience@polymtl.ca>
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions
++# are met:
++#
++# 1. Redistributions of source code must retain the above copyright
++#    notice, this list of conditions and the following disclaimer.
++# 2. Redistributions in binary form must reproduce the above copyright
++#    notice, this list of conditions and the following disclaimer in
++#    the documentation and/or other materials provided with the
++#    distribution.
++# 3. Neither the name NuttX nor the names of its contributors may be
++#    used to endorse or promote products derived from this software
++#    without specific prior written permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
++# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
++# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
++# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
++# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
++# OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
++# AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
++# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
++# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++# POSSIBILITY OF SUCH DAMAGE.
++#
++############################################################################
++
++-include $(APPDIR)/Make.defs
++
++WGET = wget
++UNPACK = unzip
++PACKEXT = .zip
++
++LIBCANARDV1_URL = $(patsubst "%",%,$(strip $(CONFIG_LIBCANARDV1_URL)))
++LIBCANARDV1_VERSION = $(patsubst "%",%,$(strip $(CONFIG_LIBCANARDV1_VERSION)))
++LIBCANARDV1_UNPACKNAME = libcanard-$(LIBCANARDV1_VERSION)
++LIBCANARDV1_PACKNAME = $(LIBCANARDV1_UNPACKNAME)$(PACKEXT)
++LIBCANARDV1_SRCDIR = $(LIBCANARDV1_UNPACKNAME)/libcanard
++
++APPS_INCDIR = $(APPDIR)$(DELIM)include$(DELIM)canutils
++
++CFLAGS += -std=c11 -I$(APPS_INCDIR) -DCANARD_ASSERT=DEBUGASSERT -DCANARD_DSDL_CONFIG_LITTLE_ENDIAN=1
++
++CSRCS = $(LIBCANARDV1_SRCDIR)$(DELIM)canard.c $(LIBCANARDV1_SRCDIR)$(DELIM)canard_dsdl.c
++
++$(LIBCANARDV1_PACKNAME):
++	@echo "Downloading: $@"
++	$(Q) $(WGET) -O $@ $(LIBCANARDV1_URL)$(DELIM)$(LIBCANARDV1_VERSION)$(PACKEXT)
++
++$(LIBCANARDV1_UNPACKNAME): $(LIBCANARDV1_PACKNAME)
++	@echo "Unpacking: $< -> $@"
++	$(call DELDIR, $@)
++	$(Q) $(UNPACK) $<
++	$(Q) touch $@
++
++$(LIBCANARDV1_SRCDIR)$(DELIM)canard.h: $(LIBCANARDV1_UNPACKNAME)
++
++$(LIBCANARDV1_SRCDIR)$(DELIM)canard_dsdl.h: $(LIBCANARDV1_UNPACKNAME)
++
++$(APPS_INCDIR)$(DELIM)canard.h: $(LIBCANARDV1_SRCDIR)$(DELIM)canard.h
++	$(Q) cp $< $@
++
++$(APPS_INCDIR)$(DELIM)canard_dsdl.h: $(LIBCANARDV1_SRCDIR)$(DELIM)canard_dsdl.h
++	$(Q) cp $< $@
++
++context:: $(APPS_INCDIR)$(DELIM)canard.h $(APPS_INCDIR)$(DELIM)canard_dsdl.h
++
++clean::
++	$(foreach OBJ, $(OBJS), $(call DELFILE, $(OBJ)))
++
++distclean::
++	$(call DELFILE, $(APPS_INCDIR)$(DELIM)canard.h)
++	$(call DELFILE, $(APPS_INCDIR)$(DELIM)canard_dsdl.h)
++	$(call DELDIR, $(LIBCANARDV1_UNPACKNAME))
++	$(call DELFILE, $(LIBCANARDV1_PACKNAME))
++
++include $(APPDIR)/Application.mk
+diff --git a/canutils/slcan/Kconfig b/canutils/slcan/Kconfig
+new file mode 100644
+index 000000000..39b4eff12
+--- /dev/null
++++ b/canutils/slcan/Kconfig
+@@ -0,0 +1,21 @@
++#
++# For a description of the syntax of this configuration file,
++# see the file kconfig-language.txt in the NuttX tools repository.
++#
++
++config CANUTILS_SLCAN
++	tristate "SocketCAN slcan tool"
++	default n
++	depends on NET_CAN
++	---help---
++		Enable the SocketCAN slcan tool
++
++if CANUTILS_SLCAN
++
++config SLCAN_TRACE
++	bool "Print trace output"
++	default y
++	---help---
++		Debug trace output
++
++endif
+diff --git a/canutils/slcan/Make.defs b/canutils/slcan/Make.defs
+new file mode 100644
+index 000000000..bf355a8f5
+--- /dev/null
++++ b/canutils/slcan/Make.defs
+@@ -0,0 +1,39 @@
++############################################################################
++# apps/canutils/slcan/Make.defs
++# Adds selected applications to apps/ build
++#
++#   Copyright (C) 2015 Gregory Nutt. All rights reserved.
++#   Author: Gregory Nutt <gnutt@nuttx.org>
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions
++# are met:
++#
++# 1. Redistributions of source code must retain the above copyright
++#    notice, this list of conditions and the following disclaimer.
++# 2. Redistributions in binary form must reproduce the above copyright
++#    notice, this list of conditions and the following disclaimer in
++#    the documentation and/or other materials provided with the
++#    distribution.
++# 3. Neither the name NuttX nor the names of its contributors may be
++#    used to endorse or promote products derived from this software
++#    without specific prior written permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
++# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
++# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
++# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
++# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
++# OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
++# AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
++# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
++# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++# POSSIBILITY OF SUCH DAMAGE.
++#
++############################################################################
++
++ifneq ($(CONFIG_CANUTILS_SLCAN),)
++CONFIGURED_APPS += $(APPDIR)/canutils/slcan
++endif
+diff --git a/canutils/slcan/Makefile b/canutils/slcan/Makefile
+new file mode 100644
+index 000000000..9274d252d
+--- /dev/null
++++ b/canutils/slcan/Makefile
+@@ -0,0 +1,49 @@
++############################################################################
++# apps/examples/netpkt/Makefile
++#
++#   Copyright (C) 2014 Gregory Nutt. All rights reserved.
++#   Author: Gregory Nutt <gnutt@nuttx.org>
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions
++# are met:
++#
++# 1. Redistributions of source code must retain the above copyright
++#    notice, this list of conditions and the following disclaimer.
++# 2. Redistributions in binary form must reproduce the above copyright
++#    notice, this list of conditions and the following disclaimer in
++#    the documentation and/or other materials provided with the
++#    distribution.
++# 3. Neither the name NuttX nor the names of its contributors may be
++#    used to endorse or promote products derived from this software
++#    without specific prior written permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
++# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
++# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
++# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
++# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
++# OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
++# AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
++# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
++# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++# POSSIBILITY OF SUCH DAMAGE.
++#
++############################################################################
++
++-include $(APPDIR)/Make.defs
++
++# Network packet socket example
++
++PROGNAME = slcan
++PRIORITY = SCHED_PRIORITY_DEFAULT
++STACKSIZE = 2048
++MODULE = $(CONFIG_CANUTILS_SLCAN)
++
++CSRCS = 
++
++MAINSRC = slcan.c
++
++include $(APPDIR)/Application.mk
+diff --git a/canutils/slcan/slcan.c b/canutils/slcan/slcan.c
+new file mode 100644
+index 000000000..06fd7caee
+--- /dev/null
++++ b/canutils/slcan/slcan.c
+@@ -0,0 +1,489 @@
++/****************************************************************************
++ * apps/canutils/slcan/slcan.c
++ *
++ ****************************************************************************/
++
++/****************************************************************************
++ * Included Files
++ ****************************************************************************/
++
++#include <nuttx/config.h>
++
++#include <stdint.h>
++#include <stdio.h>
++#include <unistd.h>
++#include <nuttx/clock.h>
++#include <sched.h>
++#include <fcntl.h>
++#include <errno.h>
++#include <stdlib.h>
++#include <nuttx/fs/fs.h>
++#include <nuttx/arch.h>
++#include <string.h>
++#include <time.h>
++#include <ctype.h>
++#include <net/if.h>
++#include <sys/time.h>
++#include <sys/types.h>
++#include <sys/ioctl.h>
++#include <sys/socket.h>
++#include <sys/uio.h>
++#include <net/if.h>
++#include <termios.h>
++#include <nuttx/can.h>
++#include <netpacket/can.h>
++
++#include "slcan.h"
++
++/****************************************************************************
++ * Defines
++ ****************************************************************************/
++
++#define DEFAULT_PRIORITY 100
++#define DEFAULT_STACK_SIZE 2048
++
++#ifdef CONFIG_SLCAN_TRACE
++#  define DEBUG 1
++#else
++#  define DEBUG 0
++#endif
++
++#define debug_print(fmt, ...) \
++  do \
++    { \
++      if (DEBUG) \
++        fprintf(stdout, fmt, ##__VA_ARGS__); \
++    } \
++  while (0)
++
++/****************************************************************************
++ * private data
++ ****************************************************************************/
++
++#ifdef CONFIG_SLCAN_TRACE
++static char opening[] = "starting slcan\n";
++#else
++static char opening[] = "";
++#endif
++
++static void ok_return(int fd)
++{
++  write(fd, "\r", 1);
++}
++
++static void fail_return(int fd)
++{
++  write(fd, "\a", 1); /* BELL return for error */
++}
++
++static int readlinebuffer(int fd, char *buf, int maxlen)
++{
++  size_t n;
++  int meslen = 0;
++  int noeol  = 1;
++  uint8_t ch;
++
++  while ((meslen < maxlen) && noeol)
++    {
++      n = read(fd, &ch, 1);
++      if (n > 0)
++        {
++          /* valid input */
++
++          if (ch == '\r')
++            {
++              noeol = 0;
++              *buf  = '\0';
++            }
++          else
++            {
++              *buf++ = ch;
++              meslen++;
++            }
++        }
++      else
++        {
++          return (meslen);
++        }
++    }
++  return (meslen);
++}
++
++static int caninit(char *candev, int *s, struct sockaddr_can *addr,
++                   char *ctrlmsg, struct canfd_frame *frame,
++                   struct msghdr *msg, struct iovec *iov)
++{
++  struct ifreq ifr;
++
++  debug_print("slcanBus\n");
++  if ((*s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
++    {
++      debug_print("Error opening CAN socket\n");
++      return -1;
++    }
++  strncpy(ifr.ifr_name, candev, 4);
++  ifr.ifr_name[4] = '\0';
++  ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
++  if (!ifr.ifr_ifindex)
++    {
++      debug_print("error finding index %s\n", candev);
++      return -1;
++    }
++  memset(addr, 0, sizeof(struct sockaddr));
++  addr->can_family  = AF_CAN;
++  addr->can_ifindex = ifr.ifr_ifindex;
++  setsockopt(*s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
++
++  if (bind(*s, (struct sockaddr *)addr, sizeof(struct sockaddr)) < 0)
++    {
++      debug_print("bind error\n");
++      return -1;
++    }
++
++  iov->iov_base    = frame;
++  msg->msg_name    = addr;
++  msg->msg_iov     = iov;
++  msg->msg_iovlen  = 1;
++  msg->msg_control = ctrlmsg;
++
++  /* CAN interface ready to be used */
++
++  debug_print("CAN socket open\n");
++
++  return 0;
++}
++
++/****************************************************************************
++ * Public Functions
++ ****************************************************************************/
++
++/****************************************************************************
++ * Name: slcan_main
++ ****************************************************************************/
++
++int main(int argc, char *argv[])
++{
++  /* UART */
++
++  char buf[31];
++  int mode = 0;
++  size_t n;
++  int canspeed = 1000000; /* default to 1MBps */
++  int fd;                 /* UART slcan channel */
++
++  /* CAN */
++
++  int s, nbytes, i, ret, reccount;
++  struct sockaddr_can addr;
++  struct canfd_frame frame;
++  struct msghdr msg;
++  struct iovec iov;
++  fd_set rdfs;
++  char ctrlmsg[CMSG_SPACE(sizeof(struct timeval) +
++                          3 * sizeof(struct timespec) + sizeof(int))];
++  char sbuf[40], *sbp;
++
++  if (argc != 3)
++    {
++      fprintf(stderr, "Usage: slcan <can device> <uart device>\n");
++      fflush(stderr);
++      return -1;
++    }
++
++  char *chrdev = argv[2];
++  char *candev = argv[1];
++
++  debug_print("Starting slcan on NuttX\n");
++  fd = open(chrdev, O_RDWR | O_BINARY);
++  if (fd < 0)
++    {
++      fprintf(stderr, "Failed to open serial channel %s\n", chrdev);
++      fflush(stderr);
++      return -1;
++    }
++  else
++    {
++      /* Create CAN socket */
++
++      if (caninit(candev, &s, &addr, &ctrlmsg[0], &frame, &msg, &iov) < 0)
++        {
++          fprintf(stderr, "Failed to open CAN socket %s\n", candev);
++          fflush(stderr);
++          close(fd);
++          return -1;
++        }
++
++      /* serial interface active */
++
++      debug_print("Serial interface open %s\n", chrdev);
++      write(fd, opening, (sizeof(opening) - 1));
++
++      while (mode < 100)
++        {
++          /* Setup ooll */
++
++          FD_ZERO(&rdfs);
++          FD_SET(s, &rdfs);  /* CAN Socket */
++          FD_SET(fd, &rdfs); /* UART */
++
++          if ((ret = select(s + 1, &rdfs, NULL, NULL, NULL)) <= 0)
++            {
++              continue;
++            }
++
++          if (FD_ISSET(s, &rdfs))
++            {
++              /* CAN received new message in socketCAN input */
++
++              iov.iov_len        = sizeof(frame);
++              msg.msg_namelen    = sizeof(addr);
++              msg.msg_controllen = sizeof(ctrlmsg);
++              msg.msg_flags      = 0;
++              nbytes             = recvmsg(s, &msg, 0);
++
++              if (nbytes == CAN_MTU)
++                {
++                  reccount++;
++                  debug_print("R%d, Id:0x%X\n", reccount, frame.can_id);
++                  if (frame.can_id & CAN_EFF_FLAG)
++                    {
++                      /* 29 bit address */
++
++                      frame.can_id = frame.can_id & ~CAN_EFF_FLAG;
++                      sprintf(sbuf, "T%08X%d", frame.can_id, frame.len);
++                      sbp = &sbuf[10];
++                    }
++                  else
++                    {
++                      /* 11 bit address */
++
++                      sprintf(sbuf, "t%03X%d", frame.can_id, frame.len);
++                      sbp = &sbuf[5];
++                    }
++
++                  for (i = 0; i < frame.len; i++)
++                    {
++                      sprintf(sbp, "%02X", frame.data[i]);
++                      sbp += 2;
++                    }
++
++                  *sbp++ = '\r';
++                  *sbp   = '\0';
++                  write(fd, sbuf, strlen(sbuf));
++                }
++            }
++
++          if (FD_ISSET(fd, &rdfs))
++            {
++              /* UART receive */
++
++              n = readlinebuffer(fd, buf, 30);
++
++              switch (mode)
++                {
++                case 0: /* CAN channel not open */
++                  if (n > 0)
++                    {
++                      if (buf[0] == 'F')
++                        {
++                          /* return clear flags */
++
++                          write(fd, "F00\r", 4);
++                        }
++                      else if (buf[0] == 'O')
++                        {
++                          /* open CAN interface */
++
++                          mode = 1;
++                          printf("Open interface\n");
++                          ok_return(fd);
++                        }
++                      else if (buf[0] == 'S')
++                        {
++                          /* set CAN interface speed */
++
++                          switch (buf[1])
++                            {
++                            case '0':
++                              canspeed = 10000;
++                              break;
++                            case '1':
++                              canspeed = 20000;
++                              break;
++                            case '2':
++                              canspeed = 50000;
++                              break;
++                            case '3':
++                              canspeed = 100000;
++                              break;
++                            case '4':
++                              canspeed = 125000;
++                              break;
++                            case '5':
++                              canspeed = 250000;
++                              break;
++                            case '6':
++                              canspeed = 500000;
++                              break;
++                            case '7':
++                              canspeed = 800000;
++                              break;
++                            case '8': /* set speed to 1Mbps */
++                              canspeed = 1000000;
++                              break;
++                            default:
++                              break;
++                            }
++
++                          struct ifreq ifr;
++
++                          /* set the device name */
++
++                          strncpy(ifr.ifr_name, argv[1], IFNAMSIZ - 1);
++                          ifr.ifr_name[IFNAMSIZ - 1] = '\0';
++
++                          ifr.ifr_ifru.ifru_can_data.arbi_bitrate =
++                            canspeed / 1000; /* Convert bit/s to kbit/s */
++                          ifr.ifr_ifru.ifru_can_data.arbi_samplep = 80;
++
++                          if (ioctl(s, SIOCSCANBITRATE, &ifr) < 0)
++                            {
++                              printf("set speed %d failed\n", canspeed);
++                              fail_return(fd);
++                            }
++                          else
++                            {
++                              printf("set speed %d\n", canspeed);
++                              ok_return(fd);
++                            }
++                        }
++                      else
++                        {
++                          /* whatever */
++
++                          ok_return(fd);
++                        }
++                    }
++                  break;
++                case 1: /* CAN task running open interface */
++                  if (n > 0)
++                    {
++                      if (buf[0] == 'C')
++                        {
++                          /* close interface */
++
++                          mode = 0;
++                          debug_print("Close interface\n");
++                          ok_return(fd);
++                        }
++                      else if (buf[0] == 'T')
++                        {
++                          /* Transmit an extended 29 bit CAN frame */
++
++                          char tbuf[9];
++                          int idval, val;
++
++                          /* get 29bit CAN ID */
++
++                          strncpy(tbuf, &buf[1], 8);
++                          tbuf[8] = '\0';
++                          sscanf(tbuf, "%x", &idval);
++
++                          frame.len = buf[9] - '0'; /* get byte count */
++
++                          /* get canmessage */
++
++                          for (i = 0; i < frame.len; i++)
++                            {
++                              tbuf[0] = buf[10 + (2 * i)];
++                              tbuf[1] = buf[11 + (2 * i)];
++                              tbuf[2] = '\0';
++                              sscanf(tbuf, "%x", &val);
++                              frame.data[i] = val & 0xff;
++                            }
++
++                          debug_print("Transmitt: 0x%X ", idval);
++                          for (i = 0; i < frame.len; i++)
++                            {
++                              debug_print("0x%02X ", frame.data[i]);
++                            }
++
++                          debug_print("\n");
++
++                          frame.can_id = idval | CAN_EFF_FLAG; /* 29 bit */
++
++                          if (write(s, &frame, CAN_MTU) != CAN_MTU)
++                            {
++                              debug_print("transmitt error\n");
++
++                              /* TODO update error flags */
++                            }
++
++                          ok_return(fd);
++                        }
++                      else if (buf[0] == 't')
++                        {
++                          /* Transmit an 11 bit CAN frame */
++
++                          char tbuf[9];
++                          int idval, val;
++
++                          /* get 11bit CAN ID */
++
++                          strncpy(tbuf, &buf[1], 3);
++                          tbuf[3] = '\0';
++                          sscanf(tbuf, "%x", &idval);
++
++                          frame.len = buf[4] - '0'; /* get byte count */
++
++                          /* get canmessage */
++
++                          for (i = 0; i < frame.len; i++)
++                            {
++                              tbuf[0] = buf[5 + (2 * i)];
++                              tbuf[1] = buf[6 + (2 * i)];
++                              tbuf[2] = '\0';
++                              sscanf(tbuf, "%x", &val);
++                              frame.data[i] = val & 0xff;
++                            }
++
++                          debug_print("Transmitt: 0x%X ", idval);
++                          for (i = 0; i < frame.len; i++)
++                            {
++                              debug_print("0x%02X ", frame.data[i]);
++                            }
++
++                          debug_print("\n");
++
++                          frame.can_id = idval; /* 11 bit address command */
++
++                          if (write(s, &frame, CAN_MTU) != CAN_MTU)
++                            {
++                              debug_print("transmitt error\n");
++
++                              /* TODO update error flags */
++                            }
++
++                          ok_return(fd);
++                        }
++                      else
++                        {
++                          /* whatever */
++
++                          ok_return(fd);
++                        }
++                    }
++                  break;
++                default: /* should not happen */
++                  mode = 100;
++                  break;
++                }
++            }
++        }
++
++      close(fd);
++      close(s);
++    }
++
++  return 0;
++}
+diff --git a/canutils/slcan/slcan.h b/canutils/slcan/slcan.h
+new file mode 100644
+index 000000000..922879d5a
+--- /dev/null
++++ b/canutils/slcan/slcan.h
+@@ -0,0 +1,32 @@
++/****************************************************************************
++ * apps/canutils/slcan/slcan.h
++ *
++ ****************************************************************************/
++
++#ifndef SLCAN_H
++#define SLCAN_H
++
++/****************************************************************************
++ * Pre-processor Definitions
++ ****************************************************************************/
++
++/* S6   - CAN speed 500 kBit/s
++ * S8   - CAN speed 1   Mbit/s
++ * O    - open channel
++ * C    - close channel
++ * C
++ * S8
++ * O
++ * F  -> return status flags
++ */
++#define SLCAN_REC_FIFO_FULL    (1 << 0)
++#define SLCAN_SND_FIFO_FULL    (1 << 1)
++#define SLCAN_ERROR_WARN       (1 << 2)
++#define SLCAN_DATA_OVERRUN     (1 << 3)
++#define SLCAN_ERROR_PASSIVE    (1 << 5)
++#define SLCAN_ARBITRATION_LOST (1 << 6)
++#define SLCAN_BUS_ERROR        (1 << 7)
++
++/* T1401557F8f601000000▒0 */
++
++#endif /* SLCAN_H */
+diff --git a/examples/canard/Kconfig b/examples/canardv0/Kconfig
+similarity index 58%
+rename from examples/canard/Kconfig
+rename to examples/canardv0/Kconfig
+index 6595aee6a..fd594af12 100644
+--- a/examples/canard/Kconfig
++++ b/examples/canardv0/Kconfig
+@@ -3,45 +3,45 @@
+ # see the file kconfig-language.txt in the NuttX tools repository.
+ #
+ 
+-config EXAMPLES_LIBCANARD
+-	tristate "libcandard example"
++config EXAMPLES_LIBCANARDV0
++	tristate "libcandard v0 example"
+ 	default n
+-	depends on CANUTILS_LIBCANARD && CLOCK_MONOTONIC && SYSTEM_TIME64
++	depends on CANUTILS_LIBCANARDV0 && CLOCK_MONOTONIC && SYSTEM_TIME64
+ 	---help---
+-		Enable the LIBCANARD example
++		Enable the LIBCANARDV0 example
+ 
+-if EXAMPLES_LIBCANARD
++if EXAMPLES_LIBCANARDV0
+ 
+-config EXAMPLES_LIBCANARD_DEVPATH
++config EXAMPLES_LIBCANARDV0_DEVPATH
+ 	string "Device Path"
+ 	default "/dev/can0"
+ 	---help---
+ 		The device path
+ 
+-config EXAMPLES_LIBCANARD_NODE_ID
++config EXAMPLES_LIBCANARDV0_NODE_ID
+ 	int "Node ID"
+ 	default 1
+ 	range 1 127
+ 	---help---
+ 		Specifies the node's ID
+ 
+-config EXAMPLES_LIBCANARD_APP_NODE_NAME
++config EXAMPLES_LIBCANARDV0_APP_NODE_NAME
+ 	string "Node name"
+ 	default "org.uavcan.libcanard.nuttx.demo"
+ 	---help---
+ 		app node name
+ 
+-config EXAMPLES_LIBCANARD_NODE_MEM_POOL_SIZE
++config EXAMPLES_LIBCANARDV0_NODE_MEM_POOL_SIZE
+ 	int "Node Memory Pool Size"
+ 	default 1024
+ 	---help---
+ 		Specifies the node's memory pool size
+ 
+-config EXAMPLES_LIBCANARD_DAEMON_PRIORITY
++config EXAMPLES_LIBCANARDV0_DAEMON_PRIORITY
+ 	int "daemon task priority"
+ 	default 100
+ 
+-config EXAMPLES_LIBCANARD_STACKSIZE
++config EXAMPLES_LIBCANARDV0_STACKSIZE
+ 	int "canard stack size"
+ 	default DEFAULT_TASK_STACKSIZE
+ 
+diff --git a/examples/canard/Make.defs b/examples/canardv0/Make.defs
+similarity index 95%
+rename from examples/canard/Make.defs
+rename to examples/canardv0/Make.defs
+index 86c615b0c..09bc7e09c 100644
+--- a/examples/canard/Make.defs
++++ b/examples/canardv0/Make.defs
+@@ -34,6 +34,6 @@
+ #
+ ############################################################################
+ 
+-ifneq ($(CONFIG_EXAMPLES_LIBCANARD),)
+-CONFIGURED_APPS += $(APPDIR)/examples/canard
++ifneq ($(CONFIG_EXAMPLES_LIBCANARDV0),)
++CONFIGURED_APPS += $(APPDIR)/examples/canardv0
+ endif
+diff --git a/examples/canard/Makefile b/examples/canardv0/Makefile
+similarity index 94%
+rename from examples/canard/Makefile
+rename to examples/canardv0/Makefile
+index 307fc15d7..73167e6e5 100644
+--- a/examples/canard/Makefile
++++ b/examples/canardv0/Makefile
+@@ -35,10 +35,10 @@
+ 
+ include $(APPDIR)/Make.defs
+ 
+-PROGNAME = canard
++PROGNAME = canardv0
+ PRIORITY = SCHED_PRIORITY_DEFAULT
+-STACKSIZE = $(CONFIG_EXAMPLES_LIBCANARD_STACKSIZE)
+-MODULE = $(CONFIG_EXAMPLES_LIBCANARD)
++STACKSIZE = $(CONFIG_EXAMPLES_LIBCANARDV0_STACKSIZE)
++MODULE = $(CONFIG_EXAMPLES_LIBCANARDV0)
+ 
+ CFLAGS += ${shell $(INCDIR) "$(CC)" $(APPDIR)/include/canutils}
+ MAINSRC = canard_main.c
+diff --git a/examples/canard/canard_main.c b/examples/canardv0/canard_main.c
+similarity index 97%
+rename from examples/canard/canard_main.c
+rename to examples/canardv0/canard_main.c
+index 792080eb0..8b12dabd2 100644
+--- a/examples/canard/canard_main.c
++++ b/examples/canardv0/canard_main.c
+@@ -60,7 +60,7 @@
+ 
+ #define APP_VERSION_MAJOR                        1
+ #define APP_VERSION_MINOR                        0
+-#define APP_NODE_NAME                            CONFIG_EXAMPLES_LIBCANARD_APP_NODE_NAME
++#define APP_NODE_NAME                            CONFIG_EXAMPLES_LIBCANARDV0_APP_NODE_NAME
+ #define GIT_HASH                                 0xb28bf6ac
+ 
+  /* Some useful constants defined by the UAVCAN specification.
+@@ -99,7 +99,7 @@ static CanardInstance canard;
+ 
+ /* Arena for memory allocation, used by the library */
+ 
+-static uint8_t canard_memory_pool[CONFIG_EXAMPLES_LIBCANARD_NODE_MEM_POOL_SIZE];
++static uint8_t canard_memory_pool[CONFIG_EXAMPLES_LIBCANARDV0_NODE_MEM_POOL_SIZE];
+ 
+ static uint8_t unique_id[UNIQUE_ID_LENGTH_BYTES] =
+ { 0x00, 0x00, 0x00, 0x00,
+@@ -436,11 +436,11 @@ static int canard_daemon(int argc, char *argv[])
+   /* Open the CAN device for reading */
+ 
+   ret = canardNuttXInit(&canardnuttx_instance,
+-                        CONFIG_EXAMPLES_LIBCANARD_DEVPATH);
++                        CONFIG_EXAMPLES_LIBCANARDV0_DEVPATH);
+   if (ret < 0)
+     {
+       printf("canard_daemon: ERROR: open %s failed: %d\n",
+-             CONFIG_EXAMPLES_LIBCANARD_DEVPATH, errno);
++             CONFIG_EXAMPLES_LIBCANARDV0_DEVPATH, errno);
+       errval = 2;
+       goto errout_with_dev;
+     }
+@@ -469,9 +469,9 @@ static int canard_daemon(int argc, char *argv[])
+ 
+   canardInit(&canard, canard_memory_pool, sizeof(canard_memory_pool),
+              onTransferReceived, shouldAcceptTransfer, (void *)(12345));
+-  canardSetLocalNodeID(&canard, CONFIG_EXAMPLES_LIBCANARD_NODE_ID);
++  canardSetLocalNodeID(&canard, CONFIG_EXAMPLES_LIBCANARDV0_NODE_ID);
+   printf("canard_daemon: canard initialized\n");
+-  printf("start node (ID: %d Name: %s)\n", CONFIG_EXAMPLES_LIBCANARD_NODE_ID,
++  printf("start node (ID: %d Name: %s)\n", CONFIG_EXAMPLES_LIBCANARDV0_NODE_ID,
+          APP_NODE_NAME);
+ 
+   g_canard_daemon_started = true;
+@@ -517,8 +517,8 @@ int main(int argc, FAR char *argv[])
+       return EXIT_SUCCESS;
+     }
+ 
+-  ret = task_create("canard_daemon", CONFIG_EXAMPLES_LIBCANARD_DAEMON_PRIORITY,
+-                    CONFIG_EXAMPLES_LIBCANARD_STACKSIZE, canard_daemon,
++  ret = task_create("canard_daemon", CONFIG_EXAMPLES_LIBCANARDV0_DAEMON_PRIORITY,
++                    CONFIG_EXAMPLES_LIBCANARDV0_STACKSIZE, canard_daemon,
+                     NULL);
+   if (ret < 0)
+     {
+diff --git a/examples/canardv1/.gitignore b/examples/canardv1/.gitignore
+new file mode 100644
+index 000000000..fa1ec7579
+--- /dev/null
++++ b/examples/canardv1/.gitignore
+@@ -0,0 +1,11 @@
++/Make.dep
++/.depend
++/.built
++/*.asm
++/*.obj
++/*.rel
++/*.lst
++/*.sym
++/*.adb
++/*.lib
++/*.src
+diff --git a/examples/canardv1/Kconfig b/examples/canardv1/Kconfig
+new file mode 100644
+index 000000000..cad22cd66
+--- /dev/null
++++ b/examples/canardv1/Kconfig
+@@ -0,0 +1,49 @@
++#
++# For a description of the syntax of this configuration file,
++# see the file kconfig-language.txt in the NuttX tools repository.
++#
++
++config EXAMPLES_LIBCANARDV1
++	tristate "libcandard v1 example"
++	default n
++	depends on CANUTILS_LIBCANARDV1
++        select CLOCK_MONOTONIC
++	---help---
++		Enable the LIBCANARDV1 example
++
++if EXAMPLES_LIBCANARDV1
++
++config EXAMPLES_LIBCANARDV1_DEV
++	string "Device"
++	default "can0"
++	---help---
++		device
++
++config EXAMPLES_LIBCANARDV1_NODE_ID
++	int "Node ID"
++	default 1
++	range 1 127
++	---help---
++		Specifies the node's ID
++
++config EXAMPLES_LIBCANARDV1_APP_NODE_NAME
++	string "Node name"
++	default "org.uavcan.libcanardv1.nuttx.demo"
++	---help---
++		app node name
++
++config EXAMPLES_LIBCANARDV1_NODE_MEM_POOL_SIZE
++	int "Node Memory Pool Size"
++	default 1024
++	---help---
++		Specifies the node's memory pool size
++
++config EXAMPLES_LIBCANARDV1_DAEMON_PRIORITY
++	int "daemon task priority"
++	default 100
++
++config EXAMPLES_LIBCANARDV1_DAEMON_STACK_SIZE
++	int "canard stack size"
++	default 3000
++
++endif
+diff --git a/examples/canardv1/Make.defs b/examples/canardv1/Make.defs
+new file mode 100644
+index 000000000..7442ef608
+--- /dev/null
++++ b/examples/canardv1/Make.defs
+@@ -0,0 +1,39 @@
++############################################################################
++# apps/examples/canard/Make.defs
++# Adds selected applications to apps/ build
++#
++#   Copyright (C) 2015 Omni Hoverboards Inc. All rights reserved.
++#   Author: Paul Alexander Patience <paul-a.patience@polymtl.ca>
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions
++# are met:
++#
++# 1. Redistributions of source code must retain the above copyright
++#    notice, this list of conditions and the following disclaimer.
++# 2. Redistributions in binary form must reproduce the above copyright
++#    notice, this list of conditions and the following disclaimer in
++#    the documentation and/or other materials provided with the
++#    distribution.
++# 3. Neither the name NuttX nor the names of its contributors may be
++#    used to endorse or promote products derived from this software
++#    without specific prior written permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
++# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
++# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
++# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
++# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
++# OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
++# AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
++# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
++# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++# POSSIBILITY OF SUCH DAMAGE.
++#
++############################################################################
++
++ifneq ($(CONFIG_EXAMPLES_LIBCANARDV1),)
++CONFIGURED_APPS += $(APPDIR)/examples/canardv1
++endif
+diff --git a/examples/canardv1/Makefile b/examples/canardv1/Makefile
+new file mode 100644
+index 000000000..81ff4cc13
+--- /dev/null
++++ b/examples/canardv1/Makefile
+@@ -0,0 +1,48 @@
++############################################################################
++# apps/examples/canard/Makefile
++#
++#   Copyright (C) 2015 Omni Hoverboards Inc. All rights reserved.
++#   Author: Paul Alexander Patience <paul-a.patience@polymtl.ca>
++#
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions
++# are met:
++#
++# 1. Redistributions of source code must retain the above copyright
++#    notice, this list of conditions and the following disclaimer.
++# 2. Redistributions in binary form must reproduce the above copyright
++#    notice, this list of conditions and the following disclaimer in
++#    the documentation and/or other materials provided with the
++#    distribution.
++# 3. Neither the name NuttX nor the names of its contributors may be
++#    used to endorse or promote products derived from this software
++#    without specific prior written permission.
++#
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
++# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
++# COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
++# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
++# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
++# OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
++# AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
++# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
++# ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++# POSSIBILITY OF SUCH DAMAGE.
++#
++############################################################################
++
++-include $(TOPDIR)/Make.defs
++
++PROGNAME = canardv1
++PRIORITY = SCHED_PRIORITY_DEFAULT
++STACKSIZE = $(CONFIG_EXAMPLES_LIBCANARDV1_DAEMON_STACK_SIZE)
++MODULE = $(CONFIG_EXAMPLES_LIBCANARDV1)
++
++CSRCS = o1heap.c socketcan.c
++
++CFLAGS += -std=c11 -I$(APPDIR)/include/canutils
++MAINSRC = canard_main.c
++
++include $(APPDIR)/Application.mk
+diff --git a/examples/canardv1/canard_main.c b/examples/canardv1/canard_main.c
+new file mode 100644
+index 000000000..2034134c1
+--- /dev/null
++++ b/examples/canardv1/canard_main.c
+@@ -0,0 +1,418 @@
++/****************************************************************************
++ * examples/canard/canard_main.c
++ *
++ *   Copyright (C) 2016 ETH Zuerich. All rights reserved.
++ *   Author: Matthias Renner <rennerm@ethz.ch>
++ *
++ * Redistribution and use in source and binary forms, with or without
++ * modification, are permitted provided that the following conditions
++ * are met:
++ *
++ * 1. Redistributions of source code must retain the above copyright
++ *    notice, this list of conditions and the following disclaimer.
++ * 2. Redistributions in binary form must reproduce the above copyright
++ *    notice, this list of conditions and the following disclaimer in
++ *    the documentation and/or other materials provided with the
++ *    distribution.
++ * 3. Neither the name NuttX nor the names of its contributors may be
++ *    used to endorse or promote products derived from this software
++ *    without specific prior written permission.
++ *
++ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
++ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
++ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
++ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
++ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
++ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
++ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
++ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
++ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
++ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
++ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
++ * POSSIBILITY OF SUCH DAMAGE.
++ *
++ ****************************************************************************/
++
++/****************************************************************************
++ * Included Files
++ ****************************************************************************/
++
++#include <canard.h>
++#include <canard_dsdl.h>
++
++#include <sched.h>
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <time.h>
++#include <string.h>
++#include <assert.h>
++#include <errno.h>
++
++#include <net/if.h>
++#include <sys/time.h>
++#include <sys/ioctl.h>
++#include <sys/socket.h>
++
++#include <poll.h>
++
++#include <nuttx/can.h>
++#include <netpacket/can.h>
++
++#include "socketcan.h"
++#include "o1heap.h"
++
++/****************************************************************************
++ * Pre-processor Definitions
++ ****************************************************************************/
++
++/* Application constants */
++
++#define APP_VERSION_MAJOR                        1
++#define APP_VERSION_MINOR                        0
++#define APP_NODE_NAME                            CONFIG_EXAMPLES_LIBCANARDV1_APP_NODE_NAME
++
++#define UAVCAN_NODE_HEALTH_OK                    0
++#define UAVCAN_NODE_HEALTH_WARNING               1
++#define UAVCAN_NODE_HEALTH_ERROR                 2
++#define UAVCAN_NODE_HEALTH_CRITICAL              3
++
++#define UAVCAN_NODE_MODE_OPERATIONAL             0
++#define UAVCAN_NODE_MODE_INITIALIZATION          1
++
++#define UAVCAN_GET_NODE_INFO_RESPONSE_MAX_SIZE   ((3015 + 7) / 8)
++#define UAVCAN_GET_NODE_INFO_DATA_TYPE_SIGNATURE 0xee468a8121c46a9e
++#define UAVCAN_GET_NODE_INFO_DATA_TYPE_ID        1
++
++#define UNIQUE_ID_LENGTH_BYTES                   16
++
++/****************************************************************************
++ * Private Data
++ ****************************************************************************/
++
++/* Arena for memory allocation, used by the library */
++
++#define O1_HEAP_SIZE CONFIG_EXAMPLES_LIBCANARDV1_NODE_MEM_POOL_SIZE
++
++/* Temporary development UAVCAN topic service ID to publish/subscribe from */
++#define PORT_ID                                  4421
++#define TOPIC_SIZE                               512
++
++O1HeapInstance *my_allocator;
++static uint8_t uavcan_heap[O1_HEAP_SIZE]
++__attribute__((aligned(O1HEAP_ALIGNMENT)));
++
++static uint8_t unique_id[UNIQUE_ID_LENGTH_BYTES] = {
++	0x00, 0x00, 0x00, 0x00,
++	0x00, 0x00, 0x00, 0x00,
++	0x00, 0x00, 0x00, 0x00,
++	0x00, 0x00, 0x00, 0x01
++};
++
++/* Node status variables */
++
++static uint8_t node_health = UAVCAN_NODE_HEALTH_OK;
++static uint8_t node_mode = UAVCAN_NODE_MODE_INITIALIZATION;
++static bool g_canard_daemon_started;
++
++static uint8_t my_message_transfer_id;  // Must be static or heap-allocated to retain state between calls.
++
++struct pollfd fd;
++
++/****************************************************************************
++ * Public Functions
++ ****************************************************************************/
++
++/****************************************************************************
++ * Name: memAllocate
++ *
++ * Description:
++ *
++ ****************************************************************************/
++static void *memAllocate(CanardInstance *const ins, const size_t amount)
++{
++	(void) ins;
++	return o1heapAllocate(my_allocator, amount);
++}
++
++/****************************************************************************
++ * Name: memFree
++ *
++ * Description:
++ *
++ ****************************************************************************/
++
++static void memFree(CanardInstance *const ins, void *const pointer)
++{
++	(void) ins;
++	o1heapFree(my_allocator, pointer);
++}
++
++/****************************************************************************
++ * Name: getMonotonicTimestampUSec
++ *
++ * Description:
++ *
++ ****************************************************************************/
++uint64_t getMonotonicTimestampUSec(void)
++{
++	struct timespec ts;
++
++	memset(&ts, 0, sizeof(ts));
++
++	if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
++		abort();
++	}
++
++	return ts.tv_sec * 1000000ULL + ts.tv_nsec / 1000ULL;
++}
++
++/****************************************************************************
++ * Name: process1HzTasks
++ *
++ * Description:
++ *   This function is called at 1 Hz rate from the main loop.
++ *
++ ****************************************************************************/
++
++void process1HzTasks(CanardInstance *ins, uint64_t timestamp_usec)
++{
++
++	CanardMicrosecond transmission_deadline = getMonotonicTimestampUSec() + 1000 * 10;
++
++	const CanardTransfer transfer = {
++		.timestamp_usec = transmission_deadline,      // Zero if transmission deadline is not limited.
++		.priority       = CanardPriorityNominal,
++		.transfer_kind  = CanardTransferKindMessage,
++		.port_id        = 1234,                       // This is the subject-ID.
++		.remote_node_id = CANARD_NODE_ID_UNSET,       // Messages cannot be unicast, so use UNSET.
++		.transfer_id    = my_message_transfer_id,
++		.payload_size   = 47,
++		.payload        = "\x2D\x00" "Sancho, it strikes me thou art in great fear.",
++	};
++
++	++my_message_transfer_id;  // The transfer-ID shall be incremented after every transmission on this subject.
++	int32_t result = canardTxPush(ins, &transfer);
++
++	if (result < 0) {
++		// An error has occurred: either an argument is invalid or we've ran out of memory.
++		// It is possible to statically prove that an out-of-memory will never occur for a given application if the
++		// heap is sized correctly; for background, refer to the Robson's Proof and the documentation for O1Heap.
++		fprintf(stderr, "Transmit error %d\n", result);
++	}
++}
++
++
++static void processReceivedTransfer(CanardTransfer *receive)
++{
++	printf("Received transfer remote_node_id %d transfer_id: %d payload size: %d\n",
++	       receive->remote_node_id, receive->transfer_id, receive->payload_size);
++
++}
++
++/****************************************************************************
++ * Name: processTxRxOnce
++ *
++ * Description:
++ *   Transmits all frames from the TX queue, receives up to one frame.
++ *
++ ****************************************************************************/
++
++void processTxRxOnce(CanardInstance *ins, CanardSocketInstance *sock_ins, int timeout_msec)
++{
++	int32_t result;
++
++	/* Transmitting */
++
++
++	for (const CanardFrame *txf = NULL; (txf = canardTxPeek(ins)) != NULL;) { // Look at the top of the TX queue.
++		if (txf->timestamp_usec > getMonotonicTimestampUSec()) { // Check if the frame has timed out.
++			if (socketcanTransmit(sock_ins, txf) == 0) {           // Send the frame. Redundant interfaces may be used here.
++				break;                             // If the driver is busy, break and retry later.
++			}
++		}
++
++		canardTxPop(ins);                         // Remove the frame from the queue after it's transmitted.
++		ins->memory_free(ins, (CanardFrame *)txf); // Deallocate the dynamic memory afterwards.
++	}
++
++
++	/* Poll receive */
++	if (poll(&fd, 1, timeout_msec) <= 0) {
++		return;
++	}
++
++	/* Receiving */
++	CanardFrame received_frame;
++
++	socketcanReceive(sock_ins, &received_frame);
++
++	CanardTransfer receive;
++	result = canardRxAccept(ins,
++				&received_frame, // The CAN frame received from the bus.
++				0,               // If the transport is not redundant, use 0.
++				&receive);
++
++	if (result < 0) {
++		// An error has occurred: either an argument is invalid or we've ran out of memory.
++		// It is possible to statically prove that an out-of-memory will never occur for a given application if
++		// the heap is sized correctly; for background, refer to the Robson's Proof and the documentation for O1Heap.
++		// Reception of an invalid frame is NOT an error.
++		fprintf(stderr, "Receive error %d\n", result);
++
++	} else if (result == 1) {
++		// A transfer has been received, process it. !!!!
++        printf("Receive UAVCAN port id%d TODO process me\n",
++		       receive.port_id);
++        
++		ins->memory_free(ins, (void *)receive.payload); // Deallocate the dynamic memory afterwards.
++
++	} else {
++		// printf("RX canard %d\r\n", result);
++		// Nothing to do.
++		// The received frame is either invalid or it's a non-last frame of a multi-frame transfer.
++		// Reception of an invalid frame is NOT reported as an error because it is not an error.
++	}
++
++}
++
++/****************************************************************************
++ * Name: canard_daemon
++ *
++ * Description:
++ *
++ ****************************************************************************/
++
++static int canard_daemon(int argc, char *argv[])
++{
++	int errval = 0;
++	int can_fd = 0;
++	int pub = 1;
++
++	if (argc > 2) {
++		for (int args = 2; args < argc; args++) {
++			if (!strcmp(argv[args], "canfd")) {
++				can_fd = 1;
++			}
++
++			if (!strcmp(argv[args], "pub")) {
++				pub = 1;
++			}
++
++			if (!strcmp(argv[args], "sub")) {
++				pub = 0;
++			}
++		}
++	}
++
++	my_allocator = o1heapInit(&uavcan_heap, O1_HEAP_SIZE, NULL, NULL);
++
++	if (my_allocator == NULL) {
++		printf("o1heapInit failed with size %d\n", O1_HEAP_SIZE);
++		errval = 2;
++		goto errout_with_dev;
++	}
++
++	CanardInstance ins = canardInit(&memAllocate, &memFree);
++
++	if (can_fd) {
++		ins.mtu_bytes = CANARD_MTU_CAN_FD;
++
++	} else {
++		ins.mtu_bytes = CANARD_MTU_CAN_CLASSIC;
++	}
++
++	ins.node_id = (pub ? CONFIG_EXAMPLES_LIBCANARDV1_NODE_ID : CONFIG_EXAMPLES_LIBCANARDV1_NODE_ID + 1);
++
++	/* Open the CAN device for reading */
++	CanardSocketInstance sock_ins;
++	socketcanOpen(&sock_ins, CONFIG_EXAMPLES_LIBCANARDV1_DEV, can_fd);
++
++
++	/* setup poll fd */
++	fd.fd = sock_ins.s;
++	fd.events = POLLIN;
++
++	if (sock_ins.s < 0) {
++		printf("canard_daemon: ERROR: open %s failed: %d\n",
++		       CONFIG_EXAMPLES_LIBCANARDV1_DEV, errno);
++		errval = 2;
++		goto errout_with_dev;
++	}
++
++
++	printf("canard_daemon: canard initialized\n");
++	printf("start node (ID: %d Name: %s MTU: %d PUB: %d TOPIC_SIZE: %d)\n", ins.node_id,
++	       APP_NODE_NAME, ins.mtu_bytes, pub, TOPIC_SIZE);
++
++	CanardRxSubscription heartbeat_subscription;
++	(void) canardRxSubscribe(&ins,   // Subscribe to messages uavcan.node.Heartbeat.
++				 CanardTransferKindMessage,
++				 32085,  // The fixed Subject-ID of the Heartbeat message type (see DSDL definition).
++				 7,      // The maximum payload size (max DSDL object size) from the DSDL definition.
++				 CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC,
++				 &heartbeat_subscription);
++
++	CanardRxSubscription my_subscription;
++	(void) canardRxSubscribe(&ins,
++				 CanardTransferKindMessage,
++				 PORT_ID,                     // The Service-ID to subscribe to.
++				 TOPIC_SIZE,                  // The maximum payload size (max DSDL object size).
++				 CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC,
++				 &my_subscription);
++
++	g_canard_daemon_started = true;
++	uint64_t next_1hz_service_at = getMonotonicTimestampUSec();
++
++	for (;;) {
++		processTxRxOnce(&ins, &sock_ins, 10);
++
++		const uint64_t ts = getMonotonicTimestampUSec();
++
++		if (ts >= next_1hz_service_at) {
++			next_1hz_service_at += 1000000;
++			process1HzTasks(&ins, ts);
++		}
++	}
++
++errout_with_dev:
++
++	g_canard_daemon_started = false;
++	printf("canard_daemon: Terminating!\n");
++	fflush(stdout);
++	return errval;
++}
++
++
++/****************************************************************************
++ * Name: canard_main
++ *
++ * Description:
++ *
++ ****************************************************************************/
++
++int canardv1_main(int argc, FAR char *argv[])
++{
++	int ret;
++
++	printf("canard_main: Starting canard_daemon\n");
++
++	if (g_canard_daemon_started) {
++		printf("canard_main: receive and send task already running\n");
++		return EXIT_SUCCESS;
++	}
++
++	ret = task_create("canard_daemon", CONFIG_EXAMPLES_LIBCANARDV1_DAEMON_PRIORITY,
++			  CONFIG_EXAMPLES_LIBCANARDV1_DAEMON_STACK_SIZE, canard_daemon,
++			  argv);
++
++	if (ret < 0) {
++		int errcode = errno;
++		printf("canard_main: ERROR: Failed to start canard_daemon: %d\n",
++		       errcode);
++		return EXIT_FAILURE;
++	}
++
++	printf("canard_main: canard_daemon started\n");
++	return EXIT_SUCCESS;
++}
+diff --git a/examples/canardv1/o1heap.c b/examples/canardv1/o1heap.c
+new file mode 100644
+index 000000000..ec5235d5a
+--- /dev/null
++++ b/examples/canardv1/o1heap.c
+@@ -0,0 +1,508 @@
++// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
++// documentation files (the "Software"), to deal in the Software without restriction, including without limitation
++// the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
++// and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in all copies or substantial portions
++// of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
++// WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS
++// OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
++// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
++//
++// Copyright (c) 2020 Pavel Kirienko
++// Authors: Pavel Kirienko <pavel.kirienko@zubax.com>
++
++#include "o1heap.h"
++#include <assert.h>
++
++// ---------------------------------------- BUILD CONFIGURATION OPTIONS ----------------------------------------
++
++/// The assertion macro defaults to the standard assert().
++/// It can be overridden to manually suppress assertion checks or use a different error handling policy.
++#ifndef O1HEAP_ASSERT
++// Intentional violation of MISRA: the assertion check macro cannot be replaced with a function definition.
++#    define O1HEAP_ASSERT(x) assert(x)  // NOSONAR
++#endif
++
++/// Branch probability annotations are used to improve the worst case execution time (WCET). They are entirely optional.
++/// A stock implementation is provided for some well-known compilers; for other compilers it defaults to nothing.
++/// If you are using a different compiler, consider overriding this value.
++#ifndef O1HEAP_LIKELY
++#    if defined(__GNUC__) || defined(__clang__) || defined(__CC_ARM)
++// Intentional violation of MISRA: branch hinting macro cannot be replaced with a function definition.
++#        define O1HEAP_LIKELY(x) __builtin_expect((x), 1)  // NOSONAR
++#    else
++#        define O1HEAP_LIKELY(x) x
++#    endif
++#endif
++
++/// This option is used for testing only. Do not use in production.
++#if defined(O1HEAP_EXPOSE_INTERNALS) && O1HEAP_EXPOSE_INTERNALS
++#    define O1HEAP_PRIVATE
++#else
++#    define O1HEAP_PRIVATE static inline
++#endif
++
++// ---------------------------------------- INTERNAL DEFINITIONS ----------------------------------------
++
++#if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)
++#    error "Unsupported language: ISO C99 or a newer version is required."
++#endif
++
++#if __STDC_VERSION__ < 201112L
++// Intentional violation of MISRA: static assertion macro cannot be replaced with a function definition.
++#    define static_assert(x, ...) typedef char _static_assert_gl(_static_assertion_, __LINE__)[(x) ? 1 : -1]  // NOSONAR
++#    define _static_assert_gl(a, b) _static_assert_gl_impl(a, b)                                              // NOSONAR
++// Intentional violation of MISRA: the paste operator ## cannot be avoided in this context.
++#    define _static_assert_gl_impl(a, b) a##b  // NOSONAR
++#endif
++
++/// The overhead is at most O1HEAP_ALIGNMENT bytes large,
++/// then follows the user data which shall keep the next fragment aligned.
++#define FRAGMENT_SIZE_MIN (O1HEAP_ALIGNMENT * 2U)
++
++/// This is risky, handle with care: if the allocation amount plus per-fragment overhead exceeds 2**(b-1),
++/// where b is the pointer bit width, then ceil(log2(amount)) yields b; then 2**b causes an integer overflow.
++/// To avoid this, we put a hard limit on fragment size (which is amount + per-fragment overhead): 2**(b-1)
++#define FRAGMENT_SIZE_MAX ((SIZE_MAX >> 1U) + 1U)
++
++/// Normally we should subtract log2(FRAGMENT_SIZE_MIN) but log2 is bulky to compute using the preprocessor only.
++/// We will certainly end up with unused bins this way, but it is cheap to ignore.
++#define NUM_BINS_MAX (sizeof(size_t) * 8U)
++
++static_assert((O1HEAP_ALIGNMENT & (O1HEAP_ALIGNMENT - 1U)) == 0U, "Not a power of 2");
++static_assert((FRAGMENT_SIZE_MIN & (FRAGMENT_SIZE_MIN - 1U)) == 0U, "Not a power of 2");
++static_assert((FRAGMENT_SIZE_MAX & (FRAGMENT_SIZE_MAX - 1U)) == 0U, "Not a power of 2");
++
++typedef struct Fragment Fragment;
++
++typedef struct FragmentHeader
++{
++    Fragment* next;
++    Fragment* prev;
++    size_t    size;
++    bool      used;
++} FragmentHeader;
++static_assert(sizeof(FragmentHeader) <= O1HEAP_ALIGNMENT, "Memory layout error");
++
++struct Fragment
++{
++    FragmentHeader header;
++    // Everything past the header may spill over into the allocatable space. The header survives across alloc/free.
++    Fragment* next_free;  // Next free fragment in the bin; NULL in the last one.
++    Fragment* prev_free;  // Same but points back; NULL in the first one.
++};
++static_assert(sizeof(Fragment) <= FRAGMENT_SIZE_MIN, "Memory layout error");
++
++struct O1HeapInstance
++{
++    Fragment* bins[NUM_BINS_MAX];  ///< Smallest fragments are in the bin at index 0.
++    size_t    nonempty_bin_mask;   ///< Bit 1 represents a non-empty bin; bin at index 0 is for the smallest fragments.
++
++    O1HeapHook critical_section_enter;
++    O1HeapHook critical_section_leave;
++
++    O1HeapDiagnostics diagnostics;
++};
++
++/// The amount of space allocated for the heap instance.
++/// Its size is padded up to O1HEAP_ALIGNMENT to ensure correct alignment of the allocation arena that follows.
++#define INSTANCE_SIZE_PADDED ((sizeof(O1HeapInstance) + O1HEAP_ALIGNMENT - 1U) & ~(O1HEAP_ALIGNMENT - 1U))
++
++static_assert(INSTANCE_SIZE_PADDED >= sizeof(O1HeapInstance), "Invalid instance footprint computation");
++static_assert((INSTANCE_SIZE_PADDED % O1HEAP_ALIGNMENT) == 0U, "Invalid instance footprint computation");
++
++/// True if the argument is an integer power of two or zero.
++O1HEAP_PRIVATE bool isPowerOf2(const size_t x);
++O1HEAP_PRIVATE bool isPowerOf2(const size_t x)
++{
++    return (x & (x - 1U)) == 0U;
++}
++
++/// Special case: if the argument is zero, returns zero.
++O1HEAP_PRIVATE uint8_t log2Floor(const size_t x);
++O1HEAP_PRIVATE uint8_t log2Floor(const size_t x)
++{
++    size_t  tmp = x;
++    uint8_t y   = 0;
++    // This is currently the only exception to the statement "routines contain neither loops nor recursion".
++    // It is unclear if there is a better way to compute the binary logarithm than this.
++    while (tmp > 1U)
++    {
++        tmp >>= 1U;
++        y++;
++    }
++    return y;
++}
++
++/// Special case: if the argument is zero, returns zero.
++O1HEAP_PRIVATE uint8_t log2Ceil(const size_t x);
++O1HEAP_PRIVATE uint8_t log2Ceil(const size_t x)
++{
++    return (uint8_t)(log2Floor(x) + (isPowerOf2(x) ? 0U : 1U));
++}
++
++/// Raise 2 into the specified power.
++/// You might be tempted to do something like (1U << power). WRONG! We humans are prone to forgetting things.
++/// If you forget to cast your 1U to size_t or ULL, you may end up with undefined behavior.
++O1HEAP_PRIVATE size_t pow2(const uint8_t power);
++O1HEAP_PRIVATE size_t pow2(const uint8_t power)
++{
++    return ((size_t) 1U) << power;
++}
++
++O1HEAP_PRIVATE void invoke(const O1HeapHook hook);
++O1HEAP_PRIVATE void invoke(const O1HeapHook hook)
++{
++    if (hook != NULL)
++    {
++        hook();
++    }
++}
++
++/// Links two fragments so that their next/prev pointers point to each other; left goes before right.
++O1HEAP_PRIVATE void interlink(Fragment* const left, Fragment* const right);
++O1HEAP_PRIVATE void interlink(Fragment* const left, Fragment* const right)
++{
++    if (O1HEAP_LIKELY(left != NULL))
++    {
++        left->header.next = right;
++    }
++    if (O1HEAP_LIKELY(right != NULL))
++    {
++        right->header.prev = left;
++    }
++}
++
++/// Adds a new block into the appropriate bin and updates the lookup mask.
++O1HEAP_PRIVATE void rebin(O1HeapInstance* const handle, Fragment* const fragment);
++O1HEAP_PRIVATE void rebin(O1HeapInstance* const handle, Fragment* const fragment)
++{
++    O1HEAP_ASSERT(handle != NULL);
++    O1HEAP_ASSERT(fragment != NULL);
++    O1HEAP_ASSERT(fragment->header.size >= FRAGMENT_SIZE_MIN);
++    O1HEAP_ASSERT((fragment->header.size % FRAGMENT_SIZE_MIN) == 0U);
++    const uint8_t idx = log2Floor(fragment->header.size / FRAGMENT_SIZE_MIN);  // Round DOWN when inserting.
++    O1HEAP_ASSERT(idx < NUM_BINS_MAX);
++    // Add the new fragment to the beginning of the bin list.
++    // I.e., each allocation will be returning the least-recently-used fragment -- good for caching.
++    fragment->next_free = handle->bins[idx];
++    fragment->prev_free = NULL;
++    if (O1HEAP_LIKELY(handle->bins[idx] != NULL))
++    {
++        handle->bins[idx]->prev_free = fragment;
++    }
++    handle->bins[idx] = fragment;
++    handle->nonempty_bin_mask |= pow2(idx);
++}
++
++/// Removes the specified block from its bin.
++O1HEAP_PRIVATE void unbin(O1HeapInstance* const handle, const Fragment* const fragment);
++O1HEAP_PRIVATE void unbin(O1HeapInstance* const handle, const Fragment* const fragment)
++{
++    O1HEAP_ASSERT(handle != NULL);
++    O1HEAP_ASSERT(fragment != NULL);
++    O1HEAP_ASSERT(fragment->header.size >= FRAGMENT_SIZE_MIN);
++    O1HEAP_ASSERT((fragment->header.size % FRAGMENT_SIZE_MIN) == 0U);
++    const uint8_t idx = log2Floor(fragment->header.size / FRAGMENT_SIZE_MIN);  // Round DOWN when removing.
++    O1HEAP_ASSERT(idx < NUM_BINS_MAX);
++    // Remove the bin from the free fragment list.
++    if (O1HEAP_LIKELY(fragment->next_free != NULL))
++    {
++        fragment->next_free->prev_free = fragment->prev_free;
++    }
++    if (O1HEAP_LIKELY(fragment->prev_free != NULL))
++    {
++        fragment->prev_free->next_free = fragment->next_free;
++    }
++    // Update the bin header.
++    if (O1HEAP_LIKELY(handle->bins[idx] == fragment))
++    {
++        O1HEAP_ASSERT(fragment->prev_free == NULL);
++        handle->bins[idx] = fragment->next_free;
++        if (O1HEAP_LIKELY(handle->bins[idx] == NULL))
++        {
++            handle->nonempty_bin_mask &= ~pow2(idx);
++        }
++    }
++}
++
++// ---------------------------------------- PUBLIC API IMPLEMENTATION ----------------------------------------
++
++O1HeapInstance* o1heapInit(void* const      base,
++                           const size_t     size,
++                           const O1HeapHook critical_section_enter,
++                           const O1HeapHook critical_section_leave)
++{
++    O1HeapInstance* out = NULL;
++    if ((base != NULL) && ((((size_t) base) % O1HEAP_ALIGNMENT) == 0U) &&
++        (size >= (INSTANCE_SIZE_PADDED + FRAGMENT_SIZE_MIN)))
++    {
++        // Allocate the core heap metadata structure in the beginning of the arena.
++        O1HEAP_ASSERT(((size_t) base) % sizeof(O1HeapInstance*) == 0U);
++        out                         = (O1HeapInstance*) base;
++        out->nonempty_bin_mask      = 0U;
++        out->critical_section_enter = critical_section_enter;
++        out->critical_section_leave = critical_section_leave;
++        for (size_t i = 0; i < NUM_BINS_MAX; i++)
++        {
++            out->bins[i] = NULL;
++        }
++
++        // Limit and align the capacity.
++        size_t capacity = size - INSTANCE_SIZE_PADDED;
++        if (capacity > FRAGMENT_SIZE_MAX)
++        {
++            capacity = FRAGMENT_SIZE_MAX;
++        }
++        while ((capacity % FRAGMENT_SIZE_MIN) != 0)
++        {
++            O1HEAP_ASSERT(capacity > 0U);
++            capacity--;
++        }
++        O1HEAP_ASSERT((capacity % FRAGMENT_SIZE_MIN) == 0);
++        O1HEAP_ASSERT((capacity >= FRAGMENT_SIZE_MIN) && (capacity <= FRAGMENT_SIZE_MAX));
++
++        // Initialize the root fragment.
++        Fragment* const frag = (Fragment*) (void*) (((uint8_t*) base) + INSTANCE_SIZE_PADDED);
++        O1HEAP_ASSERT((((size_t) frag) % O1HEAP_ALIGNMENT) == 0U);
++        frag->header.next = NULL;
++        frag->header.prev = NULL;
++        frag->header.size = capacity;
++        frag->header.used = false;
++        frag->next_free   = NULL;
++        frag->prev_free   = NULL;
++        rebin(out, frag);
++        O1HEAP_ASSERT(out->nonempty_bin_mask != 0U);
++
++        // Initialize the diagnostics.
++        out->diagnostics.capacity          = capacity;
++        out->diagnostics.allocated         = 0U;
++        out->diagnostics.peak_allocated    = 0U;
++        out->diagnostics.peak_request_size = 0U;
++        out->diagnostics.oom_count         = 0U;
++    }
++
++    return out;
++}
++
++void* o1heapAllocate(O1HeapInstance* const handle, const size_t amount)
++{
++    O1HEAP_ASSERT(handle != NULL);
++    O1HEAP_ASSERT(handle->diagnostics.capacity <= FRAGMENT_SIZE_MAX);
++    void* out = NULL;
++
++    // If the amount approaches approx. SIZE_MAX/2, an undetected integer overflow may occur.
++    // To avoid that, we do not attempt allocation if the amount exceeds the hard limit.
++    // We perform multiple redundant checks to account for a possible unaccounted overflow.
++    if (O1HEAP_LIKELY((amount > 0U) && (amount <= (handle->diagnostics.capacity - O1HEAP_ALIGNMENT))))
++    {
++        // Add the header size and align the allocation size to the power of 2.
++        // See "Timing-Predictable Memory Allocation In Hard Real-Time Systems", Herter, page 27.
++        const size_t fragment_size = pow2(log2Ceil(amount + O1HEAP_ALIGNMENT));
++        O1HEAP_ASSERT(fragment_size <= FRAGMENT_SIZE_MAX);
++        O1HEAP_ASSERT(fragment_size >= FRAGMENT_SIZE_MIN);
++        O1HEAP_ASSERT(fragment_size >= amount + O1HEAP_ALIGNMENT);
++        O1HEAP_ASSERT(isPowerOf2(fragment_size));
++
++        const uint8_t optimal_bin_index = log2Ceil(fragment_size / FRAGMENT_SIZE_MIN);  // Use CEIL when fetching.
++        O1HEAP_ASSERT(optimal_bin_index < NUM_BINS_MAX);
++        const size_t candidate_bin_mask = ~(pow2(optimal_bin_index) - 1U);
++
++        invoke(handle->critical_section_enter);
++
++        // Find the smallest non-empty bin we can use.
++        const size_t suitable_bins     = handle->nonempty_bin_mask & candidate_bin_mask;
++        const size_t smallest_bin_mask = suitable_bins & ~(suitable_bins - 1U);  // Clear all bits but the lowest.
++        if (O1HEAP_LIKELY(smallest_bin_mask != 0))
++        {
++            O1HEAP_ASSERT(isPowerOf2(smallest_bin_mask));
++            const uint8_t bin_index = log2Floor(smallest_bin_mask);
++            O1HEAP_ASSERT(bin_index >= optimal_bin_index);
++            O1HEAP_ASSERT(bin_index < NUM_BINS_MAX);
++
++            // The bin we found shall not be empty, otherwise it's a state divergence (memory corruption?).
++            Fragment* const frag = handle->bins[bin_index];
++            O1HEAP_ASSERT(frag != NULL);
++            O1HEAP_ASSERT(frag->header.size >= fragment_size);
++            O1HEAP_ASSERT((frag->header.size % FRAGMENT_SIZE_MIN) == 0U);
++            O1HEAP_ASSERT(!frag->header.used);
++            unbin(handle, frag);
++
++            // Split the fragment if it is too large.
++            const size_t leftover = frag->header.size - fragment_size;
++            frag->header.size     = fragment_size;
++            O1HEAP_ASSERT(leftover < handle->diagnostics.capacity);  // Overflow check.
++            O1HEAP_ASSERT(leftover % FRAGMENT_SIZE_MIN == 0U);       // Alignment check.
++            if (O1HEAP_LIKELY(leftover >= FRAGMENT_SIZE_MIN))
++            {
++                Fragment* const new_frag = (Fragment*) (void*) (((uint8_t*) frag) + fragment_size);
++                O1HEAP_ASSERT(((size_t) new_frag) % O1HEAP_ALIGNMENT == 0U);
++                new_frag->header.size = leftover;
++                new_frag->header.used = false;
++                interlink(new_frag, frag->header.next);
++                interlink(frag, new_frag);
++                rebin(handle, new_frag);
++            }
++
++            // Update the diagnostics.
++            O1HEAP_ASSERT((handle->diagnostics.allocated % FRAGMENT_SIZE_MIN) == 0U);
++            handle->diagnostics.allocated += fragment_size;
++            O1HEAP_ASSERT(handle->diagnostics.allocated <= handle->diagnostics.capacity);
++            if (O1HEAP_LIKELY(handle->diagnostics.peak_allocated < handle->diagnostics.allocated))
++            {
++                handle->diagnostics.peak_allocated = handle->diagnostics.allocated;
++            }
++
++            // Finalize the fragment we just allocated.
++            O1HEAP_ASSERT(frag->header.size >= amount + O1HEAP_ALIGNMENT);
++            frag->header.used = true;
++
++            out = ((uint8_t*) frag) + O1HEAP_ALIGNMENT;
++        }
++    }
++    else
++    {
++        invoke(handle->critical_section_enter);
++    }
++
++    // Update the diagnostics.
++    if (O1HEAP_LIKELY(handle->diagnostics.peak_request_size < amount))
++    {
++        handle->diagnostics.peak_request_size = amount;
++    }
++    if (O1HEAP_LIKELY((out == NULL) && (amount > 0U)))
++    {
++        handle->diagnostics.oom_count++;
++    }
++
++    invoke(handle->critical_section_leave);
++    return out;
++}
++
++void o1heapFree(O1HeapInstance* const handle, void* const pointer)
++{
++    O1HEAP_ASSERT(handle != NULL);
++    O1HEAP_ASSERT(handle->diagnostics.capacity <= FRAGMENT_SIZE_MAX);
++    if (O1HEAP_LIKELY(pointer != NULL))  // NULL pointer is a no-op.
++    {
++        Fragment* const frag = (Fragment*) (void*) (((uint8_t*) pointer) - O1HEAP_ALIGNMENT);
++
++        // Check for heap corruption in debug builds.
++        O1HEAP_ASSERT(((size_t) frag) % sizeof(Fragment*) == 0U);
++        O1HEAP_ASSERT(((size_t) frag) >= (((size_t) handle) + INSTANCE_SIZE_PADDED));
++        O1HEAP_ASSERT(((size_t) frag) <=
++                      (((size_t) handle) + INSTANCE_SIZE_PADDED + handle->diagnostics.capacity - FRAGMENT_SIZE_MIN));
++        O1HEAP_ASSERT(frag->header.used);  // Catch double-free
++        O1HEAP_ASSERT(((size_t) frag->header.next) % sizeof(Fragment*) == 0U);
++        O1HEAP_ASSERT(((size_t) frag->header.prev) % sizeof(Fragment*) == 0U);
++        O1HEAP_ASSERT(frag->header.size >= FRAGMENT_SIZE_MIN);
++        O1HEAP_ASSERT(frag->header.size <= handle->diagnostics.capacity);
++        O1HEAP_ASSERT((frag->header.size % FRAGMENT_SIZE_MIN) == 0U);
++
++        invoke(handle->critical_section_enter);
++
++        // Even if we're going to drop the fragment later, mark it free anyway to prevent double-free.
++        frag->header.used = false;
++
++        // Update the diagnostics. It must be done before merging because it invalidates the fragment size information.
++        O1HEAP_ASSERT(handle->diagnostics.allocated >= frag->header.size);  // Heap corruption check.
++        handle->diagnostics.allocated -= frag->header.size;
++
++        // Merge with siblings and insert the returned fragment into the appropriate bin and update metadata.
++        Fragment* const prev       = frag->header.prev;
++        Fragment* const next       = frag->header.next;
++        const bool      join_left  = (prev != NULL) && (!prev->header.used);
++        const bool      join_right = (next != NULL) && (!next->header.used);
++        if (join_left && join_right)  // [ prev ][ this ][ next ] => [ ------- prev ------- ]
++        {
++            unbin(handle, prev);
++            unbin(handle, next);
++            prev->header.size += frag->header.size + next->header.size;
++            frag->header.size = 0;  // Invalidate the dropped fragment headers to prevent double-free.
++            next->header.size = 0;
++            O1HEAP_ASSERT((prev->header.size % FRAGMENT_SIZE_MIN) == 0U);
++            interlink(prev, next->header.next);
++            rebin(handle, prev);
++        }
++        else if (join_left)  // [ prev ][ this ][ next ] => [ --- prev --- ][ next ]
++        {
++            unbin(handle, prev);
++            prev->header.size += frag->header.size;
++            frag->header.size = 0;
++            O1HEAP_ASSERT((prev->header.size % FRAGMENT_SIZE_MIN) == 0U);
++            interlink(prev, next);
++            rebin(handle, prev);
++        }
++        else if (join_right)  // [ prev ][ this ][ next ] => [ prev ][ --- this --- ]
++        {
++            unbin(handle, next);
++            frag->header.size += next->header.size;
++            next->header.size = 0;
++            O1HEAP_ASSERT((frag->header.size % FRAGMENT_SIZE_MIN) == 0U);
++            interlink(frag, next->header.next);
++            rebin(handle, frag);
++        }
++        else
++        {
++            rebin(handle, frag);
++        }
++
++        invoke(handle->critical_section_leave);
++    }
++}
++
++bool o1heapDoInvariantsHold(const O1HeapInstance* const handle)
++{
++    O1HEAP_ASSERT(handle != NULL);
++    bool valid = true;
++
++    invoke(handle->critical_section_enter);
++
++    // Check the bin mask consistency.
++    for (size_t i = 0; i < NUM_BINS_MAX; i++)  // Dear compiler, feel free to unroll this loop.
++    {
++        const bool mask_bit_set = (handle->nonempty_bin_mask & pow2((uint8_t) i)) != 0U;
++        const bool bin_nonempty = handle->bins[i] != NULL;
++        valid                   = valid && (mask_bit_set == bin_nonempty);
++    }
++
++    // Create a local copy of the diagnostics struct to check later and release the critical section early.
++    const O1HeapDiagnostics diag = handle->diagnostics;
++
++    invoke(handle->critical_section_leave);
++
++    // Capacity check.
++    valid = valid && (diag.capacity <= FRAGMENT_SIZE_MAX) && (diag.capacity >= FRAGMENT_SIZE_MIN) &&
++            ((diag.capacity % FRAGMENT_SIZE_MIN) == 0U);
++
++    // Allocation info check.
++    valid = valid && (diag.allocated <= diag.capacity) && ((diag.allocated % FRAGMENT_SIZE_MIN) == 0U) &&
++            (diag.peak_allocated <= diag.capacity) && (diag.peak_allocated >= diag.allocated) &&
++            ((diag.peak_allocated % FRAGMENT_SIZE_MIN) == 0U);
++
++    // Peak request check
++    valid = valid && ((diag.peak_request_size < diag.capacity) || (diag.oom_count > 0U));
++    if (diag.peak_request_size == 0U)
++    {
++        valid = valid && (diag.peak_allocated == 0U) && (diag.allocated == 0U) && (diag.oom_count == 0U);
++    }
++    else
++    {
++        valid = valid &&  // Overflow on summation is possible but safe to ignore.
++                (((diag.peak_request_size + O1HEAP_ALIGNMENT) <= diag.peak_allocated) || (diag.oom_count > 0U));
++    }
++
++    return valid;
++}
++
++O1HeapDiagnostics o1heapGetDiagnostics(const O1HeapInstance* const handle)
++{
++    O1HEAP_ASSERT(handle != NULL);
++    invoke(handle->critical_section_enter);
++    const O1HeapDiagnostics out = handle->diagnostics;
++    invoke(handle->critical_section_leave);
++    return out;
++}
+diff --git a/examples/canardv1/o1heap.h b/examples/canardv1/o1heap.h
+new file mode 100644
+index 000000000..079277dfd
+--- /dev/null
++++ b/examples/canardv1/o1heap.h
+@@ -0,0 +1,143 @@
++// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
++// documentation files (the "Software"), to deal in the Software without restriction, including without limitation
++// the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
++// and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
++//
++// The above copyright notice and this permission notice shall be included in all copies or substantial portions
++// of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
++// WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS
++// OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
++// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
++//
++// Copyright (c) 2020 Pavel Kirienko
++// Authors: Pavel Kirienko <pavel.kirienko@zubax.com>
++//
++// READ THE DOCUMENTATION IN README.md.
++
++#ifndef O1HEAP_H_INCLUDED
++#define O1HEAP_H_INCLUDED
++
++#include <stdbool.h>
++#include <stddef.h>
++#include <stdint.h>
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++/// The semantic version number of this distribution.
++#define O1HEAP_VERSION_MAJOR 1
++
++/// The guaranteed alignment depends on the platform pointer width.
++#define O1HEAP_ALIGNMENT (sizeof(void*) * 4U)
++
++/// The definition is private, so the user code can only operate on pointers. This is done to enforce encapsulation.
++typedef struct O1HeapInstance O1HeapInstance;
++
++/// A hook function invoked by the allocator. NULL hooks are silently not invoked (not an error).
++typedef void (*O1HeapHook)(void);
++
++/// Runtime diagnostic information. This information can be used to facilitate runtime self-testing,
++/// as required by certain safety-critical development guidelines.
++/// If assertion checks are not disabled, the library will perform automatic runtime self-diagnostics that trigger
++/// an assertion failure if a heap corruption is detected.
++/// Health checks and validation can be done with @ref o1heapDoInvariantsHold().
++typedef struct
++{
++    /// The total amount of memory available for serving allocation requests (heap size).
++    /// The maximum allocation size is (capacity - O1HEAP_ALIGNMENT).
++    /// This parameter does not include the overhead used up by @ref O1HeapInstance and arena alignment.
++    /// This parameter is constant.
++    size_t capacity;
++
++    /// The amount of memory that is currently allocated, including the per-fragment overhead and size alignment.
++    /// For example, if the application requested a fragment of size 1 byte, the value reported here may be 32 bytes.
++    size_t allocated;
++
++    /// The maximum value of 'allocated' seen since initialization. This parameter is never decreased.
++    size_t peak_allocated;
++
++    /// The largest amount of memory that the allocator has attempted to allocate (perhaps unsuccessfully)
++    /// since initialization (not including the rounding and the allocator's own per-fragment overhead,
++    /// so the total is larger). This parameter is never decreased. The initial value is zero.
++    size_t peak_request_size;
++
++    /// The number of times an allocation request could not be completed due to the lack of memory or
++    /// excessive fragmentation. OOM stands for "out of memory". This parameter is never decreased.
++    uint64_t oom_count;
++} O1HeapDiagnostics;
++
++/// The arena base pointer shall be aligned at @ref O1HEAP_ALIGNMENT, otherwise NULL is returned.
++///
++/// The total heap capacity cannot exceed approx. (SIZE_MAX/2). If the arena size allows for a larger heap,
++/// the excess will be silently truncated away (no error). This is not a realistic use case because a typical
++/// application is unlikely to be able to dedicate that much of the address space for the heap.
++///
++/// The critical section enter/leave callbacks will be invoked when the allocator performs an atomic transaction.
++/// There is at most one atomic transaction per allocation/deallocation.
++/// Either or both of the callbacks may be NULL if locking is not needed (i.e., the heap is not shared).
++/// It is guaranteed that a critical section will never be entered recursively.
++/// It is guaranteed that 'enter' is invoked the same number of times as 'leave', unless either of them are NULL.
++/// It is guaranteed that 'enter' is invoked before 'leave', unless either of them are NULL.
++/// The callbacks are never invoked from the initialization function itself.
++///
++/// The function initializes a new heap instance allocated in the provided arena, taking some of its space for its
++/// own needs (normally about 40..600 bytes depending on the architecture, but this parameter is not characterized).
++/// A pointer to the newly initialized instance is returned.
++///
++/// If the provided space is insufficient, NULL is returned.
++///
++/// An initialized instance does not hold any resources. Therefore, if the instance is no longer needed,
++/// it can be discarded without any de-initialization procedures.
++///
++/// The time complexity is unspecified.
++O1HeapInstance* o1heapInit(void* const      base,
++                           const size_t     size,
++                           const O1HeapHook critical_section_enter,
++                           const O1HeapHook critical_section_leave);
++
++/// The semantics follows malloc() with additional guarantees the full list of which is provided below.
++///
++/// If the allocation request is served successfully, a pointer to the newly allocated memory fragment is returned.
++/// The returned pointer is guaranteed to be aligned at @ref O1HEAP_ALIGNMENT.
++///
++/// If the allocation request cannot be served due to the lack of memory or its excessive fragmentation,
++/// a NULL pointer is returned.
++///
++/// The function is executed in constant time (unless the critical section management hooks are used and are not
++/// constant-time). The allocated memory is NOT zero-filled (because zero-filling is a variable-complexity operation).
++///
++/// The function may invoke critical_section_enter and critical_section_leave at most once each (NULL hooks ignored).
++void* o1heapAllocate(O1HeapInstance* const handle, const size_t amount);
++
++/// The semantics follows free() with additional guarantees the full list of which is provided below.
++///
++/// If the pointer does not point to a previously allocated block and is not NULL, the behavior is undefined.
++/// Builds where assertion checks are enabled may trigger an assertion failure for some invalid inputs.
++///
++/// The function is executed in constant time (unless the critical section management hooks are used and are not
++/// constant-time).
++///
++/// The function may invoke critical_section_enter and critical_section_leave at most once each (NULL hooks ignored).
++void o1heapFree(O1HeapInstance* const handle, void* const pointer);
++
++/// Performs a basic sanity check on the heap.
++/// This function can be used as a weak but fast method of heap corruption detection.
++/// It invokes critical_section_enter once (unless NULL) and then critical_section_leave once (unless NULL).
++/// If the handle pointer is NULL, the behavior is undefined.
++/// The time complexity is constant.
++/// The return value is truth if the heap looks valid, falsity otherwise.
++bool o1heapDoInvariantsHold(const O1HeapInstance* const handle);
++
++/// Samples and returns a copy of the diagnostic information, see @ref O1HeapDiagnostics.
++/// This function merely copies the structure from an internal storage, so it is fast to return.
++/// It invokes critical_section_enter once (unless NULL) and then critical_section_leave once (unless NULL).
++/// If the handle pointer is NULL, the behavior is undefined.
++O1HeapDiagnostics o1heapGetDiagnostics(const O1HeapInstance* const handle);
++
++#ifdef __cplusplus
++}
++#endif
++#endif  // O1HEAP_H_INCLUDED
+diff --git a/examples/canardv1/socketcan.c b/examples/canardv1/socketcan.c
+new file mode 100644
+index 000000000..017615538
+--- /dev/null
++++ b/examples/canardv1/socketcan.c
+@@ -0,0 +1,171 @@
++#include "socketcan.h"
++
++#include <net/if.h>
++#include <sys/ioctl.h>
++#include <string.h>
++
++int16_t socketcanOpen(CanardSocketInstance *ins, const char *const can_iface_name, const bool can_fd)
++{
++	struct sockaddr_can addr;
++	struct ifreq ifr;
++
++	ins->can_fd = can_fd;
++
++	/* open socket */
++	if ((ins->s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
++		perror("socket");
++		return -1;
++	}
++
++	strncpy(ifr.ifr_name, can_iface_name, IFNAMSIZ - 1);
++	ifr.ifr_name[IFNAMSIZ - 1] = '\0';
++	ifr.ifr_ifindex = if_nametoindex(ifr.ifr_name);
++
++	if (!ifr.ifr_ifindex) {
++		perror("if_nametoindex");
++		return -1;
++	}
++
++	memset(&addr, 0, sizeof(addr));
++	addr.can_family = AF_CAN;
++	addr.can_ifindex = ifr.ifr_ifindex;
++
++	const int on = 1;
++	/* RX Timestamping */
++
++	if (setsockopt(ins->s, SOL_SOCKET, SO_TIMESTAMP, &on, sizeof(on)) < 0) {
++		perror("SO_TIMESTAMP is disabled");
++		return -1;
++	}
++
++	/* NuttX Feature: Enable TX deadline when sending CAN frames
++	 * When a deadline occurs the driver will remove the CAN frame
++	 */
++
++	if (setsockopt(ins->s, SOL_CAN_RAW, CAN_RAW_TX_DEADLINE, &on, sizeof(on)) < 0) {
++		perror("CAN_RAW_TX_DEADLINE is disabled");
++		return -1;
++	}
++
++	if (can_fd) {
++		if (setsockopt(ins->s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &on, sizeof(on)) < 0) {
++			perror("no CAN FD support");
++			return -1;
++		}
++	}
++
++	if (bind(ins->s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
++		perror("bind");
++		return -1;
++	}
++
++	// Setup TX msg
++	ins->send_iov.iov_base = &ins->send_frame;
++
++	if (ins->can_fd) {
++		ins->send_iov.iov_len = sizeof(struct canfd_frame);
++
++	} else {
++		ins->send_iov.iov_len = sizeof(struct can_frame);
++	}
++
++	memset(&ins->send_control, 0x00, sizeof(ins->send_control));
++
++	ins->send_msg.msg_iov    = &ins->send_iov;
++	ins->send_msg.msg_iovlen = 1;
++	ins->send_msg.msg_control = &ins->send_control;
++	ins->send_msg.msg_controllen = sizeof(ins->send_control);
++
++	ins->send_cmsg = CMSG_FIRSTHDR(&ins->send_msg);
++	ins->send_cmsg->cmsg_level = SOL_CAN_RAW;
++	ins->send_cmsg->cmsg_type = CAN_RAW_TX_DEADLINE;
++	ins->send_cmsg->cmsg_len = sizeof(struct timeval);
++	ins->send_tv = (struct timeval *)CMSG_DATA(&ins->send_cmsg);
++
++	// Setup RX msg
++	ins->recv_iov.iov_base = &ins->recv_frame;
++
++	if (can_fd) {
++		ins->recv_iov.iov_len = sizeof(struct canfd_frame);
++
++	} else {
++		ins->recv_iov.iov_len = sizeof(struct can_frame);
++	}
++
++	memset(&ins->recv_control, 0x00, sizeof(ins->recv_control));
++
++	ins->recv_msg.msg_iov    = &ins->recv_iov;
++	ins->recv_msg.msg_iovlen = 1;
++	ins->recv_msg.msg_control = &ins->recv_control;
++	ins->recv_msg.msg_controllen = sizeof(ins->recv_control);
++	ins->recv_cmsg = CMSG_FIRSTHDR(&ins->recv_msg);
++
++	return 0;
++}
++
++int16_t socketcanTransmit(CanardSocketInstance *ins, const CanardFrame *txf)
++{
++	/* Copy CanardFrame to can_frame/canfd_frame */
++
++	if (ins->can_fd) {
++		ins->send_frame.can_id = txf->extended_can_id;
++		ins->send_frame.can_id |= CAN_EFF_FLAG;
++		ins->send_frame.len = txf->payload_size;
++		memcpy(&ins->send_frame.data, txf->payload, txf->payload_size);
++
++	} else {
++		struct can_frame *frame = (struct can_frame *)&ins->send_frame;
++		frame->can_id = txf->extended_can_id;
++		frame->can_id |= CAN_EFF_FLAG;
++		frame->can_dlc = txf->payload_size;
++		memcpy(&frame->data, txf->payload, txf->payload_size);
++	}
++
++	/* Set CAN_RAW_TX_DEADLINE timestamp  */
++
++	ins->send_tv->tv_usec = txf->timestamp_usec % 1000000ULL;
++	ins->send_tv->tv_sec = (txf->timestamp_usec - ins->send_tv->tv_usec) / 1000000ULL;
++
++	return sendmsg(ins->s, &ins->send_msg, 0);
++}
++
++int16_t socketcanReceive(CanardSocketInstance *ins, CanardFrame *rxf)
++{
++	int32_t result = recvmsg(ins->s, &ins->recv_msg, 0);
++
++	if (result < 0) {
++		return result;
++	}
++
++	/* Copy CAN frame to CanardFrame */
++
++	if (ins->can_fd) {
++		struct canfd_frame *recv_frame = (struct canfd_frame *)&ins->recv_frame;
++		rxf->extended_can_id = recv_frame->can_id & CAN_EFF_MASK;
++		rxf->payload_size = recv_frame->len;
++		rxf->payload = &recv_frame->data;
++
++	} else {
++		struct can_frame *recv_frame = (struct can_frame *)&ins->recv_frame;
++		rxf->extended_can_id = recv_frame->can_id & CAN_EFF_MASK;
++		rxf->payload_size = recv_frame->can_dlc;
++		rxf->payload = &recv_frame->data; //FIXME either copy or clearly state the pointer reference
++	}
++
++	/* Read SO_TIMESTAMP value */
++
++	if (ins->recv_cmsg->cmsg_level == SOL_SOCKET && ins->recv_cmsg->cmsg_type == SO_TIMESTAMP) {
++		struct timeval *tv = (struct timeval *)CMSG_DATA(ins->recv_cmsg);
++		rxf->timestamp_usec = tv->tv_sec * 1000000ULL + tv->tv_usec;
++	}
++
++	return result;
++}
++
++
++/* TODO implement corresponding IOCTL */
++
++int16_t socketcanConfigureFilter(const fd_t fd, const size_t num_filters, const struct can_filter *filters)
++{
++	return -1;
++}
+diff --git a/examples/canardv1/socketcan.h b/examples/canardv1/socketcan.h
+new file mode 100644
+index 000000000..64db4323b
+--- /dev/null
++++ b/examples/canardv1/socketcan.h
+@@ -0,0 +1,69 @@
++
++#ifndef SOCKETCAN_H_INCLUDED
++#define SOCKETCAN_H_INCLUDED
++
++#include <stdbool.h>
++#include <stddef.h>
++#include <stdint.h>
++
++#include <sys/time.h>
++#include <sys/socket.h>
++
++#include <nuttx/can.h>
++#include <netpacket/can.h>
++
++#include <canard.h>
++
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++typedef struct CanardSocketInstance CanardSocketInstance;
++typedef int fd_t;
++
++struct CanardSocketInstance {
++	fd_t               s;
++	bool               can_fd;
++
++	//// Send msg structure
++	struct iovec       send_iov;
++	struct canfd_frame send_frame;
++	struct msghdr      send_msg;
++	struct cmsghdr     *send_cmsg;
++	struct timeval     *send_tv;   /* TX deadline timestamp */
++	uint8_t            send_control[sizeof(struct cmsghdr) + sizeof(struct timeval)];
++
++	//// Receive msg structure
++	struct iovec       recv_iov;
++	struct canfd_frame recv_frame;
++	struct msghdr      recv_msg;
++	struct cmsghdr     *recv_cmsg;
++	uint8_t            recv_control[sizeof(struct cmsghdr) + sizeof(struct timeval)];
++};
++
++/// Creates a SocketCAN socket for corresponding iface can_iface_name
++/// Also sets up the message structures required for socketcanTransmit & socketcanReceive
++/// can_fd determines to use CAN FD frame when is 1, and classical CAN frame when is 0
++/// The return value is 0 on succes and -1 on error
++int16_t socketcanOpen(CanardSocketInstance *ins, const char *const can_iface_name, const bool can_fd);
++
++/// Send a CanardFrame to the CanardSocketInstance socket
++/// This function is blocking
++/// The return value is number of bytes transferred, negative value on error.
++int16_t socketcanTransmit(CanardSocketInstance *ins, const CanardFrame *txf);
++
++/// Receive a CanardFrame from the CanardSocketInstance socket
++/// This function is blocking
++/// The return value is number of bytes received, negative value on error.
++int16_t socketcanReceive(CanardSocketInstance *ins, CanardFrame *rxf);
++
++// TODO implement ioctl for CAN filter
++int16_t socketcanConfigureFilter(const fd_t fd, const size_t num_filters, const struct can_filter *filters);
++
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif //SOCKETCAN_H_INCLUDED
+diff --git a/nxp_bms/Make.defs b/nxp_bms/Make.defs
+new file mode 100644
+index 000000000..24f85f56b
+--- /dev/null
++++ b/nxp_bms/Make.defs
+@@ -0,0 +1,35 @@
++############################################################################
++# apps/nxp_bms/Make.defs
++#
++# BSD 3-Clause License
++# 
++# Copyright 2020 NXP
++# 
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions are met:
++# 
++# 1. Redistributions of source code must retain the above copyright notice, this
++#    list of conditions and the following disclaimer.
++# 
++# 2. Redistributions in binary form must reproduce the above copyright notice,
++#    this list of conditions and the following disclaimer in the documentation
++#    and/or other materials provided with the distribution.
++# 
++# 3. Neither the name of the copyright holder nor the names of its
++#    contributors may be used to endorse or promote products derived from
++#    this software without specific prior written permission.
++# 
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
++# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
++# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
++# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
++# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
++# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++#
++############################################################################
++
++include $(wildcard nxp_bms/*/Make.defs)
+diff --git a/nxp_bms/Makefile b/nxp_bms/Makefile
+new file mode 100644
+index 000000000..c84758792
+--- /dev/null
++++ b/nxp_bms/Makefile
+@@ -0,0 +1,75 @@
++############################################################################
++# apps/nxp_bms/Makefile
++#
++# BSD 3-Clause License
++# 
++# Copyright 2020 NXP
++# 
++# Redistribution and use in source and binary forms, with or without
++# modification, are permitted provided that the following conditions are met:
++# 
++# 1. Redistributions of source code must retain the above copyright notice, this
++#    list of conditions and the following disclaimer.
++# 
++# 2. Redistributions in binary form must reproduce the above copyright notice,
++#    this list of conditions and the following disclaimer in the documentation
++#    and/or other materials provided with the distribution.
++# 
++# 3. Neither the name of the copyright holder nor the names of its
++#    contributors may be used to endorse or promote products derived from
++#    this software without specific prior written permission.
++# 
++# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
++# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
++# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
++# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
++# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
++# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
++# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
++# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
++# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
++# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++#
++############################################################################
++
++MENUDESC = "nxp_bms"
++
++include $(APPDIR)/Make.defs
++
++# Sub-directories
++
++SUBDIRS       := $(dir $(wildcard *$(DELIM)Makefile))
++CONFIGSUBDIRS := $(filter-out $(dir $(wildcard *$(DELIM)Kconfig)),$(SUBDIRS))
++CLEANSUBDIRS  := $(dir $(wildcard *$(DELIM).built))
++CLEANSUBDIRS  += $(dir $(wildcard *$(DELIM).depend))
++CLEANSUBDIRS  += $(dir $(wildcard *$(DELIM).kconfig))
++
++all: nothing
++
++.PHONY: nothing clean distclean
++
++$(foreach SDIR, $(CONFIGSUBDIRS), $(eval $(call SDIR_template,$(SDIR),preconfig)))
++$(foreach SDIR, $(CLEANSUBDIRS), $(eval $(call SDIR_template,$(SDIR),clean)))
++$(foreach SDIR, $(CLEANSUBDIRS), $(eval $(call SDIR_template,$(SDIR),distclean)))
++
++nothing:
++
++install:
++
++preconfig: $(foreach SDIR, $(CONFIGSUBDIRS), $(SDIR)_preconfig)
++ifneq ($(MENUDESC),)
++	$(Q) $(MKKCONFIG) -m $(MENUDESC)
++	$(Q) touch .kconfig
++endif
++
++clean: $(foreach SDIR, $(CLEANSUBDIRS), $(SDIR)_clean)
++	find . -name "*.o" | xargs rm -rf
++
++distclean: $(foreach SDIR, $(CLEANSUBDIRS), $(SDIR)_distclean)
++	find . -name "*.o" | xargs rm -rf
++ifneq ($(MENUDESC),)
++	$(call DELFILE, Kconfig)
++	$(call DELFILE, .kconfig)
++endif
++
++-include Make.dep
+diff --git a/system/spi/spi_common.c b/system/spi/spi_common.c
+index 21017ceca..1fc5f8382 100644
+--- a/system/spi/spi_common.c
++++ b/system/spi/spi_common.c
+@@ -208,7 +208,7 @@ int spitool_common_args(FAR struct spitool_s *spitool, FAR char **arg)
+ 
+       case 'w':
+         ret = arg_decimal(arg, &value);
+-        if (value != 8 && value != 16)
++        if (value != 8 && value != 16 && value != 40)
+           {
+             goto out_of_range;
+           }
+diff --git a/system/spi/spi_exch.c b/system/spi/spi_exch.c
+index 6bdee9e98..33722b20c 100644
+--- a/system/spi/spi_exch.c
++++ b/system/spi/spi_exch.c
+@@ -150,7 +150,7 @@ int spicmd_exch(FAR struct spitool_s *spitool, int argc, FAR char **argv)
+   seq.ntrans = 1;
+   seq.trans = &trans;
+ 
+-  trans.deselect = true;
++  trans.deselect = false;
+ #ifdef CONFIG_SPI_CMDDATA
+   trans.cmd = spitool->command;
+ #endif
+-- 
+2.17.1
+

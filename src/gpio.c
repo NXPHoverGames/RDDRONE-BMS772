@@ -3,7 +3,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020 NXP
+ * Copyright 2020-2021 NXP
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -65,32 +65,22 @@
 #define ERROR_WRONG_PIN         32
 #define ERROR_REGISTER_INT      64
 #define ERROR_REGISTER_ISR      128
+#define ERROR_GET_PINTYPE       256
+#define ERROR_SET_PINTYPE       512
 
 /****************************************************************************
  * Private Variables
  ****************************************************************************/
+static bool gGPIOInitialized = false;
 
-/*! @brief  mutex for the filedescriptor */
-static pthread_mutex_t gFileDescriptorLock;
-static bool gFileDescriptorLockInitialized = false;
+/*! @brief value to keep track of the pins registered for the interrupt.
+ *  @note bitmask with the pinEnum_t
+ */
+static uint16_t gInterruptPinsISR = 0;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-/*!
- * @brief   This function will be used to set or get a file descriptor that is open
- *          This file descriptor can be used in the IOCTL call.
- *
- * @param   setNGet true if you want to set the file descriptio, false to get it
- * @param   pin for which pin you want to get or set the descriptor from the pinEnum_t
- * @param   newFileDescriptor if setNGet == true, this wil be the new file descriptor
- *          This needs to be an opened file descriptor
- *    
- * @return  Returns the file descriptor when setNGet == false, -1 if error
- *      
- */
-int setNGetFileDescriptior(bool setNGet, pinEnum_t pin, int newFileDescriptor);
 
 /****************************************************************************
  * Public Functions
@@ -99,102 +89,84 @@ int setNGetFileDescriptior(bool setNGet, pinEnum_t pin, int newFileDescriptor);
  * @brief   This function will initialze the GPIO pins
  *          it will open devices for each pin and the file descriptor will be 
  *          saved, to ensure quick acces when reading or writing
+ *
+ * @param   skipSelfTest if this is true it will skip the self-test
  *    
  * @return  0 if there is no error, otherwise the error number will indicate the error
- * @example if(gpio_init())
+ * @example if(gpio_init(false))
  *          {
  *            // do something with the error
  *          }
  *      
  */
-int gpio_init(void)
+int gpio_init(bool skipSelfTest)
 {
-  int lvRetValue = 0;
-  char devPath[DEVPATH_LENGHT_TO_99 + 8];
-  int i, lvFd, lvErrorCode;
+    int lvRetValue = 0;
 
-  // check if initialized
-  if(!gFileDescriptorLockInitialized)
-  {
-    cli_printf("SELF-TEST GPIO: START\n");
-
-    lvRetValue = -1;
-
-    // initialize the mutex
-    pthread_mutex_init(&gFileDescriptorLock, NULL);
-
-    // go through each pin
-    for(i = 0; i < END_INTERRUPT_PIN_NUMBER+1; i++)
+    // check if initialized
+    if(!gGPIOInitialized)
     {
-      // check what kind of pin it is
-      if(i < START_OUTPUT_PIN_NUMBER)
-      {
-        // it is an input pin
-        sprintf(devPath, "/dev/gpin%u", i);
-      }
-      else if (i < START_INTERRRUPT_PIN_NUMBER)
-      {
-        // it is an output pin
-        sprintf(devPath,"/dev/gpout%u", i);
-      }
-      else
-      {
-        // it is an interrupt pin
-        sprintf(devPath, "/dev/gpint%u", i);
-      }
+        // Check if the self-test shouldn't be skipped
+        if(!skipSelfTest)
+        {
+            cli_printf("SELF-TEST GPIO: START\n");
+        }
 
-      //Open the pin driver 
-      lvFd = open(devPath, O_RDWR);
-      if (lvFd < 0)
-      {
-        lvErrorCode = errno;
-        cli_printfError("GPIO ERROR: Failed to open %s: %d\n", devPath, lvErrorCode);
-        return lvRetValue;
-      }
+        lvRetValue = -1;
 
-      // save the file desriptor
-      if(setNGetFileDescriptior(true, i, lvFd))
-      {
-        // there is an error 
-        cli_printfError("GPIO ERROR: Failed to save file descriptor %s: %d\n", devPath, i);
-        return lvRetValue;
-      }
+        // set the initialzed variable
+        gGPIOInitialized = true;
+
+        // Check if the self-test shouldn't be skipped
+        if(!skipSelfTest)
+        {
+            /* Only test this pin OUTPUT if it is configured as output */
+
+            if(PTE8 < START_INTERRRUPT_PIN_NUMBER)
+            {
+                cli_printfWarning("WARNING: Toggling PTE8 to high and back to low!\n");
+
+                // check if the PTE8 pin can be written
+                // write the PTE8 pin to high
+                lvRetValue = gpio_writePin(PTE8, 1);
+
+                // check if it went wrong
+                if(lvRetValue)
+                {
+                    cli_printfError("GPIO ERROR: writing PTE8 high went wrong!\n");
+                    cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
+                    return lvRetValue;
+                }
+
+                // write the PTE8 pin to low
+                lvRetValue = gpio_writePin(PTE8, 0);
+
+                // check if it went wrong
+                if(lvRetValue)
+                {
+                    cli_printfError("GPIO ERROR: writing PTE8 low went wrong!\n");
+                    cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
+                    return lvRetValue;
+                }
+            }
+            /* If the GPIO is an input */
+            else
+            {
+                // it went OK
+                lvRetValue = 0;
+            }
+        }
+        else
+        {
+            // it went OK
+            lvRetValue = 0;
+        }
+        
+        /* other pins will be tested during the initialize of the other parts */
     }
 
-    // set the initialzed variable
-    gFileDescriptorLockInitialized = true;
-
-    cli_printfWarning("WARNING: Toggling PTE8 to high and back to low!\n");
-
-    // check if the PTE8 pin can be written
-    // write the PTE8 pin to high
-    lvRetValue = gpio_writePin(PTE8, 1);
-
-    // check if it went wrong
-    if(lvRetValue)
-    {
-      cli_printfError("GPIO ERROR: writing PTE8 high went wrong!\n");
-      cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
-      return lvRetValue;
-    }
-
-    // write the PTE8 pin to low
-    lvRetValue = gpio_writePin(PTE8, 0);
-
-    // check if it went wrong
-    if(lvRetValue)
-    {
-      cli_printfError("GPIO ERROR: writing PTE8 low went wrong!\n");
-      cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
-      return lvRetValue;
-    }
-
-    // other pins will be tested during the initialize of the other parts
-  }
-
-  // return to the user
-  return lvRetValue;
-
+    // return to the user
+    return lvRetValue;
 }
 
 /*!
@@ -218,42 +190,71 @@ int gpio_init(void)
  */
 int gpio_readPin(pinEnum_t pin)
 {
-  int lvRetValue = -1, lvError = 0;
-  bool lvInvalue;
-  int lvFd = -1;
-  int lvErrorCode;
+    int lvRetValue = -1, lvError = 0;
+    bool lvInvalue;
+    int lvFd = -1;
+    int lvErrorCode;
+    char devPath[DEVPATH_LENGHT_TO_99 + 8];
 
-  // get the file descriptor
-  lvFd = setNGetFileDescriptior(false, pin, -1);
-
-  // Read the pin value 
-  if(lvFd >= 0)
-  {
-    lvRetValue = ioctl(lvFd, GPIOC_READ, (unsigned long)((uintptr_t)&lvInvalue));
-    if (lvRetValue < 0)
+    // make the dev path
+    // check what kind of pin it is
+    if(pin < START_OUTPUT_PIN_NUMBER)
     {
-      lvErrorCode = errno;
-      cli_printfError("GPIO ERROR: Failed to read value from %d: %d\n", pin, lvErrorCode);
-      //close(lvFd);
-      lvError += ERROR_READ_DEV;
-      //return lvRetValue;
+        // it is an input pin
+        sprintf(devPath, "/dev/gpin%u", pin);
     }
-  }
-  else
-  {
-    // error 
-    lvError += ERROR_OPEN_DEV;
-    cli_printfError("GPIO ERROR: Failed to get file descriptor %d: %d\n", pin, lvFd);
-  }
+    else if(pin < START_INTERRRUPT_PIN_NUMBER)
+    {
+        // it is an output pin
+        sprintf(devPath,"/dev/gpout%u", pin);
+    }
+    else if(pin <= END_INTERRUPT_PIN_NUMBER)
+    {
+        // it is an interrupt pin
+        sprintf(devPath, "/dev/gpint%u", pin);
+    }
+    else
+    {
+        cli_printfError("GPIO ERROR: read pin number not in range: %d\n", pin);
+        return lvRetValue;
+    }
 
-  if(!lvError)
-  {
-    // set the return value
-    lvRetValue = lvInvalue;
-  }
+    //Open the pin driver
+    lvFd = open(devPath, O_RDONLY);
 
-  // return the value
-  return lvRetValue;
+    // Read the pin value
+    if(lvFd >= 0)
+    {
+        lvRetValue = ioctl(lvFd, GPIOC_READ, (unsigned long)((uintptr_t)&lvInvalue));
+        if(lvRetValue < 0)
+        {
+            lvErrorCode = errno;
+            cli_printfError("GPIO ERROR: Failed to read value from %d: %d\n", pin, lvErrorCode);
+            
+            lvError += ERROR_READ_DEV;
+        }
+    }
+    else
+    {
+        // get the error code
+        lvErrorCode = errno;
+        // error 
+        lvError += ERROR_OPEN_DEV;
+        cli_printfError("GPIO ERROR: Failed to open %s: %d\n", devPath, lvErrorCode);
+    }
+
+    // Check if there are no errors
+    if(!lvError)
+    {
+        // set the return value
+        lvRetValue = lvInvalue;
+    }
+
+    // close the fd
+    close(lvFd);
+
+    // return the value
+    return lvRetValue;
 }
 
 /*!
@@ -273,231 +274,368 @@ int gpio_readPin(pinEnum_t pin)
  */
 int gpio_writePin(pinEnum_t pin, bool newValue)
 {
-  int lvRetValue = -1, lvError = 0;
-  bool lvInvalue;
-  int lvFd = -1;
-  int lvErrorCode;
+    int lvRetValue = -1, lvError = 0;
+    bool lvInvalue;
+    int lvFd = -1;
+    int lvErrorCode;
+    char devPath[DEVPATH_LENGHT_TO_99 + 8];
 
-  // get the file descriptor
-  lvFd = setNGetFileDescriptior(false, pin, -1);
-
-  // check for an error
-  if(lvFd >= 0)
-  {
-    // write the GPIO pin
-    lvRetValue = ioctl(lvFd, GPIOC_WRITE, (unsigned long)newValue);
-    if (lvRetValue < 0)
+    // check if the pin is not in the correct range
+    if(pin < START_OUTPUT_PIN_NUMBER || pin >= START_INTERRRUPT_PIN_NUMBER)
     {
-      lvErrorCode = errno;
-      cli_printfError("GPIO ERROR: Failed to write value %u from %d: %d\n",
-         (unsigned int)newValue, pin, lvErrorCode);
-
-      // set the error value
-      lvError += ERROR_WRITE_DEV;
+        // Error
+        cli_printfError("GPIO ERROR: write pin number not in range: %d\n", pin);
+        return lvRetValue;
     }
-  }
-  else
-  {
-    lvError += ERROR_OPEN_DEV;
-    cli_printfError("GPIO ERROR: Failed to get file descriptor %s: %d\n", pin, lvFd);
-  }
-   
-  // read the pin value 
-  if(!lvError)
-  {
-    lvRetValue = ioctl(lvFd, GPIOC_READ, (unsigned long)((uintptr_t)&lvInvalue));
-    if (lvRetValue < 0)
+
+    // make the dev path
+    sprintf(devPath,"/dev/gpout%u", pin);
+
+    //Open the pin driver 
+    lvFd = open(devPath, O_RDONLY);
+
+    // check for no errors
+    if(lvFd >= 0)
     {
-      lvErrorCode = errno;
-      cli_printfError("GPIO ERROR: Failed to read value from %d: %d\n", pin, lvErrorCode);
-      
-      // set the error variable
-      lvError += ERROR_READ_DEV;
+        // write the GPIO pin
+        lvRetValue = ioctl(lvFd, GPIOC_WRITE, (unsigned long)newValue);
+        if(lvRetValue < 0)
+        {
+            lvErrorCode = errno;
+            cli_printfError("GPIO ERROR: Failed to write value %u from %d: %d\n",
+                (unsigned int)newValue, pin, lvErrorCode);
+
+            // set the error value
+            lvError += ERROR_WRITE_DEV;
+        }
     }
-  }
+    else
+    {
+        lvError += ERROR_OPEN_DEV;
+        cli_printfError("GPIO ERROR: Failed to open %s: %d\n", devPath, lvFd);
+    }
+     
+    // if there are no errors
+    if(!lvError)
+    {
+        // read the pin value 
+        lvRetValue = ioctl(lvFd, GPIOC_READ, (unsigned long)((uintptr_t)&lvInvalue));
 
-  // check if it went right
-  if(!lvError && (lvInvalue == newValue))
-  {
-    // set the return value
-    lvRetValue = 0;
-  }
-  // if the read value is not equal to the written value
-  else
-  {
-    // set the return value to -1
-    lvRetValue = -1;
-  }
+        // Check for an error
+        if(lvRetValue < 0)
+        {
+            lvErrorCode = errno;
+            cli_printfError("GPIO ERROR: Failed to read value from %d: %d\n", pin, lvErrorCode);
+            
+            // set the error variable
+            lvError += ERROR_READ_DEV;
+        }
+    }
 
-  // return the value
-  return lvRetValue;
+    // check if it went right
+    if(!lvError && (lvInvalue == newValue))
+    {
+        // set the return value
+        lvRetValue = 0;
+    }
+    // if the read value is not equal to the written value or there is an error
+    else
+    {
+        // set the return value to -1
+        lvRetValue = -1;
+    }
+
+    // close the fd 
+    close(lvFd);
+
+    // return the value
+    return lvRetValue;
 }
 
 /*!
  * @brief   This function can be used to register a function as 
- *          interrupt service routine (ISR)
+ *          interrupt service routine (ISR) for multiple pins. 
  * @warning This function should be called in a thread that is running (not ended) when the interrupt occurs!
  *          if the thread pid doesn't exist any more, it will not go to the ISR 
- * @warning only 2 pins can be registered as interrupt
- *    
- * @param   which pin to set the ISR for from the pinEnum_t enum. 
- * @param   The ISR handle function
- *          pinISRHandler = void handler(int sig);
- * @param   num which pin is registered 0 or 1 
- *          note: 0 = SIGUSR1 and 1 = SIGUSR2
- *          note: the previous signal to ISR is gone 
+ * @note    It will use SIGUSR1 for the pin interrupt 
+ * @note    Multiple pins will have the same ISR. 
  *
- * @return  0 if succesfull, -1 if there is an error
- * @example if(gpio_registerISR(SBC_WAKE, handler))
+ * @param   IsrPins Bitfield of the pins which to set the ISR for from the pinEnum_t enum. 
+ * @param   pinISRHandler The ISR handle function
+ *          pinISRHandler = void handler(int signo, FAR siginfo_t *siginfo, FAR void *context);
+ *
+ * @return  0 if succesfull, otherwise a number to indicate an error
+ * @example if(gpio_registerISR((uint16_t) ((1 << SBC_WAKE) + (1 <<BCC_FAULT)), handler);
  *          {
  *            // do something with the error
  *          }
  *        
- *          void handler(int sig)
+ *          void handler(int signo, siginfo_t *siginfo, void *context)
  *          {
- *            cli_printf("pin %d value: %d\n", sig, gpio_readPin(sig));
+ *            int pinNumber = (*siginfo).si_value.sival_int;
+ *            cli_printf("cli_printf("GPIO ISR: sig: %d, pin: %d value %d\n", signo, pinNumber, gpio_readPin(pinNumber);
+ * 
+ *            // do something with the pin
  *          }
  */
-int gpio_registerISR(pinEnum_t pin, _sa_handler_t  pinISRHandler, bool num)
+int gpio_registerISR(uint16_t IsrPins, _sa_sigaction_t  pinISRHandler)
 {
-  int signalNumber = SIGUSR1;
-  int lvRetValue = -1, lvError = 0;
-  int lvFd = -1;
-  int lvErrorCode;
-  struct sigevent notify;
-  _sa_handler_t sigRetValue;
+    int lvRetValue = -1, lvError = 0;
+    int lvFd = -1, i;
+    int lvErrorCode;
+    struct sigevent notify;
+    struct sigaction act;
+    struct sigaction oact1;
+    enum gpio_pintype_e pinType;
+    char devPath[DEVPATH_LENGHT_TO_99 + 8];
 
-  // check if the signalnumber needs to change
-  if(num)
-  {
-    // change the number
-    signalNumber = SIGUSR2;
-  }
-
-  // get the file descriptor
-  lvFd = setNGetFileDescriptior(false, pin, -1);
-
-  // check for errors
-  if(lvFd < 0)
-  {
-    lvError += ERROR_OPEN_DEV;
-    cli_printfError("GPIO ERROR: Failed to get file descriptor %s: %d\n", pin, lvFd);
-  }
-
-  // check if it all went ok
-  if(!lvError)
-  {
-
-    //cli_printf("setting notify %d!\n", pin);
-    // set the notify signal
-    notify.sigev_notify = SIGEV_SIGNAL;
-    notify.sigev_signo  = signalNumber;//pin;
-
-    // register the interrupt 
-    lvRetValue = ioctl(lvFd, GPIOC_REGISTER, (unsigned long)&notify);
-    if (lvRetValue < 0)
+    // loop through all the bits set in the IsrPins variable 
+    for(i = 0; IsrPins >> i; i++)
     {
-      lvErrorCode = errno;
-      cli_printfError("GPIO ERROR: Failed to register interrupt for %d: %d\n",
-         pin, lvErrorCode);
+        // check if the bit is set
+        if((IsrPins >> i) & 1)
+        {
+            // check if there is already an error 
+            if(lvError)
+            {
+                // output to the user
+                cli_printfError("GPIO ERROR: not initializing pin ISR %d, there is already an error\n", i);
+            }
 
-      // set the error value
-      lvError += ERROR_REGISTER_INT;
+            // check if the IsrPins bit is not in the correct range
+            if((i < START_INTERRRUPT_PIN_NUMBER) || (i > END_INTERRUPT_PIN_NUMBER))
+            {
+                // set the error and output
+                lvError += ERROR_WRONG_PIN;
+                cli_printfError("GPIO ERROR: pin not in range: %d <= %d <= %d\n", 
+                    START_INTERRRUPT_PIN_NUMBER, i, END_INTERRUPT_PIN_NUMBER);
+            }
+
+            // check for errors
+            if(!lvError)
+            {
+                // make the dev path
+                // it is an interrupt pin
+                sprintf(devPath, "/dev/gpint%u", i);
+                
+                //Open the pin driver 
+                lvFd = open(devPath, O_RDONLY);
+
+                // check for errors
+                if(lvFd < 0)
+                {
+                    lvError += ERROR_OPEN_DEV;
+                    cli_printfError("GPIO ERROR: Failed to get file descriptor %s: %d\n", lvFd, i);
+                }
+
+                // check if it all went ok
+                if(!lvError)
+                {
+                    // get the pintype
+                    lvRetValue = ioctl(lvFd, GPIOC_PINTYPE, (unsigned long)&pinType);
+                    if(lvRetValue < 0)
+                    {
+                        lvErrorCode = errno;
+                        cli_printfError("GPIO ERROR: Failed to get pintype for %d: %d\n",
+                            i, lvErrorCode);
+
+                        // set the error value
+                        lvError += ERROR_GET_PINTYPE;
+                    }
+
+                    // check if the pintype is not an interrupt pin
+                    // get the pintype
+                    if(pinType < GPIO_INTERRUPT_PIN || pinType > GPIO_INTERRUPT_BOTH_PIN)
+                    {
+                        // set the error and output
+                        lvError += ERROR_WRONG_PIN;
+                        cli_printfError("GPIO ERROR: pin %d is not an interrupt pin: %d \n", 
+                            i, pinType);
+                    }
+
+                    // check if no error
+                    if(!lvError)
+                    {
+                        //cli_printf("setting notify %d!\n", i);
+                        // set the notify signal
+                        notify.sigev_notify = SIGEV_SIGNAL;
+                        notify.sigev_signo  = SIGUSR1;
+
+                        // add the pin number to be extracted
+                        notify.sigev_value.sival_int = i;
+
+                        // register the interrupt 
+                        lvRetValue = ioctl(lvFd, GPIOC_REGISTER, (unsigned long)&notify);
+                        if(lvRetValue < 0)
+                        {
+                            lvErrorCode = errno;
+                            cli_printfError("GPIO ERROR: Failed to register interrupt for %d: %d\n",
+                                i, lvErrorCode);
+
+                            // set the error value
+                            lvError += ERROR_REGISTER_INT;
+                        }
+                    }
+                }
+
+                // close the fd
+                close(lvFd);
+
+                // check if it all went ok
+                if(!lvError)
+                {
+                    // Set up so that pinISRHandler will respond to SIGUSR1 
+                    memset(&act, 0, sizeof(struct sigaction));
+                    act.sa_sigaction = pinISRHandler;
+                    act.sa_flags     = SA_SIGINFO;
+
+                    // empty the mask
+                    sigemptyset(&act.sa_mask);
+
+                    // register the handler
+                    lvError += sigaction(SIGUSR1, &act, &oact1);
+                    
+                    // check for errors
+                    if(lvError)
+                    {
+                        // check errno for the error
+                        lvErrorCode = errno;
+                        cli_printfError("GPIO ERROR: Failed to register signal to ISR pin: %d sig: %d err:%d\n",
+                            i, (SIGUSR1), lvErrorCode);
+
+                        // set the errorvalue
+                        lvError += ERROR_REGISTER_ISR;
+                    }
+
+                    // add the pin to the variable that keeps track of the ISR pins
+                    gInterruptPinsISR += 1 << i;
+                }
+            }
+        }
     }
 
-  }
+    // set the error value
+    lvRetValue = lvError;
 
-  // check if it all went ok
-  if(!lvError)
-  {
-    // register the handler
-    sigRetValue = signal(signalNumber, pinISRHandler);
-    
-    // check for errors
-    if(sigRetValue == SIG_ERR)
-    {
-      // check errno for the error
-      lvErrorCode = errno;
-      cli_printfError("GPIO ERROR: Failed to register signal to ISR pin: %d sig: %d err:%d\n", pin, (pin+GPIO_SIG_OFFSET), lvErrorCode);
-
-      // set the errorvalue
-      lvError += ERROR_REGISTER_ISR;
-    }
-  }
-
-  // return
-  return lvRetValue;
+    // return
+    return lvRetValue;
 }
 
+
 /*!
- * @brief   This function will be used to set or get a file descriptor that is open
- *          This file descriptor can be used in the IOCTL call.
+ * @brief   This function can be used to register an input pin as a different pin type
  *
- * @param   setNGet true if you want to set the file descriptio, false to get it
- * @param   pin for which pin you want to get or set the descriptor from the pinEnum_t
- * @param   newFileDescriptor if setNGet == true, this wil be the new file descriptor
- *          This needs to be an opened file descriptor
- *    
- * @return  Returns the file descriptor when setNGet == false, -1 if error
- *      
+ * @param   pin which pin to set from the pinEnum_t enum. 
+ * @param   newPinType To which the pin type should change from the inputPinTypes_t enum.
+ *
+ * @return  0 if succesfull, otherwise a number to indicate an error
+ * @example if(gpio_changePinType(PTE8, INPUT_PULL_UP);
+ *          {
+ *            // do something with the error
+ *          }
  */
-int setNGetFileDescriptior(bool setNGet, pinEnum_t pin, int newFileDescriptor)
+int gpio_changePinType(pinEnum_t pin, inputPinTypes_t newPinType)
 {
-  int lvRetValue = -1;
-  static int descriptorArr[END_INTERRUPT_PIN_NUMBER+1], i;
-  static bool firstTime = true;
+    int lvRetValue = 0, lvFd, lvErrorCode;
+    enum gpio_pintype_e pinTypeIoctl;
+    char devPath[DEVPATH_LENGHT_TO_99 + 8];
 
-  // check if first time
-  if(firstTime)
-  {
-    // initialize the array
-    for(i = 0; i < END_INTERRUPT_PIN_NUMBER+1; i++)
+    // check if the pin is not in range
+    if(pin < START_INTERRRUPT_PIN_NUMBER)
     {
-      // set the error value
-      descriptorArr[i] = -1;
+        // error and return
+        cli_printfError("GPIO ERROR: pin is not an input pin: %d max: %d\n", 
+            pin, START_INTERRRUPT_PIN_NUMBER);
+
+        // set the correct error value
+        lvRetValue += ERROR_WRONG_PIN;
     }
 
-    // set the firstTime value off
-    firstTime = false;
-  }
-
-  // check if it is get or set
-  // if get
-  if(!setNGet)
-  {
-    // output the descriptor 
-    // lock the mutex
-    pthread_mutex_lock(&gFileDescriptorLock);
-
-    // save the descriptor
-    lvRetValue = descriptorArr[pin];
-
-    // unlock the mutex
-    pthread_mutex_unlock(&gFileDescriptorLock);
-  }
-  // if set
-  else
-  {
-    // check for errors
-    if(newFileDescriptor < 0)
+    // check if the newPinType is in rage
+    if(newPinType >= INPUT_PIN_CONFIGURATIONS)
     {
-      cli_printfError("GPIO ERROR: newFileDescriptor < 0!\n");
-      return lvRetValue;
+        // error and return
+        cli_printfError("GPIO ERROR: newPinType is not in range: %d max: %d\n", 
+            newPinType, INPUT_PIN_CONFIGURATIONS);
+
+        // set the correct error value
+        lvRetValue += ERROR_WRONG_PIN;
     }
-    // write the descriptor
-    // lock the mutex
-    pthread_mutex_lock(&gFileDescriptorLock);
 
-    // save the new descriptor
-    descriptorArr[pin] = newFileDescriptor;
+    // check if the pin is not already used in the ISR
+    if(gInterruptPinsISR & 1 << pin)
+    {
+        // error and return
+        cli_printfError("GPIO ERROR: pin %d is already used for ISR\n", 
+            pin);
 
-    // unlock the mutex
-    pthread_mutex_unlock(&gFileDescriptorLock);
+        // set the correct error value
+        lvRetValue += ERROR_WRONG_PIN;
+    }
 
-    // set lvretvalue to 0
-    lvRetValue = 0;
-  }
+    // check if there is no error
+    if(!lvRetValue)
+    {
+        // it is an interrupt pin
+        sprintf(devPath, "/dev/gpint%u", pin);
 
-  // return to the user
-  return lvRetValue;
+        //Open the pin driver 
+        lvFd = open(devPath, O_RDONLY);
+        if(lvFd < 0)
+        {
+            lvErrorCode = errno;
+            cli_printfError("GPIO ERROR: Failed to open %s: %d\n", devPath, lvErrorCode);
+            lvRetValue += ERROR_OPEN_DEV;
+        }
+
+        // check if it all went ok
+        if(!lvRetValue)
+        {
+            // check to which type to set it
+            switch(newPinType)
+            {
+                // in case of the 
+                case INPUT_INTERRUPT:
+                    // set the correct IOCTL pintype
+                    pinTypeIoctl = GPIO_INTERRUPT_BOTH_PIN;
+                break;
+                case INPUT_PULL_UP:
+                    // set the correct IOCTL pintype
+                    pinTypeIoctl = GPIO_INPUT_PIN_PULLUP;
+                break;
+                case INPUT_PULL_DOWN:
+                    // set the correct IOCTL pintype
+                    pinTypeIoctl = GPIO_INPUT_PIN_PULLDOWN;
+                break;
+                default:
+                    // error
+                    cli_printfError("GPIO ERROR: Wrong pintype!!! %d\n", lvFd, newPinType);
+                    lvRetValue += ERROR_WRONG_PIN;
+                break;
+            }
+
+            // Check if no errors
+            if(!lvRetValue)
+            {
+                // register the new pintype
+                lvRetValue = ioctl(lvFd, GPIOC_SETPINTYPE, (unsigned long)pinTypeIoctl);
+                if (lvRetValue != 0)
+                {
+                    // error
+                    lvErrorCode = errno;
+                    cli_printfError("GPIO ERROR: Failed to set new pintype for %d: %d\n",
+                         pin, newPinType, lvErrorCode);
+
+                    // set the error value
+                    lvRetValue += ERROR_SET_PINTYPE;
+                }
+            }
+        }
+
+        // close the FD
+        close(lvFd);
+    }
+
+    // return
+    return lvRetValue;
 }

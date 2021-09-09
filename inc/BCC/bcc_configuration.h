@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 - 2020 NXP
+ * Copyright 2019 - 2021 NXP
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -38,8 +38,8 @@
  **         This module contains all functions linked to configuration of BCC6 chip.
  **
  **         Note: INIT register is initialized automatically by the BCC driver.
- ** 		Note: SYS_CFG_GLOBAL register contains only command GO2SLEEP (no initialization needed).
- ** 		Note: EEPROM_CTRL, FUSE_MIRROR_DATA and FUSE_MIRROR_CNTL registers are not initialized.
+ **         Note: SYS_CFG_GLOBAL register contains only command GO2SLEEP (no initialization needed).
+ **         Note: EEPROM_CTRL, FUSE_MIRROR_DATA and FUSE_MIRROR_CNTL registers are not initialized.
  **
  ** ###################################################################*/
 /*!
@@ -52,11 +52,11 @@
  **         This module contains all functions linked to configuration of BCC6 chip. \n
  **
  **         Note: INIT register is initialized automatically by the BCC driver. \n
- ** 		Note: SYS_CFG_GLOBAL register contains only command GO2SLEEP (no initialization needed). \n
- ** 		Note: EEPROM_CTRL, FUSE_MIRROR_DATA and FUSE_MIRROR_CNTL registers are not initialized. \n
+ **         Note: SYS_CFG_GLOBAL register contains only command GO2SLEEP (no initialization needed). \n
+ **         Note: EEPROM_CTRL, FUSE_MIRROR_DATA and FUSE_MIRROR_CNTL registers are not initialized. \n
  **
  ** @note
- ** 		This module was adapted from BCC SW examples by C. van Mierlo.
+ **         This module was adapted from BCC SW examples by C. van Mierlo.
  **
  */
 
@@ -124,9 +124,23 @@
 /* Note: SYS_CFG_GLOBAL register contains only command GO2SLEEP (no initialization needed). */
 /* Note: EEPROM_CTRL, FUSE_MIRROR_DATA and FUSE_MIRROR_CNTL registers are not initialized. */
 
+#define BCC_CYCLIC_TIMER_INTERVAL_NORMAL BCC_CYCLIC_TIMER_CONTINOUS 
+#define BCC_CYCLIC_TIMER_INTERVAL_SLOW  BCC_CYCLIC_TIMER_0_1S
+#define BCC_CYCLIC_TIMER_INTERVAL_SLEEP BCC_CYCLIC_TIMER_0_1S
+
+#if BCC_CYCLIC_TIMER_INTERVAL_SLEEP == BCC_CYCLIC_TIMER_CONTINOUS 
+    #error BCC sleep measurement interval may not be continous
+#elif BCC_CYCLIC_TIMER_INTERVAL_SLEEP ==BCC_CYCLIC_TIMER_DISABLED
+    #error BCC sleep measurement interval may not be disabled
+#endif
+
+#if BCC_CYCLIC_TIMER_INTERVAL_NORMAL > BCC_CYCLIC_TIMER_INTERVAL_SLOW
+    #warning Normal measurement interval > slow measurement interval
+#endif
+
 /* Initial value of SYS_CFG1 register. */
 #define BCC_CONF1_SYS_CFG1_VALUE ( \
-    BCC_CYCLIC_TIMER_CONTINOUS /*BCC_CYCLIC_TIMER_0_1S*/ | \
+    BCC_CYCLIC_TIMER_INTERVAL_NORMAL /*BCC_CYCLIC_TIMER_0_1S*/ | \
     BCC_DIAG_TIMEOUT_1S | \
     BCC_I_MEAS_ENABLED | \
     BCC_CB_AUTO_PAUSE_DISABLED /*BCC_CB_AUTO_PAUSE_ENABLED*/ | \
@@ -242,7 +256,7 @@
     BCC_GPIO0_WUP_FLT_DIS | \
     BCC_I2C_ERR_FLT_DIS | \
     BCC_IS_OL_FLT_DIS | \
-    BCC_IS_OC_FLT_DIS | \
+    BCC_IS_OC_FLT_EN | \
     BCC_AN_OT_FLT_EN | \
     BCC_AN_UT_FLT_EN | \
     BCC_CT_OV_FLT_EN | \
@@ -270,7 +284,7 @@
 #warning set BCC_CC_OVR_FLT_EN and the other faults to enable
 /* Initial value of FAULT_MASK3 register. */
 #define BCC_CONF1_FAULT_MASK3_VALUE ( \
-    BCC_CC_OVR_FLT_EN  | \
+    BCC_CC_OVR_FLT_EN   | \
     BCC_DIAG_TO_FLT_EN | \
     /* CBx timeout detection (EOT_CBx bits). */ \
     BCC_EOT_CBX_FLT_DIS(1U) |                  /* CB1. */  \
@@ -286,7 +300,7 @@
 #define BCC_CONF1_WAKEUP_MASK1_VALUE ( \
     BCC_VPWR_OV_WAKEUP_DIS | \
     BCC_VPWR_LV_WAKEUP_DIS | \
-    BCC_CSB_WUP_WAKEUP_DIS | \
+    BCC_CSB_WUP_WAKEUP_EN | \
     BCC_GPIO0_WUP_WAKEUP_DIS | \
     BCC_IS_OC_WAKEUP_EN | \
     BCC_AN_OT_WAKEUP_EN | \
@@ -297,31 +311,31 @@
 
 /* Initial value of WAKEUP_MASK2 register. */
 #define BCC_CONF1_WAKEUP_MASK2_VALUE ( \
-    BCC_VCOM_OV_WAKEUP_EN | \
-    BCC_VCOM_UV_WAKEUP_EN | \
-    BCC_VANA_OV_WAKEUP_EN | \
-    BCC_VANA_UV_WAKEUP_EN | \
-    BCC_ADC1_B_WAKEUP_EN | \
-    BCC_ADC1_A_WAKEUP_EN | \
-    BCC_GND_LOSS_WAKEUP_EN | \
-    BCC_IC_TSD_WAKEUP_EN | \
-    BCC_GPIO_SHORT_WAKEUP_EN | \
-    BCC_CB_SHORT_WAKEUP_EN | \
-    BCC_OSC_ERR_WAKEUP_EN | \
-    BCC_DED_ERR_WAKEUP_EN \
+    BCC_VCOM_OV_WAKEUP_DIS | \
+    BCC_VCOM_UV_WAKEUP_DIS | \
+    BCC_VANA_OV_WAKEUP_DIS | \
+    BCC_VANA_UV_WAKEUP_DIS | \
+    BCC_ADC1_B_WAKEUP_DIS | \
+    BCC_ADC1_A_WAKEUP_DIS | \
+    BCC_GND_LOSS_WAKEUP_DIS | \
+    BCC_IC_TSD_WAKEUP_DIS | \
+    BCC_GPIO_SHORT_WAKEUP_DIS | \
+    BCC_CB_SHORT_WAKEUP_DIS | \
+    BCC_OSC_ERR_WAKEUP_DIS | \
+    BCC_DED_ERR_WAKEUP_DIS \
 )
 
 /* Initial value of WAKEUP_MASK3 register. */
 #define BCC_CONF1_WAKEUP_MASK3_VALUE ( \
-    BCC_CC_OVR_FLT_EN | \
+    BCC_CC_OVR_FLT_DIS | \
     BCC_DIAG_TO_FLT_DIS | \
     /* CBx timeout detection (EOT_CBx bits). */ \
-    BCC_EOT_CBX_WAKEUP_EN |                  /* CB1. */  \
-    BCC_EOT_CBX_WAKEUP_EN |                  /* CB2. */  \
-    BCC_EOT_CBX_WAKEUP_EN |                  /* CB3. */  \
-    BCC_EOT_CBX_WAKEUP_EN |                  /* CB4. */  \
-    BCC_EOT_CBX_WAKEUP_EN |                  /* CB5. */  \
-    BCC_EOT_CBX_WAKEUP_EN                    /* CB6. */  \
+    BCC_EOT_CBX_FLT_DIS(1U) |                  /* CB1. */  \
+    BCC_EOT_CBX_FLT_DIS(2U) |                  /* CB2. */  \
+    BCC_EOT_CBX_FLT_DIS(3U) |                  /* CB3. */  \
+    BCC_EOT_CBX_FLT_DIS(4U) |                  /* CB4. */  \
+    BCC_EOT_CBX_FLT_DIS(5U) |                  /* CB5. */  \
+    BCC_EOT_CBX_FLT_DIS(6U)                    /* CB6. */  \
 )
 
 
@@ -588,6 +602,44 @@ static const uint16_t BCC_INIT_CONF[1][BCC_INIT_CONF_REG_CNT] = {
  */
  bcc_status_t bcc_configuration_changeCellCount(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
     uint8_t newCellCount);
+
+/*!
+ * @brief   This function is used to enable or disable the CC_OVR_FLT mask, 
+ *          to set it the fault pin needs to be set or not with this fault.
+ *
+ * @param   drvConfig Pointer to driver instance configuration.
+ * @param   cid Cluster Identification Address.
+ * @param   enable if this fault needs to be enabled.
+ *
+ * @return  BCC error status.
+ */
+ bcc_status_t bcc_configuration_setCCOvrFltEnable(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
+    bool enable);
+
+ /*!
+ * @brief   This function is used to enable or disable the CSB_WUP_FLT mask, 
+ *          to set it the fault pin needs to be set or not with this fault.
+ *
+ * @param   drvConfig Pointer to driver instance configuration.
+ * @param   cid Cluster Identification Address.
+ * @param   enable if this fault needs to be enabled.
+ *
+ * @return  BCC error status.
+ */
+ bcc_status_t bcc_configuration_setCSbFltEnable(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
+    bool enable);
+
+/*!
+ * @brief   his function is used to check if the sleep current threshold mask is enabled, 
+ *
+ * @param   drvConfig Pointer to driver instance configuration.
+ * @param   cid Cluster Identification Address.
+ * @param   enabled address of the variable to be true if enabled.
+ *
+ * @return  BCC error status.
+ */
+bcc_status_t bcc_configuration_checkSleepCurrentTh(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
+    bool *enabled);
 
 /*******************************************************************************
  * EOF

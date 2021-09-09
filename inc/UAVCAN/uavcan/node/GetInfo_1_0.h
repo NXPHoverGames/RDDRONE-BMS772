@@ -2,7 +2,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020 NXP 
+ * Copyright 2020-2021 NXP 
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -38,13 +38,19 @@
 // To avoid conflicts with definitions given in the source DSDL file, all entities created by the code generator
 // are named with an underscore at the end, like foo_bar_().
 //
-// Generator:     nunavut-0.5.1 (serialization was enabled)
-// Source file:   /home/hovergames/nuttx/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/node/430.GetInfo.1.0.uavcan
-// Generated at:  2020-11-18 09:47:56.496248 UTC
+// Generator:     nunavut-1.1.0 (serialization was enabled)
+// Source file:   /home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/node/430.GetInfo.1.0.uavcan
+// Generated at:  2021-04-12 07:46:44.456695 UTC
 // Is deprecated: no
 // Fixed port-ID: 430
 // Full name:     uavcan.node.GetInfo
 // Version:       1.0
+//
+// Language Options
+//     target_endianness:  any
+//     omit_float_serialization_support:  False
+//     enable_serialization_asserts:  False
+//     enable_override_variable_array_capacity:  True
 
 #ifndef UAVCAN_NODE_GET_INFO_1_0_INCLUDED_
 #define UAVCAN_NODE_GET_INFO_1_0_INCLUDED_
@@ -54,6 +60,19 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_TARGET_ENDIANNESS == 1693710260,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/node/430.GetInfo.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_OMIT_FLOAT_SERIALIZATION_SUPPORT == 0,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/node/430.GetInfo.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_ENABLE_SERIALIZATION_ASSERTS == 0,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/node/430.GetInfo.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_ENABLE_OVERRIDE_VARIABLE_ARRAY_CAPACITY == 1,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/node/430.GetInfo.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
 
 #ifdef __cplusplus
 extern "C" {
@@ -157,10 +176,12 @@ static inline void uavcan_node_GetInfo_Request_1_0_initialize_(uavcan_node_GetIn
         size_t size_bytes = 0;
         const uint8_t buf = 0;
         const int8_t err = uavcan_node_GetInfo_Request_1_0_deserialize_(out_obj, &buf, &size_bytes);
-        NUNAVUT_ASSERT(err >= 0);
+
         (void) err;
     }
 }
+
+
 
 #define uavcan_node_GetInfo_Response_1_0_FULL_NAME_             "uavcan.node.GetInfo.Response"
 #define uavcan_node_GetInfo_Response_1_0_FULL_NAME_AND_VERSION_ "uavcan.node.GetInfo.Response.1.0"
@@ -181,13 +202,34 @@ static_assert(uavcan_node_GetInfo_Response_1_0_EXTENT_BYTES_ >= uavcan_node_GetI
 #define uavcan_node_GetInfo_Response_1_0_unique_id_ARRAY_CAPACITY_           16U
 #define uavcan_node_GetInfo_Response_1_0_unique_id_ARRAY_IS_VARIABLE_LENGTH_ false
 /// Array metadata for: saturated uint8[<=50] name
+#ifndef uavcan_node_GetInfo_Response_1_0_name_ARRAY_CAPACITY_
 #define uavcan_node_GetInfo_Response_1_0_name_ARRAY_CAPACITY_           50U
+#elif !defined(uavcan_node_GetInfo_Response_1_0_DISABLE_SERIALIZATION_BUFFER_CHECK_)
+#  define uavcan_node_GetInfo_Response_1_0_DISABLE_SERIALIZATION_BUFFER_CHECK_
+#endif
+#if uavcan_node_GetInfo_Response_1_0_name_ARRAY_CAPACITY_ > 50U
+#  error uavcan_node_GetInfo_Response_1_0_name_ARRAY_CAPACITY_ > 50U
+#endif
 #define uavcan_node_GetInfo_Response_1_0_name_ARRAY_IS_VARIABLE_LENGTH_ true
 /// Array metadata for: saturated uint64[<=1] software_image_crc
+#ifndef uavcan_node_GetInfo_Response_1_0_software_image_crc_ARRAY_CAPACITY_
 #define uavcan_node_GetInfo_Response_1_0_software_image_crc_ARRAY_CAPACITY_           1U
+#elif !defined(uavcan_node_GetInfo_Response_1_0_DISABLE_SERIALIZATION_BUFFER_CHECK_)
+#  define uavcan_node_GetInfo_Response_1_0_DISABLE_SERIALIZATION_BUFFER_CHECK_
+#endif
+#if uavcan_node_GetInfo_Response_1_0_software_image_crc_ARRAY_CAPACITY_ > 1U
+#  error uavcan_node_GetInfo_Response_1_0_software_image_crc_ARRAY_CAPACITY_ > 1U
+#endif
 #define uavcan_node_GetInfo_Response_1_0_software_image_crc_ARRAY_IS_VARIABLE_LENGTH_ true
 /// Array metadata for: saturated uint8[<=222] certificate_of_authenticity
+#ifndef uavcan_node_GetInfo_Response_1_0_certificate_of_authenticity_ARRAY_CAPACITY_
 #define uavcan_node_GetInfo_Response_1_0_certificate_of_authenticity_ARRAY_CAPACITY_           222U
+#elif !defined(uavcan_node_GetInfo_Response_1_0_DISABLE_SERIALIZATION_BUFFER_CHECK_)
+#  define uavcan_node_GetInfo_Response_1_0_DISABLE_SERIALIZATION_BUFFER_CHECK_
+#endif
+#if uavcan_node_GetInfo_Response_1_0_certificate_of_authenticity_ARRAY_CAPACITY_ > 222U
+#  error uavcan_node_GetInfo_Response_1_0_certificate_of_authenticity_ARRAY_CAPACITY_ > 222U
+#endif
 #define uavcan_node_GetInfo_Response_1_0_certificate_of_authenticity_ARRAY_IS_VARIABLE_LENGTH_ true
 
 typedef struct
@@ -210,21 +252,21 @@ typedef struct
     /// saturated uint8[<=50] name
     struct  /// Array address equivalence guarantee: &elements[0] == &name
     {
-        uint8_t elements[50];
+        uint8_t elements[uavcan_node_GetInfo_Response_1_0_name_ARRAY_CAPACITY_];
         size_t count;
     } name;
 
     /// saturated uint64[<=1] software_image_crc
     struct  /// Array address equivalence guarantee: &elements[0] == &software_image_crc
     {
-        uint64_t elements[1];
+        uint64_t elements[uavcan_node_GetInfo_Response_1_0_software_image_crc_ARRAY_CAPACITY_];
         size_t count;
     } software_image_crc;
 
     /// saturated uint8[<=222] certificate_of_authenticity
     struct  /// Array address equivalence guarantee: &elements[0] == &certificate_of_authenticity
     {
-        uint8_t elements[222];
+        uint8_t elements[uavcan_node_GetInfo_Response_1_0_certificate_of_authenticity_ARRAY_CAPACITY_];
         size_t count;
     } certificate_of_authenticity;
 } uavcan_node_GetInfo_Response_1_0;
@@ -253,22 +295,26 @@ static inline int8_t uavcan_node_GetInfo_Response_1_0_serialize_(
         return -NUNAVUT_ERROR_INVALID_ARGUMENT;
     }
 
+
     const size_t capacity_bytes = *inout_buffer_size_bytes;
+#ifndef uavcan_node_GetInfo_Response_1_0_DISABLE_SERIALIZATION_BUFFER_CHECK_
+
     if ((8U * (size_t) capacity_bytes) < 2504UL)
     {
         return -NUNAVUT_ERROR_SERIALIZATION_BUFFER_TOO_SMALL;
     }
+#endif
+
     // Notice that fields that are not an integer number of bytes long may overrun the space allocated for them
     // in the serialization buffer up to the next byte boundary. This is by design and is guaranteed to be safe.
     size_t offset_bits = 0U;
 
+
+
+
+
     {   // uavcan.node.Version.1.0 protocol_version
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 16ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes0_ = 2UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes0_) <= capacity_bytes);
         int8_t _err0_ = uavcan_node_Version_1_0_serialize_(
             &obj->protocol_version, &buffer[offset_bits / 8U], &_size_bytes0_);
         if (_err0_ < 0)
@@ -276,31 +322,23 @@ static inline int8_t uavcan_node_GetInfo_Response_1_0_serialize_(
             return _err0_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes0_ * 8U) == 16ULL);
         offset_bits += _size_bytes0_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
+
 
     if (offset_bits % 8U != 0U)  // Pad to 8 bits. TODO: Eliminate redundant padding checks.
     {
         const uint8_t _pad0_ = (uint8_t)(8U - offset_bits % 8U);
-        NUNAVUT_ASSERT(_pad0_ > 0);
         const int8_t _err1_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, _pad0_);  // Optimize?
         if (_err1_ < 0)
         {
             return _err1_;
         }
         offset_bits += _pad0_;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     }
 
     {   // uavcan.node.Version.1.0 hardware_version
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 16ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes1_ = 2UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes1_) <= capacity_bytes);
         int8_t _err2_ = uavcan_node_Version_1_0_serialize_(
             &obj->hardware_version, &buffer[offset_bits / 8U], &_size_bytes1_);
         if (_err2_ < 0)
@@ -308,31 +346,23 @@ static inline int8_t uavcan_node_GetInfo_Response_1_0_serialize_(
             return _err2_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes1_ * 8U) == 16ULL);
         offset_bits += _size_bytes1_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
+
 
     if (offset_bits % 8U != 0U)  // Pad to 8 bits. TODO: Eliminate redundant padding checks.
     {
         const uint8_t _pad1_ = (uint8_t)(8U - offset_bits % 8U);
-        NUNAVUT_ASSERT(_pad1_ > 0);
         const int8_t _err3_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, _pad1_);  // Optimize?
         if (_err3_ < 0)
         {
             return _err3_;
         }
         offset_bits += _pad1_;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     }
 
     {   // uavcan.node.Version.1.0 software_version
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 16ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes2_ = 2UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes2_) <= capacity_bytes);
         int8_t _err4_ = uavcan_node_Version_1_0_serialize_(
             &obj->software_version, &buffer[offset_bits / 8U], &_size_bytes2_);
         if (_err4_ < 0)
@@ -340,30 +370,35 @@ static inline int8_t uavcan_node_GetInfo_Response_1_0_serialize_(
             return _err4_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes2_ * 8U) == 16ULL);
         offset_bits += _size_bytes2_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
 
+
+
+
     {   // saturated uint64 software_vcs_revision_id
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 64ULL) <= (capacity_bytes * 8U));
         // Saturation code not emitted -- native representation matches the serialized representation.
-        (void) memmove(&buffer[offset_bits / 8U], &obj->software_vcs_revision_id, 8U);
+        const int8_t _err5_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, obj->software_vcs_revision_id, 64U);
+        if (_err5_ < 0)
+        {
+            return _err5_;
+        }
         offset_bits += 64U;
     }
 
+
+
+
     {   // saturated uint8[16] unique_id
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 128ULL) <= (capacity_bytes * 8U));
         // Optimization prospect: this item is aligned at the byte boundary, so it is possible to use memmove().
         nunavutCopyBits(&buffer[0], offset_bits, 16UL * 8U, &obj->unique_id[0], 0U);
         offset_bits += 16UL * 8U;
     }
 
+
+
+
     {   // saturated uint8[<=50] name
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 408ULL) <= (capacity_bytes * 8U));
         if (obj->name.count > 50)
         {
             return -NUNAVUT_ERROR_REPRESENTATION_BAD_ARRAY_LENGTH;
@@ -371,15 +406,15 @@ static inline int8_t uavcan_node_GetInfo_Response_1_0_serialize_(
         // Array length prefix: truncated uint8
         buffer[offset_bits / 8U] = (uint8_t)(obj->name.count);  // C std, 6.3.1.3 Signed and unsigned integers
         offset_bits += 8U;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         // Optimization prospect: this item is aligned at the byte boundary, so it is possible to use memmove().
         nunavutCopyBits(&buffer[0], offset_bits, obj->name.count * 8U, &obj->name.elements[0], 0U);
         offset_bits += obj->name.count * 8U;
     }
 
+
+
+
     {   // saturated uint64[<=1] software_image_crc
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 72ULL) <= (capacity_bytes * 8U));
         if (obj->software_image_crc.count > 1)
         {
             return -NUNAVUT_ERROR_REPRESENTATION_BAD_ARRAY_LENGTH;
@@ -387,16 +422,22 @@ static inline int8_t uavcan_node_GetInfo_Response_1_0_serialize_(
         // Array length prefix: truncated uint8
         buffer[offset_bits / 8U] = (uint8_t)(obj->software_image_crc.count);  // C std, 6.3.1.3 Signed and unsigned integers
         offset_bits += 8U;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        // Saturation code not emitted -- assume the native representation is conformant.
-        // Optimization prospect: this item is aligned at the byte boundary, so it is possible to use memmove().
-        nunavutCopyBits(&buffer[0], offset_bits, obj->software_image_crc.count * 64UL, &obj->software_image_crc.elements[0], 0U);
-        offset_bits += obj->software_image_crc.count * 64UL;
+        for (size_t _index0_ = 0U; _index0_ < obj->software_image_crc.count; ++_index0_)
+        {
+            // Saturation code not emitted -- native representation matches the serialized representation.
+            const int8_t _err6_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, obj->software_image_crc.elements[_index0_], 64U);
+            if (_err6_ < 0)
+            {
+                return _err6_;
+            }
+            offset_bits += 64U;
+        }
     }
 
+
+
+
     {   // saturated uint8[<=222] certificate_of_authenticity
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 1784ULL) <= (capacity_bytes * 8U));
         if (obj->certificate_of_authenticity.count > 222)
         {
             return -NUNAVUT_ERROR_REPRESENTATION_BAD_ARRAY_LENGTH;
@@ -404,30 +445,28 @@ static inline int8_t uavcan_node_GetInfo_Response_1_0_serialize_(
         // Array length prefix: truncated uint8
         buffer[offset_bits / 8U] = (uint8_t)(obj->certificate_of_authenticity.count);  // C std, 6.3.1.3 Signed and unsigned integers
         offset_bits += 8U;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         // Optimization prospect: this item is aligned at the byte boundary, so it is possible to use memmove().
         nunavutCopyBits(&buffer[0], offset_bits, obj->certificate_of_authenticity.count * 8U, &obj->certificate_of_authenticity.elements[0], 0U);
         offset_bits += obj->certificate_of_authenticity.count * 8U;
     }
 
+
     if (offset_bits % 8U != 0U)  // Pad to 8 bits. TODO: Eliminate redundant padding checks.
     {
         const uint8_t _pad2_ = (uint8_t)(8U - offset_bits % 8U);
-        NUNAVUT_ASSERT(_pad2_ > 0);
-        const int8_t _err5_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, _pad2_);  // Optimize?
-        if (_err5_ < 0)
+        const int8_t _err7_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, _pad2_);  // Optimize?
+        if (_err7_ < 0)
         {
-            return _err5_;
+            return _err7_;
         }
         offset_bits += _pad2_;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     }
     // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
 
-    NUNAVUT_ASSERT(offset_bits >= 264ULL);
-    NUNAVUT_ASSERT(offset_bits <= 2504ULL);
 
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
+
+
+
     *inout_buffer_size_bytes = (size_t) (offset_bits / 8U);
 
     return NUNAVUT_SUCCESS;
@@ -460,71 +499,75 @@ static inline int8_t uavcan_node_GetInfo_Response_1_0_deserialize_(
         return -NUNAVUT_ERROR_INVALID_ARGUMENT;
     }
 
+
     const size_t capacity_bytes = *inout_buffer_size_bytes;
     const size_t capacity_bits = capacity_bytes * (size_t) 8U;
     size_t offset_bits = 0U;
 
+
+
+
+
     // uavcan.node.Version.1.0 protocol_version
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     {
         size_t _size_bytes3_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        const int8_t _err6_ = uavcan_node_Version_1_0_deserialize_(
-            &out_obj->protocol_version, &buffer[offset_bits / 8U], &_size_bytes3_);
-        if (_err6_ < 0)
-        {
-            return _err6_;
-        }
-        offset_bits += _size_bytes3_ * 8U;  // Advance by the size of the nested serialized representation.
-    }
-
-    offset_bits = (offset_bits + 7U) & ~(size_t) 7U;  // Align on 8 bits.
-
-    // uavcan.node.Version.1.0 hardware_version
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-    {
-        size_t _size_bytes4_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        const int8_t _err7_ = uavcan_node_Version_1_0_deserialize_(
-            &out_obj->hardware_version, &buffer[offset_bits / 8U], &_size_bytes4_);
-        if (_err7_ < 0)
-        {
-            return _err7_;
-        }
-        offset_bits += _size_bytes4_ * 8U;  // Advance by the size of the nested serialized representation.
-    }
-
-    offset_bits = (offset_bits + 7U) & ~(size_t) 7U;  // Align on 8 bits.
-
-    // uavcan.node.Version.1.0 software_version
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-    {
-        size_t _size_bytes5_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         const int8_t _err8_ = uavcan_node_Version_1_0_deserialize_(
-            &out_obj->software_version, &buffer[offset_bits / 8U], &_size_bytes5_);
+            &out_obj->protocol_version, &buffer[offset_bits / 8U], &_size_bytes3_);
         if (_err8_ < 0)
         {
             return _err8_;
         }
+        offset_bits += _size_bytes3_ * 8U;  // Advance by the size of the nested serialized representation.
+    }
+
+
+    offset_bits = (offset_bits + 7U) & ~(size_t) 7U;  // Align on 8 bits.
+
+    // uavcan.node.Version.1.0 hardware_version
+    {
+        size_t _size_bytes4_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
+        const int8_t _err9_ = uavcan_node_Version_1_0_deserialize_(
+            &out_obj->hardware_version, &buffer[offset_bits / 8U], &_size_bytes4_);
+        if (_err9_ < 0)
+        {
+            return _err9_;
+        }
+        offset_bits += _size_bytes4_ * 8U;  // Advance by the size of the nested serialized representation.
+    }
+
+
+    offset_bits = (offset_bits + 7U) & ~(size_t) 7U;  // Align on 8 bits.
+
+    // uavcan.node.Version.1.0 software_version
+    {
+        size_t _size_bytes5_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
+        const int8_t _err10_ = uavcan_node_Version_1_0_deserialize_(
+            &out_obj->software_version, &buffer[offset_bits / 8U], &_size_bytes5_);
+        if (_err10_ < 0)
+        {
+            return _err10_;
+        }
         offset_bits += _size_bytes5_ * 8U;  // Advance by the size of the nested serialized representation.
     }
 
+
+
+
     // saturated uint64 software_vcs_revision_id
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     out_obj->software_vcs_revision_id = nunavutGetU64(&buffer[0], capacity_bytes, offset_bits, 64);
     offset_bits += 64U;
 
+
+
+
     // saturated uint8[16] unique_id
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     nunavutGetBits(&out_obj->unique_id[0], &buffer[0], capacity_bytes, offset_bits, 16UL * 8U);
     offset_bits += 16UL * 8U;
 
+
+
+
     // saturated uint8[<=50] name
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     // Array length prefix: truncated uint8
     if ((offset_bits + 8U) <= capacity_bits)
     {
@@ -535,16 +578,17 @@ static inline int8_t uavcan_node_GetInfo_Response_1_0_deserialize_(
         out_obj->name.count = 0U;
     }
     offset_bits += 8U;
-    if (out_obj->name.count > 50)
+    if (out_obj->name.count > 50U)
     {
         return -NUNAVUT_ERROR_REPRESENTATION_BAD_ARRAY_LENGTH;
     }
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     nunavutGetBits(&out_obj->name.elements[0], &buffer[0], capacity_bytes, offset_bits, out_obj->name.count * 8U);
     offset_bits += out_obj->name.count * 8U;
 
+
+
+
     // saturated uint64[<=1] software_image_crc
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     // Array length prefix: truncated uint8
     if ((offset_bits + 8U) <= capacity_bits)
     {
@@ -555,16 +599,20 @@ static inline int8_t uavcan_node_GetInfo_Response_1_0_deserialize_(
         out_obj->software_image_crc.count = 0U;
     }
     offset_bits += 8U;
-    if (out_obj->software_image_crc.count > 1)
+    if (out_obj->software_image_crc.count > 1U)
     {
         return -NUNAVUT_ERROR_REPRESENTATION_BAD_ARRAY_LENGTH;
     }
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-    nunavutGetBits(&out_obj->software_image_crc.elements[0], &buffer[0], capacity_bytes, offset_bits, out_obj->software_image_crc.count * 64U);
-    offset_bits += out_obj->software_image_crc.count * 64U;
+    for (size_t _index1_ = 0U; _index1_ < out_obj->software_image_crc.count; ++_index1_)
+    {
+        out_obj->software_image_crc.elements[_index1_] = nunavutGetU64(&buffer[0], capacity_bytes, offset_bits, 64);
+        offset_bits += 64U;
+    }
+
+
+
 
     // saturated uint8[<=222] certificate_of_authenticity
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     // Array length prefix: truncated uint8
     if ((offset_bits + 8U) <= capacity_bits)
     {
@@ -575,18 +623,18 @@ static inline int8_t uavcan_node_GetInfo_Response_1_0_deserialize_(
         out_obj->certificate_of_authenticity.count = 0U;
     }
     offset_bits += 8U;
-    if (out_obj->certificate_of_authenticity.count > 222)
+    if (out_obj->certificate_of_authenticity.count > 222U)
     {
         return -NUNAVUT_ERROR_REPRESENTATION_BAD_ARRAY_LENGTH;
     }
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     nunavutGetBits(&out_obj->certificate_of_authenticity.elements[0], &buffer[0], capacity_bytes, offset_bits, out_obj->certificate_of_authenticity.count * 8U);
     offset_bits += out_obj->certificate_of_authenticity.count * 8U;
 
+
     offset_bits = (offset_bits + 7U) & ~(size_t) 7U;  // Align on 8 bits.
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
+
     *inout_buffer_size_bytes = (size_t) (nunavutChooseMin(offset_bits, capacity_bits) / 8U);
-    NUNAVUT_ASSERT(capacity_bytes >= *inout_buffer_size_bytes);
+
 
     return NUNAVUT_SUCCESS;
 }
@@ -602,10 +650,12 @@ static inline void uavcan_node_GetInfo_Response_1_0_initialize_(uavcan_node_GetI
         size_t size_bytes = 0;
         const uint8_t buf = 0;
         const int8_t err = uavcan_node_GetInfo_Response_1_0_deserialize_(out_obj, &buf, &size_bytes);
-        NUNAVUT_ASSERT(err >= 0);
+
         (void) err;
     }
 }
+
+
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 - 2020 NXP
+ * Copyright 2019 - 2021 NXP
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -50,7 +50,7 @@
  **         This file contains all defined values.
  **
  ** @b Notes \n
- ** 		All '_def' values are default values for global variables.
+ **         All '_def' values are default values for global variables.
  */
 
 #ifndef BCC_DEFINE_H_

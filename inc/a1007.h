@@ -3,7 +3,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020 NXP
+ * Copyright 2020-2021 NXP
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -35,7 +35,7 @@
  **     Project     : SmartBattery_RDDRONE_BMS772
  **     Processor   : S32K144
  **     Version     : 1.00
- **     Date   		: 2020-08-25
+ **     Date        : 2020-08-25
  **     Abstract    :
  **        a1007 module.
  **        This module contains all functions needed for using a1007
@@ -70,17 +70,19 @@
  * public functions
  ******************************************************************************/
 /*!
- * @brief 	This function will initialze the a1007
- * 			it will test the i2C connection with the chip 
- * 		
- * @return 	0 if ok, -1 if there is an error
+ * @brief   This function will initialze the a1007
+ *          it will test the i2C connection with the chip 
+ *
+ * @param   skipSelfTest if this is true it will skip the self-test
+ *
+ * @return  0 if ok, -1 if there is an error
  * @example 
- * 			if(a1007_initialize())
- *			{
- *				// do something with the error
- *			}
+ *          if(a1007_initialize(false))
+ *          {
+ *            // do something with the error
+ *          }
  */
-int a1007_initialize(void);
+int a1007_initialize(bool skipSelfTest);
 
 /*******************************************************************************
  * EOF

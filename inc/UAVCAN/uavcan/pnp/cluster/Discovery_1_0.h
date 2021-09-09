@@ -2,7 +2,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020 NXP 
+ * Copyright 2020-2021 NXP 
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -38,13 +38,19 @@
 // To avoid conflicts with definitions given in the source DSDL file, all entities created by the code generator
 // are named with an underscore at the end, like foo_bar_().
 //
-// Generator:     nunavut-0.5.1 (serialization was enabled)
-// Source file:   /home/hovergames/nuttx/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/pnp/cluster/8164.Discovery.1.0.uavcan
-// Generated at:  2020-11-18 09:49:23.975310 UTC
+// Generator:     nunavut-1.1.0 (serialization was enabled)
+// Source file:   /home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/pnp/cluster/8164.Discovery.1.0.uavcan
+// Generated at:  2021-04-12 07:47:45.942909 UTC
 // Is deprecated: no
 // Fixed port-ID: 8164
 // Full name:     uavcan.pnp.cluster.Discovery
 // Version:       1.0
+//
+// Language Options
+//     target_endianness:  any
+//     omit_float_serialization_support:  False
+//     enable_serialization_asserts:  False
+//     enable_override_variable_array_capacity:  True
 
 #ifndef UAVCAN_PNP_CLUSTER_DISCOVERY_1_0_INCLUDED_
 #define UAVCAN_PNP_CLUSTER_DISCOVERY_1_0_INCLUDED_
@@ -53,6 +59,19 @@
 #include <uavcan/node/ID_1_0.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_TARGET_ENDIANNESS == 1693710260,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/pnp/cluster/8164.Discovery.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_OMIT_FLOAT_SERIALIZATION_SUPPORT == 0,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/pnp/cluster/8164.Discovery.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_ENABLE_SERIALIZATION_ASSERTS == 0,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/pnp/cluster/8164.Discovery.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_ENABLE_OVERRIDE_VARIABLE_ARRAY_CAPACITY == 1,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/pnp/cluster/8164.Discovery.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,7 +101,14 @@ static_assert(uavcan_pnp_cluster_Discovery_1_0_EXTENT_BYTES_ >= uavcan_pnp_clust
 #define uavcan_pnp_cluster_Discovery_1_0_MAX_CLUSTER_SIZE (5U)
 
 /// Array metadata for: uavcan.node.ID.1.0[<=5] known_nodes
+#ifndef uavcan_pnp_cluster_Discovery_1_0_known_nodes_ARRAY_CAPACITY_
 #define uavcan_pnp_cluster_Discovery_1_0_known_nodes_ARRAY_CAPACITY_           5U
+#elif !defined(uavcan_pnp_cluster_Discovery_1_0_DISABLE_SERIALIZATION_BUFFER_CHECK_)
+#  define uavcan_pnp_cluster_Discovery_1_0_DISABLE_SERIALIZATION_BUFFER_CHECK_
+#endif
+#if uavcan_pnp_cluster_Discovery_1_0_known_nodes_ARRAY_CAPACITY_ > 5U
+#  error uavcan_pnp_cluster_Discovery_1_0_known_nodes_ARRAY_CAPACITY_ > 5U
+#endif
 #define uavcan_pnp_cluster_Discovery_1_0_known_nodes_ARRAY_IS_VARIABLE_LENGTH_ true
 
 typedef struct
@@ -93,7 +119,7 @@ typedef struct
     /// uavcan.node.ID.1.0[<=5] known_nodes
     struct  /// Array address equivalence guarantee: &elements[0] == &known_nodes
     {
-        uavcan_node_ID_1_0 elements[5];
+        uavcan_node_ID_1_0 elements[uavcan_pnp_cluster_Discovery_1_0_known_nodes_ARRAY_CAPACITY_];
         size_t count;
     } known_nodes;
 } uavcan_pnp_cluster_Discovery_1_0;
@@ -122,18 +148,25 @@ static inline int8_t uavcan_pnp_cluster_Discovery_1_0_serialize_(
         return -NUNAVUT_ERROR_INVALID_ARGUMENT;
     }
 
+
     const size_t capacity_bytes = *inout_buffer_size_bytes;
+#ifndef uavcan_pnp_cluster_Discovery_1_0_DISABLE_SERIALIZATION_BUFFER_CHECK_
+
     if ((8U * (size_t) capacity_bytes) < 96UL)
     {
         return -NUNAVUT_ERROR_SERIALIZATION_BUFFER_TOO_SMALL;
     }
+#endif
+
     // Notice that fields that are not an integer number of bytes long may overrun the space allocated for them
     // in the serialization buffer up to the next byte boundary. This is by design and is guaranteed to be safe.
     size_t offset_bits = 0U;
 
+
+
+
+
     {   // saturated uint3 configured_cluster_size
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 3ULL) <= (capacity_bytes * 8U));
         uint8_t _sat0_ = obj->configured_cluster_size;
         if (_sat0_ > 7U)
         {
@@ -143,8 +176,10 @@ static inline int8_t uavcan_pnp_cluster_Discovery_1_0_serialize_(
         offset_bits += 3U;
     }
 
+
+
+
     {   // void5
-        NUNAVUT_ASSERT((offset_bits + 5ULL) <= (capacity_bytes * 8U));
         const int8_t _err0_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, 5U);  // Optimize?
         if (_err0_ < 0)
         {
@@ -153,23 +188,19 @@ static inline int8_t uavcan_pnp_cluster_Discovery_1_0_serialize_(
         offset_bits += 5UL;
     }
 
+
     if (offset_bits % 8U != 0U)  // Pad to 8 bits. TODO: Eliminate redundant padding checks.
     {
         const uint8_t _pad0_ = (uint8_t)(8U - offset_bits % 8U);
-        NUNAVUT_ASSERT(_pad0_ > 0);
         const int8_t _err1_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, _pad0_);  // Optimize?
         if (_err1_ < 0)
         {
             return _err1_;
         }
         offset_bits += _pad0_;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     }
 
     {   // uavcan.node.ID.1.0[<=5] known_nodes
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 88ULL) <= (capacity_bytes * 8U));
         if (obj->known_nodes.count > 5)
         {
             return -NUNAVUT_ERROR_REPRESENTATION_BAD_ARRAY_LENGTH;
@@ -177,15 +208,9 @@ static inline int8_t uavcan_pnp_cluster_Discovery_1_0_serialize_(
         // Array length prefix: truncated uint8
         buffer[offset_bits / 8U] = (uint8_t)(obj->known_nodes.count);  // C std, 6.3.1.3 Signed and unsigned integers
         offset_bits += 8U;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         for (size_t _index0_ = 0U; _index0_ < obj->known_nodes.count; ++_index0_)
         {
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-            NUNAVUT_ASSERT((offset_bits + 16ULL) <= (capacity_bytes * 8U));
             size_t _size_bytes0_ = 2UL;  // Nested object (max) size, in bytes.
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-            NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes0_) <= capacity_bytes);
             int8_t _err2_ = uavcan_node_ID_1_0_serialize_(
                 &obj->known_nodes.elements[_index0_], &buffer[offset_bits / 8U], &_size_bytes0_);
             if (_err2_ < 0)
@@ -193,30 +218,27 @@ static inline int8_t uavcan_pnp_cluster_Discovery_1_0_serialize_(
                 return _err2_;
             }
             // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-            NUNAVUT_ASSERT((_size_bytes0_ * 8U) == 16ULL);
             offset_bits += _size_bytes0_ * 8U;  // Advance by the size of the nested object.
-            NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
         }
     }
+
 
     if (offset_bits % 8U != 0U)  // Pad to 8 bits. TODO: Eliminate redundant padding checks.
     {
         const uint8_t _pad1_ = (uint8_t)(8U - offset_bits % 8U);
-        NUNAVUT_ASSERT(_pad1_ > 0);
         const int8_t _err3_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, _pad1_);  // Optimize?
         if (_err3_ < 0)
         {
             return _err3_;
         }
         offset_bits += _pad1_;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     }
     // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
 
-    NUNAVUT_ASSERT(offset_bits >= 16ULL);
-    NUNAVUT_ASSERT(offset_bits <= 96ULL);
 
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
+
+
+
     *inout_buffer_size_bytes = (size_t) (offset_bits / 8U);
 
     return NUNAVUT_SUCCESS;
@@ -249,12 +271,16 @@ static inline int8_t uavcan_pnp_cluster_Discovery_1_0_deserialize_(
         return -NUNAVUT_ERROR_INVALID_ARGUMENT;
     }
 
+
     const size_t capacity_bytes = *inout_buffer_size_bytes;
     const size_t capacity_bits = capacity_bytes * (size_t) 8U;
     size_t offset_bits = 0U;
 
+
+
+
+
     // saturated uint3 configured_cluster_size
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     if ((offset_bits + 3U) <= capacity_bits)
     {
         out_obj->configured_cluster_size = buffer[offset_bits / 8U] & 7U;
@@ -265,14 +291,16 @@ static inline int8_t uavcan_pnp_cluster_Discovery_1_0_deserialize_(
     }
     offset_bits += 3U;
 
+
+
+
     // void5
     offset_bits += 5;
+
 
     offset_bits = (offset_bits + 7U) & ~(size_t) 7U;  // Align on 8 bits.
 
     // uavcan.node.ID.1.0[<=5] known_nodes
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     // Array length prefix: truncated uint8
     if ((offset_bits + 8U) <= capacity_bits)
     {
@@ -283,18 +311,14 @@ static inline int8_t uavcan_pnp_cluster_Discovery_1_0_deserialize_(
         out_obj->known_nodes.count = 0U;
     }
     offset_bits += 8U;
-    if (out_obj->known_nodes.count > 5)
+    if (out_obj->known_nodes.count > 5U)
     {
         return -NUNAVUT_ERROR_REPRESENTATION_BAD_ARRAY_LENGTH;
     }
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     for (size_t _index1_ = 0U; _index1_ < out_obj->known_nodes.count; ++_index1_)
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes1_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err4_ = uavcan_node_ID_1_0_deserialize_(
                 &out_obj->known_nodes.elements[_index1_], &buffer[offset_bits / 8U], &_size_bytes1_);
             if (_err4_ < 0)
@@ -305,10 +329,11 @@ static inline int8_t uavcan_pnp_cluster_Discovery_1_0_deserialize_(
         }
     }
 
+
     offset_bits = (offset_bits + 7U) & ~(size_t) 7U;  // Align on 8 bits.
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
+
     *inout_buffer_size_bytes = (size_t) (nunavutChooseMin(offset_bits, capacity_bits) / 8U);
-    NUNAVUT_ASSERT(capacity_bytes >= *inout_buffer_size_bytes);
+
 
     return NUNAVUT_SUCCESS;
 }
@@ -324,10 +349,12 @@ static inline void uavcan_pnp_cluster_Discovery_1_0_initialize_(uavcan_pnp_clust
         size_t size_bytes = 0;
         const uint8_t buf = 0;
         const int8_t err = uavcan_pnp_cluster_Discovery_1_0_deserialize_(out_obj, &buf, &size_bytes);
-        NUNAVUT_ASSERT(err >= 0);
+
         (void) err;
     }
 }
+
+
 
 #ifdef __cplusplus
 }

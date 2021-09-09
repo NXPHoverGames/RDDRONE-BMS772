@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 - 2020 NXP
+ * Copyright 2016 - 2021 NXP
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -39,7 +39,7 @@
  ******************************************************************************/
 #include <assert.h>
 
-#include "BCC/bcc_peripheries.h"			// Include header file
+#include "BCC/bcc_peripheries.h"            // Include header file
 #include "gpio.h"
 #include "spi.h"
 #include "cli.h"
@@ -47,7 +47,6 @@
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
-#define BCC_SPI_BUS                 1
 #define BCC_SPI_TRANSMISSION_BYTES  5
 
 /* Number of bytes what 40b needs to be aligned in S32K118 SDK LPSPI driver
@@ -95,7 +94,6 @@ bcc_status_t BCC_MCU_TransferSpi(uint8_t drvInstance, uint8_t transBuf[], uint8_
 
     uint8_t tBuf[LPSPI_ALIGNMENT];
     uint8_t rBuf[LPSPI_ALIGNMENT];
-    //int i;
 
     tBuf[0] = transBuf[4]; 
     tBuf[1] = transBuf[3];
@@ -129,7 +127,7 @@ bcc_status_t BCC_MCU_TransferSpi(uint8_t drvInstance, uint8_t transBuf[], uint8_
  *
  *END**************************************************************************/
 bcc_status_t BCC_MCU_TransferTpl(uint8_t drvInstance, uint8_t transBuf[],
-        uint8_t recvBuf[], uint16_t recvTrCnt)
+    uint8_t recvBuf[], uint16_t recvTrCnt)
 {
     return BCC_STATUS_SUCCESS;
 }
@@ -154,20 +152,7 @@ void BCC_MCU_Assert(bool x)
  *END**************************************************************************/
 void BCC_MCU_WriteCsbPin(uint8_t drvInstance, uint8_t value)
 {
-    //int lvRetValue;
-    //!
-     // write the pin with the value
-    //gpio_writePin(BCC_RESET, value);
-    //lvRetValue = gpio_writePin(BCC_CS, (bool)(value & 1));
-
-    // check for errors
-    // if(lvRetValue)
-    // {
-    //     cli_printfError("BCC_MCU ERROR: Couldn't write BCC CS! %d\n", lvRetValue);
-    // }
-
-    // LPSPI_DRV_SetPcs(BCC_SPI_LPSPI_INSTANCE, BCC_SPI_LPSPI_PCS,
-    //         value ? LPSPI_ACTIVE_LOW : LPSPI_ACTIVE_HIGH);
+    // nothing
 }
 
 /*FUNCTION**********************************************************************
@@ -180,22 +165,21 @@ void BCC_MCU_WriteRstPin(uint8_t drvInstance, uint8_t value)
 {
     // write the pin with the value
     gpio_writePin(BCC_RESET, value);
-    // there is no need to write the reset pin!
-
-    //PINS_DRV_WritePin(BCC_RST_INSTANCE, BCC_RST_INDEX, value);
 }
 
 /*FUNCTION**********************************************************************
  *
- * 				   MODIFIED. NOT USED BUT NEEDED TO COMPILE BCC SW LIBRARY.
+ *                 MODIFIED. NOT USED BUT NEEDED TO COMPILE BCC SW LIBRARY.
  *
  *END**************************************************************************/
 void BCC_MCU_WriteEnPin(uint8_t drvInstance, uint8_t value)
-{}
+{
+    // nothing
+}
 
 /*FUNCTION**********************************************************************
  *
- * 				   MODIFIED. NOT USED BUT NEEDED TO COMPILE BCC SW LIBRARY.
+ *                 MODIFIED. NOT USED BUT NEEDED TO COMPILE BCC SW LIBRARY.
  *
  *END**************************************************************************/
 uint32_t BCC_MCU_ReadIntbPin(uint8_t drvInstance)

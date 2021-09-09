@@ -3,7 +3,7 @@
 #
 # BSD 3-Clause License
 # 
-# Copyright 2020 NXP
+# Copyright 2020-2021 NXP
 # 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -56,6 +56,7 @@ CSRCS 	+= src/BCC/bcc_peripheries.c
 CSRCS 	+= src/BCC/bcc_monitoring.c
 # CSRCS 	+= src/BCC/bcc_diag.c
 CSRCS 	+= src/BCC/bcc_configuration.c
+CSRCS 	+= src/BCC/bcc_spiwrapper.c
 CSRCS 	+= src/BCC/Derivatives/bcc.c
 CSRCS 	+= src/BCC/Derivatives/bcc_communication.c
 # CSRCS 	+= src/BCC/Derivatives/bcc_diagnostics.c
@@ -68,7 +69,9 @@ CSRCS 	+= src/UAVCAN/portid.c
 CSRCS 	+= src/sbc.c
 CSRCS 	+= src/nfc.c
 CSRCS 	+= src/a1007.c
-
+CSRCS 	+= src/SMBus.c
+CSRCS 	+= src/i2c.c
+CSRCS 	+= src/power.c
 
 MAINSRC = src/main.c
 CFLAGS 	+= -I inc

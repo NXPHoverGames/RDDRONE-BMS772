@@ -3,7 +3,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020 NXP
+ * Copyright 2020-2021 NXP
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -46,10 +46,11 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include <nuttx/i2c/i2c_master.h>
+//#include <nuttx/i2c/i2c_master.h>
 #include "a1007.h"
 #include "cli.h"
 #include "gpio.h"
+#include "i2c.h"
 
 /****************************************************************************
  * Defines
@@ -59,6 +60,7 @@
 
 #define STATUS_COMMAND_REG_ADR1     0x09
 #define STATUS_COMMAND_REG_ADR2     0x00 
+#define STATUS_COMMAND_REG_ADR      0x0900
 
 #define STATUS_COMMAND_REG_VAL_MASK 0x0F
 
@@ -66,7 +68,6 @@
  * Private Variables
  ****************************************************************************/
 static bool gA1007Initialized = false;  
-const char i2c_path_a1007[] = "/dev/i2c0";  
 
 /****************************************************************************
  * Private Functions
@@ -78,136 +79,95 @@ const char i2c_path_a1007[] = "/dev/i2c0";
 /*!
  * @brief   This function will initialze the a1007
  *          it will test the i2C connection with the chip 
- *    
+ *
+ * @param   skipSelfTest if this is true it will skip the self-test
+ *
  * @return  0 if ok, -1 if there is an error
  * @example 
- *          if(a1007_initialize())
+ *          if(a1007_initialize(false))
  *          {
  *            // do something with the error
  *          }
  */
-int a1007_initialize(void)
+int a1007_initialize(bool skipSelfTest)
 {
-  int lvRetValue = 0;
-  uint8_t regVal[2] = {0, 0}, writeVal[2]; 
-  int fd;
-  struct i2c_msg_s i2c_msg[2];  
-  struct i2c_transfer_s i2c_transfer;  
-  //uint8_t i = 0; 
+    int lvRetValue = 0;
+    uint8_t regVal[2] = {0, 0};
 
-  // check if not initialized 
-  if(!gA1007Initialized)
-  {
-    cli_printf("SELF-TEST A1007: START\n");
-
-    // wake up the A1007 with the wakeup pin
-    // write the pin to high
-    lvRetValue = gpio_writePin(AUTH_WAKE, 1);
-
-    // check if it went wrong
-    if(lvRetValue)
+    // check if not initialized 
+    if(!gA1007Initialized)
     {
-      cli_printfError("A1007 ERROR: writing AUTH_WAKE high went wrong!\n");
-      cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
-      return lvRetValue;
+        // Check if the self-test shouldn't be skipped
+        if(!skipSelfTest)
+        {
+            cli_printf("SELF-TEST A1007: START\n");
+
+            // wake up the A1007 with the wakeup pin
+            // write the pin to high
+            lvRetValue = gpio_writePin(AUTH_WAKE, 1);
+
+            // check if it went wrong
+            if(lvRetValue)
+            {
+                cli_printfError("A1007 ERROR: writing AUTH_WAKE high went wrong!\n");
+                    
+                cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
+                return lvRetValue;
+            }
+
+            // sleep for 50us for the wakeup pulse
+            usleep(50);
+
+            // write the pin to low
+            lvRetValue = gpio_writePin(AUTH_WAKE, 0);
+
+            // check if it went wrong
+            if(lvRetValue)
+            {
+                cli_printfError("A1007 ERROR: writing AUTH_WAKE low went wrong!\n");
+
+                cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
+                return lvRetValue;
+            }
+
+            // get the status command reg val and check for errors
+            lvRetValue = i2c_readData(A1007_SLAVE_ADR, 
+                STATUS_COMMAND_REG_ADR, regVal, 2, true);
+
+            // check for errors
+            if(lvRetValue)
+            {
+                //output to the user
+                cli_printfError("A1007 ERROR: Can't do i2c tranfer, error: %d\n", lvRetValue);
+
+                // return to the user
+                return lvRetValue;    
+            }
+
+            // check if there are no wrong status bits
+            if((regVal[1] & STATUS_COMMAND_REG_VAL_MASK) != 0)
+            {
+                // output to the user
+                cli_printfError("A1007 ERROR: status command has wrong bits!\n");
+
+                cli_printf("is: %d, should be 0!\n", regVal[1] & STATUS_COMMAND_REG_VAL_MASK);
+
+                cli_printf("Can't verify A1007 chip!\n");
+
+                // set the returnvalue 
+                lvRetValue = -1;
+
+                return lvRetValue;
+            }
+
+            //cli_printf("A1007 I2C communication verified!\n");
+            cli_printf("SELF-TEST A1007: \e[32mPASS\e[39m\n");
+        }
+
+        // set that it is initialzed
+        gA1007Initialized = true;
     }
 
-    // sleep for 50us for the wakeup pulse
-    usleep(50);
-
-    // write the pin to low
-    lvRetValue = gpio_writePin(AUTH_WAKE, 0);
-
-    // check if it went wrong
-    if(lvRetValue)
-    {
-      cli_printfError("A1007 ERROR: writing AUTH_WAKE low went wrong!\n");
-      cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
-      return lvRetValue;
-    }
-
-    // set the register address of the i2c slave configuration
-    writeVal[0] = STATUS_COMMAND_REG_ADR1;
-    writeVal[1] = STATUS_COMMAND_REG_ADR2;
-
-    // open the i2c device 
-    fd = open(i2c_path_a1007, O_RDONLY);  
-    
-    // check for errors
-    if (fd < 0)  
-    { 
-      // get the error 
-      lvRetValue = -errno;  
-
-      // output to the user
-      cli_printfError("A1007 ERROR: Can't open i2c device, error: %d\n", lvRetValue);
-
-      // return error
-      return lvRetValue; 
-    }  
-    
-    // make the 2 part write message with the register address to read from
-    i2c_msg[0].addr   = A1007_SLAVE_ADR;  
-    i2c_msg[0].flags  = 0;  
-    i2c_msg[0].buffer = writeVal;  
-    i2c_msg[0].length = 2;  /* Write address of where we want to read to AT24 */  
-    i2c_msg[0].frequency = SCL_FREQ;  /* 400K bsp */  
-      
-    // make the read message
-    i2c_msg[1].addr   = A1007_SLAVE_ADR;  
-    i2c_msg[1].flags  = I2C_M_READ; /* Write command then sequence read data */  
-    i2c_msg[1].buffer = regVal;  
-    i2c_msg[1].length = 2;  
-    i2c_msg[1].frequency = SCL_FREQ;  /* 400K bsp */  
-      
-    // make the i2C tranfer 
-    i2c_transfer.msgv = (struct i2c_msg_s *)i2c_msg;  
-    i2c_transfer.msgc = 2;  
-      
-    // read the status command register    
-    /* do the i2C transfer to read the register */  
-    lvRetValue = ioctl(fd, I2CIOC_TRANSFER, (unsigned long)&i2c_transfer);  
-
-    // check for errors
-    if (lvRetValue < 0)  
-    {  
-      // output to the user
-      cli_printfError("A1007 ERROR: Can't do i2c tranfer, error: %d\n", lvRetValue);
-
-      // close the file descriptor
-      close(fd);  
-
-      // return to the user
-      return lvRetValue;  
-    }
-
-    // there is a device with that slave address
-
-    // close the file descriptor
-    close(fd);  
-
-    // check if there are wrong status bits (the lower 4 bits should be 0)
-    // very weak detection
-    if((regVal[1] & STATUS_COMMAND_REG_VAL_MASK) != 0)
-    {
-      // output to the user
-      cli_printfError("A1007 ERROR: status command has wrong bits!\n");
-
-      cli_printf("Can't verify A1007 chip!\n");
-
-      // set the returnvalue 
-      lvRetValue = -1;
-
-      return lvRetValue;
-    }
-
-    //cli_printf("A1007 I2C communication verified!\n");
-    cli_printf("SELF-TEST A1007: \e[32mPASS\e[39m\n");
-
-    // set that it is initialzed
-    gA1007Initialized = true;
-  }
-
-  // return to the user
-  return lvRetValue;
+    // return to the user
+    return lvRetValue;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 - 2020 NXP
+ * Copyright 2016 - 2021 NXP
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -47,7 +47,7 @@
  **         Battery Cell Controller (BCC) module - monitoring functions.
  **         This module contains functions linked to monitoring on BCC6 chip. \n
  ** @note
- ** 		This module was adapted from BCC SW examples by C. van Mierlo.
+ **         This module was adapted from BCC SW examples by C. van Mierlo.
  */
 
 #ifndef BCC_MONITORING_H_
@@ -57,22 +57,8 @@
  * Includes
  ******************************************************************************/
 
-/* Global */
-
-// #include "../define.h"							// Include definitions and external functions
-// #include "../ext_global.h"						// Include all global variables
-
-/* Modules */
-
-//#include "bcc_common.h"							// Include BCC common functions
-
-/* Other */
-
-//#include <math.h>
-
 #include "bcc_define.h"
 #include "BMS_data_types.h"
-
 
 /*******************************************************************************
  * Definitions
@@ -96,28 +82,33 @@
 #define NTC_MAXTEMP           (120)
 
 /*! if the output voltage is lower than this voltage, the output is defined as off. 
-    keep in mind that the output is > 0.5V if no load is attached while the switch is open*/
+ *  keep in mind that the output is > 0.5V if no load is attached while the switch is open
+ */
 #define OUTPUT_ON_VOLTAGE   3.0  
 
 #define STACK_VOLTAGE_DIFFERENCE_ERROR 0.4
 
-
+/*! 
+ *  @brief This struct is used for the OCV/SoC table
+ */
 typedef struct
 {
-	uint16_t 	milliVolt;
-	uint8_t 	SoC;
+    uint16_t    milliVolt;
+    uint8_t     SoC;
 }mvSoC_t;
+
 /*******************************************************************************
  * API
  ******************************************************************************/
+
 /*
- * @brief 	This function will initialize the semaphore 
- * 			this function should be called before bcc_monitoring_updateMeasurements 
- * 			Developed by C. van Mierlo. \n
+ * @brief   This function will initialize the semaphore 
+ *          this function should be called before bcc_monitoring_updateMeasurements 
+ *          Developed by C. van Mierlo. \n
  *
  * @param   none
  *
- * @return 	int Error code (of the semaphore)
+ * @return  int Error code (of the semaphore)
  */
 int bcc_monitoring_initializeSem(void);
 
@@ -152,7 +143,6 @@ int bcc_monitoring_initializeSem(void);
  */
 void bcc_monitoring_fillNtcTable(const ntc_config_t* const ntcConfig);
 
-
 /*
  * @brief   This function reads values measured and provided via SPI
  *          by BCC device (ISENSE, cell voltages, temperatures). \n
@@ -162,16 +152,18 @@ void bcc_monitoring_fillNtcTable(const ntc_config_t* const ntcConfig);
  * @param   drvConfig the address the BCC driver configuration
  * @param   rShunt Shunt resistor for ISENSE in [uOhm].  
  * @param   lowestCellVoltageAdr this function will set the lowest cell voltage in this variable
- * @param 	gateMutexAdr this is the address of the gate mutex, to check a pin for the output status
+ * @param   gateMutexAdr this is the address of the gate mutex, to check a pin for the output status
  *
  * @return  bcc_status_t Error code
  */
 bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig, uint32_t rShunt, 
-	float *lowestCellVoltageAdr, pthread_mutex_t *gateMutexAdr);
+    float *lowestCellVoltageAdr, pthread_mutex_t *gateMutexAdr);
 
 /*
  * @brief   This function is used to do a meaurement
- * 			This function is blocking and will wait until the measurement is done
+ *          This function is blocking and will wait until the measurement is done
+ *
+ * @note    Even blocks task switch
  *
  * @param   drvConfig the address the BCC driver configuration
  *
@@ -192,7 +184,7 @@ bcc_status_t bcc_monitoring_checkOutput(bcc_drv_config_t* const drvConfig, bool 
 
 /*
  * @brief   This function is used to check if the number of cells are OK
- * 			it will read the cell voltages and the stack voltage, without reading the other measurements
+ *          it will read the cell voltages and the stack voltage, without reading the other measurements
  * @note    A measurement should be done first
  *
  * @param   drvConfig the address the BCC driver configuration
@@ -204,7 +196,7 @@ bcc_status_t bcc_monitoring_checkNCells(bcc_drv_config_t* const drvConfig, bool 
 
 /*
  * @brief   This function is used to get the output voltage
- * 			it will read the output voltage without reading the other measurements
+ *          it will read the output voltage without reading the other measurements
  * @note    A measurement should be done first
  *
  * @param   drvConfig the address the BCC driver configuration
@@ -214,12 +206,23 @@ bcc_status_t bcc_monitoring_checkNCells(bcc_drv_config_t* const drvConfig, bool 
 bcc_status_t bcc_monitoring_getOutputVoltage(bcc_drv_config_t* const drvConfig);
 
 /*
- * @brief   This function is used to get the current
- * 			it will read the current without reading the other measurements
+ * @brief   This function is used to get the cell voltages
+ *          it will read the cell voltages without reading the other measurements
  * @note    A measurement should be done first
  *
  * @param   drvConfig the address the BCC driver configuration
- * @param   openLoadDetected the address of the value that is 1 if there is an open load
+ *
+ * @return  bcc_status_t Error code
+ */
+bcc_status_t bcc_monitoring_getCellVoltages(bcc_drv_config_t* const drvConfig);
+
+/*
+ * @brief   This function is used to get the current
+ *          it will read the current without reading the other measurements
+ * @note    A measurement should be done first
+ *
+ * @param   drvConfig the address the BCC driver configuration
+ * @param   rShunt the value of the shunt resistor in uOhm
  *
  * @return  bcc_status_t Error code
  */
@@ -238,13 +241,13 @@ bcc_status_t bcc_monitoring_getBattCurrent(bcc_drv_config_t* const drvConfig, ui
 bcc_status_t bcc_monitoring_getIsenseOpenLoad(bcc_drv_config_t* const drvConfig, bool* openLoadDetected);
 
 /*
- * @brief 	This function increases the semaphore so the bcc_monitoring_updateMeasurements 
- * 			function will do the rest of the calculations
- * 			Developed by C. van Mierlo. \n
+ * @brief   This function increases the semaphore so the bcc_monitoring_updateMeasurements 
+ *          function will do the rest of the calculations
+ *          Developed by C. van Mierlo. \n
  *
  * @param   none
  *
- * @return 	int Error code (of the semaphore)
+ * @return  int Error code (of the semaphore)
  */
 int bcc_monitoring_doAllCalculations(void);
 
@@ -272,7 +275,7 @@ void bcc_monitoring_setAverageInterval(uint8_t updateAverageInterval, uint8_t el
  * @param   samplesAdr address of the variable to become the samples in the CC register
  * @param   avgCurrentAdr address of the variable to become the average current
  * @param   deltaChargeAdr address of the variable to become the delta charge
- * @param 	resetCC if this is true, it will reset the CC registers by writing CC_RST true 
+ * @param   resetCC if this is true, it will reset the CC registers by writing CC_RST true 
  *
  * @return  0 if succesfull, otherwise it will indicate the error
  */
@@ -281,16 +284,19 @@ int bcc_monitoring_calcDCharge(bcc_drv_config_t* const drvConfig, uint16_t *samp
 
 /*
  * @brief   This function can be used to calibrate the state of charge (SoC)
+ * @note    A measurement needs to be done first and the cell voltages need to be saved
  * @note    A predefined table and the lowest cell voltage will be used for this
- * @note    can be called from mulitple threads
+ * @note    Can be called from mulitple threads
  * @warning The battery (voltage) needs to be relaxed before this is used!
  *
- * @param   currentCheck if true the current check will be done,
+ * @param   calibrateARem if true, it will set the a-rem to calibrate SoC (mostly needed).
+ *          If false, it will calibrate a-full based on a-rem with correct SoC (charge complete). 
+ * @param   CurrentCheck if true the current check will be done,
  *          Keep this default on true, except for a power-up check
  *
  * @return  0 if succesfull, otherwise it will indicate the error
  */
-int bcc_monitoring_calibrateSoC(bool currentCheck);
+int bcc_monitoring_calibrateSoC(bool calibrateARem, bool currentCheck);
 
 /*
  * @brief   This function is used to check if balancing is done
@@ -302,186 +308,143 @@ int bcc_monitoring_calibrateSoC(bool currentCheck);
  * @return  0 if succesfull, otherwise it will indicate the error
  */
 int bcc_monitoring_checkBalancingDone(bcc_drv_config_t* const drvConfig, 
-	uint8_t bccIndex, bool *done);
+    uint8_t bccIndex, bool *done);
 
-/*
- * @brief   This function is used to enable or disable the display of the measurements
- *
- * @param   showCommand which measurements to enable or disable
- * @param   value the new value of that bit
- *
- * @return  none
+/*! 
+ *  @brief this is the OCV/SoC table for a LiPo battery
+ *  @note Change this table to the specification of the used LiPo battery
  */
-void bcc_monitoring_setShowMeas(showCommands_t showCommand, bool value);
-
-// this is the OCV/SoC table for a LiPo 
 static const mvSoC_t cellmvVsSOCLiPoLookupTable[60] =
 {
-	{ 4200, 100},
-	{ 4187, 99},
-	{ 4168, 96},
-	{ 4149, 94},
-	{ 4131, 92},
-	{ 4113, 90},
-	{ 4095, 88},
-	{ 4079, 86},
-	{ 4065, 84},
-	{ 4047, 82},
-	{ 4028, 80},
-	{ 4011, 78},
-	{ 3997, 75},
-	{ 3984, 73},
-	{ 3972, 72},
-	{ 3959, 70},
-	{ 3945, 68},
-	{ 3930, 66},
-	{ 3912, 64},
-	{ 3895, 62},
-	{ 3881, 60},
-	{ 3869, 58},
-	{ 3859, 56},
-	{ 3850, 54},
-	{ 3841, 52},
-	{ 3833, 51},
-	{ 3826, 49},
-	{ 3819, 47},
-	{ 3813, 45},
-	{ 3807, 43},
-	{ 3802, 41},
-	{ 3796, 40},
-	{ 3792, 38},
-	{ 3787, 36},
-	{ 3783, 34},
-	{ 3778, 32},
-	{ 3771, 31},
-	{ 3765, 29},
-	{ 3758, 27},
-	{ 3751, 25},
-	{ 3745, 24},
-	{ 3740, 22},
-	{ 3734, 20},
-	{ 3727, 18},
-	{ 3718, 17},
-	{ 3710, 15},
-	//{ 3700, 13},
-	//{ 3699, 13},
-	{ 3698, 13},
-	//{ 3697, 13},
-	//{ 3695, 13},
-	//{ 3694, 12},
-	//{ 3693, 12},
-	{ 3692, 12},
-	//{ 3691, 12},
-	//{ 3690, 12},
-	//{ 3690, 11},
-	//{ 3689, 11},
-	//{ 3689, 11},
-	{ 3688, 11},
-	//{ 3688, 11},
-	//{ 3687, 11},
-	//{ 3687, 10},
-	//{ 3687, 10},
-	//{ 3686, 10},
-	{ 3686, 10},
-	//{ 3685, 10},
-	//{ 3685, 10},
-	//{ 3685, 9},
-	//{ 3684, 9},
-	//{ 3683, 9},
-	{ 3683, 9},
-	//{ 3682, 9},
-	//{ 3682, 9},
-	//{ 3682, 8},
-	//{ 3681, 8},
-	//{ 3680, 8},
-	{ 3680, 8},
-	//{ 3679, 8},
-	//{ 3678, 8},
-	//{ 3677, 7},
-	//{ 3677, 7},
-	//{ 3676, 7},
-	{ 3675, 7},
-	//{ 3674, 7},
-	//{ 3673, 7},
-	//{ 3671, 6},
-	//{ 3670, 6},
-	//{ 3668, 6},
-	{ 3666, 6},
-	//{ 3663, 6},
-	//{ 3660, 6},
-	//{ 3657, 5},
-	//{ 3652, 5},
-	//{ 3647, 5},
-	{ 3642, 5},
-	//{ 3637, 5},
-	//{ 3631, 5},
-	//{ 3625, 4},
-	//{ 3618, 4},
-	//{ 3612, 4},
-	{ 3605, 4},
-	//{ 3598, 4},
-	//{ 3591, 4},
-	//{ 3584, 3},
-	//{ 3576, 3},
-	{ 3568, 3},
-	//{ 3560, 3},
-	//{ 3551, 3},
-	//{ 3542, 3},
-	//{ 3533, 2},
-	//{ 3523, 2},
-	//{ 3514, 2},
-	{ 3503, 2},
-	//{ 3493, 2},
-	//{ 3481, 2},
-	//{ 3470, 2},
-	//{ 3457, 1},
-	//{ 3444, 1},
-	//{ 3431, 1},
-	{ 3417, 1},
-	//{ 3402, 1},
-	//{ 3386, 1},
-	//{ 3370, 1},
-	//{ 3352, 0},
-	//{ 3333, 0},
-	{ 3313, 0}
-	//{ 3300, 0},
+    { 4200, 100},
+    { 4187, 99},
+    { 4168, 96},
+    { 4149, 94},
+    { 4131, 92},
+    { 4113, 90},
+    { 4095, 88},
+    { 4079, 86},
+    { 4065, 84},
+    { 4047, 82},
+    { 4028, 80},
+    { 4011, 78},
+    { 3997, 75},
+    { 3984, 73},
+    { 3972, 72},
+    { 3959, 70},
+    { 3945, 68},
+    { 3930, 66},
+    { 3912, 64},
+    { 3895, 62},
+    { 3881, 60},
+    { 3869, 58},
+    { 3859, 56},
+    { 3850, 54},
+    { 3841, 52},
+    { 3833, 51},
+    { 3826, 49},
+    { 3819, 47},
+    { 3813, 45},
+    { 3807, 43},
+    { 3802, 41},
+    { 3796, 40},
+    { 3792, 38},
+    { 3787, 36},
+    { 3783, 34},
+    { 3778, 32},
+    { 3771, 31},
+    { 3765, 29},
+    { 3758, 27},
+    { 3751, 25},
+    { 3745, 24},
+    { 3740, 22},
+    { 3734, 20},
+    { 3727, 18},
+    { 3718, 17},
+    { 3710, 15},
+    { 3698, 13},
+    { 3692, 12},
+    { 3688, 11},
+    { 3686, 10},
+    { 3683, 9},
+    { 3680, 8},
+    { 3675, 7},
+    { 3666, 6},
+    { 3642, 5},
+    { 3605, 4},
+    { 3568, 3},
+    { 3503, 2},
+    { 3417, 1},
+    { 3313, 0}
 };
 
-// this is the OCV/SoC table for a LiFePO4  
+/*! 
+ *  @brief this is the OCV/SoC table for a LiFePO4 battery
+ *  @note Change this table to the specification of the used LiFePO4 battery
+ */
 static const mvSoC_t cellmvVsSOCLiFePO4LookupTable[] =
 {
-	{3650, 100},			
-	{3610, 99}, 		
-	{3460, 95}, 		
-	{3320, 90}, 		
-	{3310, 80}, 		
-	{3300, 70}, 		
-	{3290, 60}, 		
-	{3280, 50}, 		
-	{3270, 40}, 		
-	{3250, 30}, 		
-	{3220, 20}, 		
-	{3200, 17}, 		
-	{3120, 14}, 		
-	{3000,  9}, 		
-	{2500,  0}	
+    {3650, 100},            
+    {3610, 99},         
+    {3460, 95},         
+    {3320, 90},         
+    {3310, 80},         
+    {3300, 70},         
+    {3290, 60},         
+    {3280, 50},         
+    {3270, 40},         
+    {3250, 30},         
+    {3220, 20},         
+    {3200, 17},         
+    {3120, 14},         
+    {3000,  9},         
+    {2500,  0}  
 };
 
-// this array contains the pointers to the OCV/SoC tables 
-// use with BATTERY_TYPE variable
-// example: cellmvVsSOCLookupTableAll[batteryType][row].milliVolt 
+/*! 
+ *  @brief this is the OCV/SoC table for a LiFeYPO4 battery
+ *  @note Change this table to the specification of the used LiFeYPO4 battery
+ */
+static const mvSoC_t cellmvVsSOCLiFeYPO4LookupTable[] =
+{
+    {3600, 100},
+    {3500, 99},
+    {3300, 95},
+    {3285, 90},
+    {3270, 80},
+    {3260, 70},
+    {3250, 60},
+    {3225, 50},
+    {3200, 40},
+    {3180, 30},
+    {3170, 20},
+    {3100, 17},
+    {3050, 14},
+    {3000, 9},
+    {2800, 0}
+};
+
+/*! 
+ *  @brief this array contains the pointers to the OCV/SoC tables 
+ *  @note use with BATTERY_TYPE variable
+ *  @example cellmvVsSOCLookupTableAll[batteryType][row].milliVolt 
+ */
 static const mvSoC_t *cellmvVsSOCLookupTableAll[] =
 {
-	&cellmvVsSOCLiPoLookupTable[0],
-	&cellmvVsSOCLiFePO4LookupTable[0]
+    &cellmvVsSOCLiPoLookupTable[0],
+    &cellmvVsSOCLiFePO4LookupTable[0],
+    &cellmvVsSOCLiFeYPO4LookupTable[0]
 };
 
-// this array contains the size of the OCV/SoC tables 
-// use with BATTERY_TYPE variable
+/*!
+ *  @brief this array contains the size of the OCV/SoC tables 
+ *  @note use with BATTERY_TYPE variable
+ */
 static const uint8_t cellmvVsSOCLookupTableAllSize[] = 
 {
-	sizeof(cellmvVsSOCLiPoLookupTable)/sizeof(mvSoC_t),
-	sizeof(cellmvVsSOCLiFePO4LookupTable)/sizeof(mvSoC_t)
+    sizeof(cellmvVsSOCLiPoLookupTable)/sizeof(mvSoC_t),
+    sizeof(cellmvVsSOCLiFePO4LookupTable)/sizeof(mvSoC_t),
+    sizeof(cellmvVsSOCLiFeYPO4LookupTable)/sizeof(mvSoC_t)
 };
 /*******************************************************************************
  * EOF

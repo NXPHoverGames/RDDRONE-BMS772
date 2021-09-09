@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 - 2020 NXP
+ * Copyright 2016 - 2021 NXP
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -38,8 +38,8 @@
  **         This module contains all functions linked to configuration of BCC6 chip.
  **
  **         Note: INIT register is initialized automatically by the BCC driver.
- ** 		Note: SYS_CFG_GLOBAL register contains only command GO2SLEEP (no initialization needed).
- ** 		Note: EEPROM_CTRL, FUSE_MIRROR_DATA and FUSE_MIRROR_CNTL registers are not initialized.
+ **         Note: SYS_CFG_GLOBAL register contains only command GO2SLEEP (no initialization needed).
+ **         Note: EEPROM_CTRL, FUSE_MIRROR_DATA and FUSE_MIRROR_CNTL registers are not initialized.
  **
  ** ###################################################################*/
 /*!
@@ -52,11 +52,11 @@
  **         This module contains all functions linked to configuration of BCC6 chip. \n
  **
  **         Note: INIT register is initialized automatically by the BCC driver. \n
- ** 		Note: SYS_CFG_GLOBAL register contains only command GO2SLEEP (no initialization needed). \n
- ** 		Note: EEPROM_CTRL, FUSE_MIRROR_DATA and FUSE_MIRROR_CNTL registers are not initialized. \n
+ **         Note: SYS_CFG_GLOBAL register contains only command GO2SLEEP (no initialization needed). \n
+ **         Note: EEPROM_CTRL, FUSE_MIRROR_DATA and FUSE_MIRROR_CNTL registers are not initialized. \n
  **
  ** @note
- ** 		This module was adapted from BCC SW examples by C. van Mierlo.
+ **         This module was adapted from BCC SW examples by C. van Mierlo.
  **
  */
 
@@ -65,25 +65,27 @@
  * Includes
  ******************************************************************************/
 
-#include "bcc_configuration.h" 					// Include header file
+#include "bcc_configuration.h"                  // Include header file
+#include "bcc_spiwrapper.h"
 #include "cli.h"
+#include <math.h>
 
 /*******************************************************************************
  * Defines
  ******************************************************************************/
 
 /*! @brief 0 degree Celsius converted to Kelvin. */
-#define NTC_DEGC_0      	273.15
+#define NTC_DEGC_0          273.15
 
-#define LAST_CELL_BITVALUE 	5
-#define ALL_CELL_MASK 		0x3F
+#define LAST_CELL_BITVALUE  5
+#define ALL_CELL_MASK       0x3F
 
 /*******************************************************************************
  * Private functions declerations
  ******************************************************************************/
 /*!  @brief this function can be used to calculate the register value from the temperature 
  *   @param temp the temperature the user wants the register value from as a double or float
- * 	 @param upperTh true if it is the upper threshold
+ *   @param upperTh true if it is the upper threshold
  *   @return it will return the register value as an uint16
  */
 static uint16_t CalcRegFromTemp(float temp, bool upperTh);
@@ -91,12 +93,11 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
 /*******************************************************************************
  * Public functions
  ******************************************************************************/
-
 /*!
  * @brief   This function is used to configure the temperature thresholds for the 
  *          TH_ANx_OT and TH_ANx_UT registers. 
  *
- * @warning this should be set after initialization!  
+ * @warning this should be set after initialization!
  *
  * @param   drvConfig Pointer to driver instance configuration.
  * @param   cid Cluster Identification Address.
@@ -110,92 +111,91 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
  * @return  BCC error status.
  */
  bcc_status_t bcc_configuration_changeTempTH(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
- 	uint8_t ANxbits, float *lowerTH, float *upperTH)
+    uint8_t ANxbits, float *lowerTH, float *upperTH)
  {
- 	bcc_status_t lvRetValue = BCC_STATUS_SUCCESS;
- 	int i;
- 	uint16_t regVal;
- 	uint16_t retRegVal;
+    bcc_status_t lvRetValue = BCC_STATUS_SUCCESS;
+    int i;
+    uint16_t regVal;
+    uint16_t retRegVal;
 
- 	// there are 7 AN registers
- 	for(i = 0; i < 7; i++)
- 	{
- 		// check if the bit is set
- 		if(ANxbits & (1<<i))
- 		{
- 			// set the lower threshold if not NULL
- 			if(lowerTH != NULL)
- 			{
- 				// calculate the lower temperature threshold register vaulue 
- 				regVal = CalcRegFromTemp(*lowerTH, false);
+    // there are 7 AN registers
+    for(i = 0; i < 7; i++)
+    {
+        // check if the bit is set
+        if(ANxbits & (1<<i))
+        {
+            // set the lower threshold if not NULL
+            if(lowerTH != NULL)
+            {
+                // calculate the lower temperature threshold register vaulue 
+                regVal = CalcRegFromTemp(*lowerTH, false);
 
- 				// write the lower temperature threshold
- 				lvRetValue |= BCC_Reg_Write(drvConfig, cid, (BCC_REG_TH_AN0_UT_ADDR - i), regVal, &retRegVal);
+                // write the lower temperature threshold
+                lvRetValue |= bcc_spiwrapper_BCC_Reg_Write(drvConfig, cid, (BCC_REG_TH_AN0_UT_ADDR - i), regVal, &retRegVal);
 
- 				// check for error
-				if(lvRetValue != BCC_STATUS_SUCCESS)
-				{
-					// report to user
-					cli_printfError("bcc_configuration ERROR: couldn't write lower threshold! %d \n", lvRetValue);
-				}
+                // check for error
+                if(lvRetValue != BCC_STATUS_SUCCESS)
+                {
+                    // report to user
+                    cli_printfError("bcc_configuration ERROR: couldn't write lower threshold! %d \n", lvRetValue);
+                }
 
-				// read the register
-				lvRetValue |= BCC_Reg_Read(drvConfig, cid, (BCC_REG_TH_AN0_UT_ADDR - i), 1, &retRegVal);
+                // read the register
+                lvRetValue |= bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, (BCC_REG_TH_AN0_UT_ADDR - i), 1, &retRegVal);
 
-				// check for error
-				if(lvRetValue != BCC_STATUS_SUCCESS)
-				{
-					// report to user
-					cli_printfError("bcc_configuration ERROR: couldn't read lower threshold! %d \n", lvRetValue);
-				}
+                // check for error
+                if(lvRetValue != BCC_STATUS_SUCCESS)
+                {
+                    // report to user
+                    cli_printfError("bcc_configuration ERROR: couldn't read lower threshold! %d \n", lvRetValue);
+                }
 
- 				// check if it didn't work
- 				if(regVal != retRegVal)
- 				{
- 					// report to user
- 					cli_printfError("bcc_configuration ERROR: couldn't set the lower temp threshold! %d != %d \n", regVal, retRegVal);
- 				}
+                // check if it didn't work
+                if(regVal != retRegVal)
+                {
+                    // report to user
+                    cli_printfError("bcc_configuration ERROR: couldn't set the lower temp threshold! %d != %d \n", regVal, retRegVal);
+                }
+            }
 
- 			}
+            // set the upper threshold if not NULL
+            if(upperTH != NULL)
+            {
+                // calculate the lower temperature threshold register vaulue 
+                regVal = CalcRegFromTemp(*upperTH, true);
 
- 			// set the upper threshold if not NULL
- 			if(upperTH != NULL)
- 			{
- 				// calculate the lower temperature threshold register vaulue 
- 				regVal = CalcRegFromTemp(*upperTH, true);
+                // write the lower temperature threshold
+                lvRetValue |= bcc_spiwrapper_BCC_Reg_Write(drvConfig, cid, (BCC_REG_TH_AN0_OT_ADDR - i), regVal, &retRegVal);
+                
+                // check for error
+                if(lvRetValue != BCC_STATUS_SUCCESS)
+                {
+                    // report to user
+                    cli_printfError("bcc_configuration ERROR: couldn't write upper threshold! %d \n", lvRetValue);
+                }
 
- 				// write the lower temperature threshold
- 				lvRetValue |= BCC_Reg_Write(drvConfig, cid, (BCC_REG_TH_AN0_OT_ADDR - i), regVal, &retRegVal);
- 				
- 				// check for error
-				if(lvRetValue != BCC_STATUS_SUCCESS)
-				{
-					// report to user
-					cli_printfError("bcc_configuration ERROR: couldn't write upper threshold! %d \n", lvRetValue);
-				}
+                // read the register
+                lvRetValue |= bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, (BCC_REG_TH_AN0_OT_ADDR - i), 1, &retRegVal);
 
-				// read the register
-				lvRetValue |= BCC_Reg_Read(drvConfig, cid, (BCC_REG_TH_AN0_OT_ADDR - i), 1, &retRegVal);
+                // check for error
+                if(lvRetValue != BCC_STATUS_SUCCESS)
+                {
+                    // report to user
+                    cli_printfError("bcc_configuration ERROR: couldn't read upper threshold! %d \n", lvRetValue);
+                }
 
-				// check for error
-				if(lvRetValue != BCC_STATUS_SUCCESS)
-				{
-					// report to user
-					cli_printfError("bcc_configuration ERROR: couldn't read upper threshold! %d \n", lvRetValue);
-				}
+                // check if it didn't work
+                if(regVal != retRegVal)
+                {
+                    // report to user
+                    cli_printfError("bcc_configuration ERROR: couldn't set the upper temp threshold! %d != %d \n", regVal, retRegVal);
+                }
+            }
+        }
+    }
 
- 				// check if it didn't work
- 				if(regVal != retRegVal)
- 				{
- 					// report to user
- 					cli_printfError("bcc_configuration ERROR: couldn't set the upper temp threshold! %d != %d \n", regVal, retRegVal);
- 				}
- 			}
- 		}
- 	}
-
- 	// return to the user
- 	return lvRetValue;
+    // return to the user
+    return lvRetValue;
  }
 
 /*!
@@ -217,56 +217,56 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
  bcc_status_t bcc_configuration_disableNEnableANx(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
     uint8_t ANxbits, bool disable)
  {
- 	bcc_status_t lvRetValue = BCC_STATUS_SUCCESS;
- 	int i;
- 	uint16_t regVal = 0, regMask = 0;
- 	uint16_t retRegVal;
+    bcc_status_t lvRetValue = BCC_STATUS_SUCCESS;
+    int i;
+    uint16_t regVal = 0, regMask = 0;
+    uint16_t retRegVal;
 
- 	// there are 7 AN registers
- 	for(i = 0; i < 7; i++)
- 	{
- 		// check if the bit is set
- 		if(ANxbits & (1<<i))
- 		{
- 			// update the regval
- 			regVal |= ((disable<<1) << (i*2));
+    // there are 7 AN registers
+    for(i = 0; i < 7; i++)
+    {
+        // check if the bit is set
+        if(ANxbits & (1<<i))
+        {
+            // update the regval
+            regVal |= ((disable<<1) << (i*2));
 
- 			// make the mask
- 			regMask |= (3 << (i*2));
- 		}
- 	}
+            // make the mask
+            regMask |= (3 << (i*2));
+        }
+    }
 
- 	// update the register
- 	lvRetValue = BCC_Reg_Update(drvConfig, cid, BCC_REG_GPIO_CFG1_ADDR, regMask, regVal);
+    // update the register
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Update(drvConfig, cid, BCC_REG_GPIO_CFG1_ADDR, regMask, regVal);
 
- 	// check for error
-	if(lvRetValue != BCC_STATUS_SUCCESS)
-	{
-		// report to user
-		cli_printfError("bcc_configuration ERROR: couldn't update GPIO_CFG1! %d \n", lvRetValue);
-	}
+    // check for error
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: couldn't update GPIO_CFG1! %d \n", lvRetValue);
+    }
 
-	// read the register
-	lvRetValue = BCC_Reg_Read(drvConfig, cid, BCC_REG_GPIO_CFG1_ADDR, 1, &retRegVal);
+    // read the register
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, BCC_REG_GPIO_CFG1_ADDR, 1, &retRegVal);
 
-	// check for error
-	if(lvRetValue != BCC_STATUS_SUCCESS)
-	{
-		// report to user
-		cli_printfError("bcc_configuration ERROR: couldn't read GPIO_CFG1! %d \n", lvRetValue);
-	}
+    // check for error
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: couldn't read GPIO_CFG1! %d \n", lvRetValue);
+    }
 
-	// check if it didn't work
-	if(regVal != (retRegVal & regMask))
-	{
-		// set the return value to an error
-		lvRetValue = BCC_STATUS_PARAM_RANGE;
-		
-		// report to user
-		cli_printfError("bcc_configuration ERROR: couldn't set GPIO_CFG1! %d != %d \n", regVal, (retRegVal &regMask));
-	}
+    // check if it didn't work
+    if(regVal != (retRegVal & regMask))
+    {
+        // set the return value to an error
+        lvRetValue = BCC_STATUS_PARAM_RANGE;
+        
+        // report to user
+        cli_printfError("bcc_configuration ERROR: couldn't set GPIO_CFG1! %d != %d \n", regVal, (retRegVal &regMask));
+    }
 
- 	return lvRetValue;
+    return lvRetValue;
  }
 
  /*!
@@ -289,98 +289,90 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
  bcc_status_t bcc_configuration_changeANxVTH(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
     uint8_t ANxbits, uint16_t *lowerTH, uint16_t *upperTH)
  {
- 	bcc_status_t lvRetValue = BCC_STATUS_SUCCESS;
- 	int i;
- 	uint16_t regVal;
- 	uint16_t retRegVal;
+    bcc_status_t lvRetValue = BCC_STATUS_SUCCESS;
+    int i;
+    uint16_t regVal;
+    uint16_t retRegVal;
 
- 	// there are 7 AN registers
- 	for(i = 0; i < 7; i++)
- 	{
- 		// check if the bit is set
- 		if(ANxbits & (1<<i))
- 		{
- 			// set the lower threshold if not NULL
- 			if(lowerTH != NULL)
- 			{
- 				// calculate the lower temperature threshold register vaulue 
- 				regVal = BCC_SET_ANX_OT_TH(*lowerTH); //CalcRegFromTemp(*lowerTH, false);
+    // there are 7 AN registers
+    for(i = 0; i < 7; i++)
+    {
+        // check if the bit is set
+        if(ANxbits & (1<<i))
+        {
+            // set the lower threshold if not NULL
+            if(lowerTH != NULL)
+            {
+                // calculate the lower temperature threshold register vaulue 
+                regVal = BCC_SET_ANX_OT_TH(*lowerTH);
 
- 				//cli_printf("setting AN%d OT to %dmv regVal: %d\n", i, *lowerTH, regVal);
+                // write the lower temperature threshold
+                lvRetValue |= bcc_spiwrapper_BCC_Reg_Write(drvConfig, cid, (BCC_REG_TH_AN0_OT_ADDR - i), regVal, &retRegVal);
 
- 				// write the lower temperature threshold
- 				lvRetValue |= BCC_Reg_Write(drvConfig, cid, (BCC_REG_TH_AN0_OT_ADDR - i), regVal, &retRegVal);
+                // check for error
+                if(lvRetValue != BCC_STATUS_SUCCESS)
+                {
+                    // report to user
+                    cli_printfError("bcc_configuration ERROR: couldn't write lower threshold! %d \n", lvRetValue);
+                }
 
- 				// check for error
-				if(lvRetValue != BCC_STATUS_SUCCESS)
-				{
-					// report to user
-					cli_printfError("bcc_configuration ERROR: couldn't write lower threshold! %d \n", lvRetValue);
-				}
+                // read the register
+                lvRetValue |= bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, (BCC_REG_TH_AN0_OT_ADDR - i), 1, &retRegVal);
 
-				// read the register
-				lvRetValue |= BCC_Reg_Read(drvConfig, cid, (BCC_REG_TH_AN0_OT_ADDR - i), 1, &retRegVal);
+                // check for error
+                if(lvRetValue != BCC_STATUS_SUCCESS)
+                {
+                    // report to user
+                    cli_printfError("bcc_configuration ERROR: couldn't read lower threshold! %d \n", lvRetValue);
+                }
 
-				//cli_printf("reading from %x: %d\n", (BCC_REG_TH_AN0_OT_ADDR - i), retRegVal);
+                // check if it didn't work
+                if(regVal != retRegVal)
+                {
+                    // report to user
+                    cli_printfError("bcc_configuration ERROR: couldn't set the lower temp threshold! %d != %d \n", regVal, retRegVal);
+                }
 
-				// check for error
-				if(lvRetValue != BCC_STATUS_SUCCESS)
-				{
-					// report to user
-					cli_printfError("bcc_configuration ERROR: couldn't read lower threshold! %d \n", lvRetValue);
-				}
+            }
 
- 				// check if it didn't work
- 				if(regVal != retRegVal)
- 				{
- 					// report to user
- 					cli_printfError("bcc_configuration ERROR: couldn't set the lower temp threshold! %d != %d \n", regVal, retRegVal);
- 				}
+            // set the upper threshold if not NULL
+            if(upperTH != NULL)
+            {
+                // calculate the lower temperature threshold register vaulue 
+                regVal = BCC_SET_ANX_UT_TH(*upperTH);
 
- 			}
+                // write the lower temperature threshold
+                lvRetValue |= bcc_spiwrapper_BCC_Reg_Write(drvConfig, cid, (BCC_REG_TH_AN0_UT_ADDR - i), regVal, &retRegVal);
+                
+                // check for error
+                if(lvRetValue != BCC_STATUS_SUCCESS)
+                {
+                    // report to user
+                    cli_printfError("bcc_configuration ERROR: couldn't write upper threshold! %d \n", lvRetValue);
+                }
 
- 			// set the upper threshold if not NULL
- 			if(upperTH != NULL)
- 			{
- 				// calculate the lower temperature threshold register vaulue 
- 				regVal = BCC_SET_ANX_UT_TH(*upperTH);//CalcRegFromTemp(*upperTH, true);
+                // read the register
+                lvRetValue |= bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, (BCC_REG_TH_AN0_UT_ADDR - i), 1, &retRegVal);
 
- 				//cli_printf("setting AN%d UT to %dmv reg: %d\n", i, *upperTH, regVal);
+                // check for error
+                if(lvRetValue != BCC_STATUS_SUCCESS)
+                {
+                    // report to user
+                    cli_printfError("bcc_configuration ERROR: couldn't read upper threshold! %d \n", lvRetValue);
+                }
 
- 				// write the lower temperature threshold
- 				lvRetValue |= BCC_Reg_Write(drvConfig, cid, (BCC_REG_TH_AN0_UT_ADDR - i), regVal, &retRegVal);
- 				
- 				// check for error
-				if(lvRetValue != BCC_STATUS_SUCCESS)
-				{
-					// report to user
-					cli_printfError("bcc_configuration ERROR: couldn't write upper threshold! %d \n", lvRetValue);
-				}
+                // check if it didn't work
+                if(regVal != retRegVal)
+                {
+                    // report to user
+                    cli_printfError("bcc_configuration ERROR: couldn't set the upper temp threshold! %d != %d \n", regVal, retRegVal);
+                }
+            }
+        }
+    }
 
-				// read the register
-				lvRetValue |= BCC_Reg_Read(drvConfig, cid, (BCC_REG_TH_AN0_UT_ADDR - i), 1, &retRegVal);
-
-				//cli_printf("reading from %x: %d\n", (BCC_REG_TH_AN0_UT_ADDR - i), retRegVal);
-
-				// check for error
-				if(lvRetValue != BCC_STATUS_SUCCESS)
-				{
-					// report to user
-					cli_printfError("bcc_configuration ERROR: couldn't read upper threshold! %d \n", lvRetValue);
-				}
-
- 				// check if it didn't work
- 				if(regVal != retRegVal)
- 				{
- 					// report to user
- 					cli_printfError("bcc_configuration ERROR: couldn't set the upper temp threshold! %d != %d \n", regVal, retRegVal);
- 				}
- 			}
- 		}
- 	}
-
- 	// return to the user
- 	return lvRetValue;
+    // return to the user
+    return lvRetValue;
  }
 
  /*!
@@ -399,87 +391,99 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
  * @return  BCC error status.
  */
  bcc_status_t bcc_configuration_ChangeCellVTH(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
- 	float *lowerTH, float *upperTH)
-    //uint8_t cellBits, float *lowerTH, float *upperTH)
+    float *lowerTH, float *upperTH)
  {
- 	bcc_status_t lvRetValue = BCC_STATUS_SUCCESS;
- 	uint16_t regVal;
- 	uint16_t retRegVal;
- 	uint16_t intValue;
+    bcc_status_t lvRetValue = BCC_STATUS_SUCCESS;
+    uint16_t regVal;
+    uint16_t retRegVal;
+    uint32_t intValue;
 
-	// get the previous register value
-	lvRetValue |= BCC_Reg_Read(drvConfig, cid, BCC_REG_TH_ALL_CT_ADDR, 1, &regVal);
+    // get the previous register value
+    lvRetValue |= bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, BCC_REG_TH_ALL_CT_ADDR, 1, &regVal);
 
-	// check if it didn't work
-	if(lvRetValue != BCC_STATUS_SUCCESS)
-	{
-		// report to user
-		cli_printfError("bcc_configuration ERROR: couldn't read cell voltage thresholds! %d \n", lvRetValue);
-	}
-	else
-	{
-		// set the lower threshold if not NULL
-		if(lowerTH != NULL)
-		{
-			//remove the theshold bits from the register value
-			regVal &= ~((uint16_t)(0xFF << BCC_RW_ALL_CT_UV_TH_SHIFT));
+    // check if it didn't work
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: couldn't read cell voltage thresholds! %d \n", lvRetValue);
+    }
+    else
+    {
+        // set the lower threshold if not NULL
+        if(lowerTH != NULL)
+        {
+            //remove the theshold bits from the register value
+            regVal &= ~((uint16_t)(0xFF << BCC_RW_ALL_CT_UV_TH_SHIFT));
 
-			// convert to integer *1000
-			intValue = (uint16_t)(round((*lowerTH)*1000));
+            // convert to integer *1000
+            intValue = (uint32_t)(round((*lowerTH)*1000));
 
-			//cli_printf("int: %d rounded: %f\n", 5, round(5.5));
+            // calculate the lower voltage threshold register value and set the bits
+            regVal |= BCC_SET_ALL_CT_UV_TH((uint16_t)intValue);
+        }
 
-			// calculate the lower voltage threshold register vaulue and set the bits
-			regVal |= BCC_SET_ALL_CT_UV_TH(intValue);
+        // set the upper threshold if not NULL
+        if(upperTH != NULL)
+        {
+            //remove the theshold bits from the register value
+            regVal &= ~((uint16_t)(0xFF << BCC_RW_ALL_CT_OV_TH_SHIFT));
 
-			//cli_printf("setting ALL_CT_UV_TH with: %0X == %dmV == %fV regAdd: %d \n", regVal, intValue, *lowerTH, BCC_SET_ALL_CT_UV_TH(intValue));
-		}
+            // convert to integer * 1000 (mV)
+            intValue = (uint32_t)(round((*upperTH)*1000));
 
-		// set the upper threshold if not NULL
-		if(upperTH != NULL)
-		{
-			//remove the theshold bits from the register value
-			regVal &= ~((uint16_t)(0xFF << BCC_RW_ALL_CT_OV_TH_SHIFT));
+            // calculate the higher voltage threshold register value (19,53mV/LSB)
+            intValue = (uint32_t)(((intValue) * 100U) / 1953U);
 
-			// convert to integer *1000
-			intValue = (uint16_t)(round((*upperTH)*1000));
+            // check if the wanted TH value is higher than the average with the next point (19,53mV steps)
+            if(((((uint32_t)(round((*upperTH)*100000))) - (1953*intValue)) / 1953.0) > 0.5)
+            {
+                // Add 2 to be sure to not trigger too soon on the cell ov 
+                intValue = intValue + 2;
+            }
+            // if the value to be set just a little lower than the wanted value
+            else
+            {
+                // add 1 to be sure the threshold for the BCC is a little higher 
+                intValue = intValue + 1;
+            }
 
-			// calculate the lower voltage threshold register vaulue and set the bits
-			regVal |= BCC_SET_ALL_CT_OV_TH(intValue);
+            // shift the bits correctly and add it to the registervalue
+            regVal |= (uint16_t)intValue << BCC_RW_ALL_CT_OV_TH_SHIFT;
 
-			//cli_printf("setting ALL_CT_OV_TH with: %0X == %dmV == %fV regAdd: %d \n", regVal, intValue, *upperTH, BCC_SET_ALL_CT_OV_TH(intValue));
-		}
+            // output to the user
+            cli_printf("BCC overvoltage set to %dmV\n", (intValue * 1953) / 100);
+        }
 
-		// write the lower temperature threshold
-		lvRetValue |= BCC_Reg_Write(drvConfig, cid, (BCC_REG_TH_ALL_CT_ADDR), regVal, &retRegVal);
+        // write the lower temperature threshold
+        lvRetValue |= bcc_spiwrapper_BCC_Reg_Write(drvConfig, cid, (BCC_REG_TH_ALL_CT_ADDR), 
+            regVal, &retRegVal);
 
-		if(lvRetValue != BCC_STATUS_SUCCESS)
-		{
-			// report to user
-			cli_printfError("bcc_configuration ERROR: write TH_CTx failed! error: %d \n", lvRetValue);
-		}
+        if(lvRetValue != BCC_STATUS_SUCCESS)
+        {
+            // report to user
+            cli_printfError("bcc_configuration ERROR: write TH_CTx failed! error: %d \n", lvRetValue);
+        }
 
-		// read the register
-		lvRetValue |= BCC_Reg_Read(drvConfig, cid, (BCC_REG_TH_ALL_CT_ADDR), 1, &retRegVal);
+        // read the register
+        lvRetValue |= bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, (BCC_REG_TH_ALL_CT_ADDR), 
+            1, &retRegVal);
 
-		//cli_printf("reading from BCC_REG_TH_ALL_CT_ADDR with %x\n", retRegVal); 
+        if(lvRetValue != BCC_STATUS_SUCCESS)
+        {
+            // report to user
+            cli_printfError("bcc_configuration ERROR: read TH_CTx failed! error: %d \n", lvRetValue);
+        }
 
-		if(lvRetValue != BCC_STATUS_SUCCESS)
-		{
-			// report to user
-			cli_printfError("bcc_configuration ERROR: read TH_CTx failed! error: %d \n", lvRetValue);
-		}
+        // check if it didn't work
+        if(regVal != retRegVal)
+        {
+            // report to user
+            cli_printfError("bcc_configuration ERROR: couldn't set the cell voltage thresholds! %d != %d \n", regVal, retRegVal);
+        }
+    }
 
-		// check if it didn't work
-		if(regVal != retRegVal)
-		{
-			// report to user
-			cli_printfError("bcc_configuration ERROR: couldn't set the cell voltage thresholds! %d != %d \n", regVal, retRegVal);
-		}
-	}
-
- 	// return to the user
- 	return lvRetValue;
+    // return to the user
+    return lvRetValue;
  }
 
 /*!
@@ -494,41 +498,44 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
  bcc_status_t bcc_configuration_changeSleepITH(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
     uint8_t sleepCurrentmA)
  {
- 	bcc_status_t lvRetValue;
- 	uint16_t regVal, retRegVal;
+    bcc_status_t lvRetValue;
+    uint16_t regVal, retRegVal;
 
- 	// calculate the registervalue
-	regVal = BCC_SET_TH_ISENSE_OC(sleepCurrentmA*SHUNT_RESISTOR);
+    // write the registervalue
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, BCC_REG_TH_ISENSE_OC_ADDR, 1, &retRegVal);
 
- 	// write the registervalue
-	lvRetValue = BCC_Reg_Write(drvConfig, cid, BCC_REG_TH_ISENSE_OC_ADDR, regVal, &retRegVal);
+    // calculate the registervalue
+    regVal = BCC_SET_TH_ISENSE_OC(sleepCurrentmA*SHUNT_RESISTOR);
 
- 	// check for errors
-	if(lvRetValue != BCC_STATUS_SUCCESS)
-	{
-		// report to user
-		cli_printfError("bcc_configuration ERROR: write TH_ISENSE failed! error: %d \n", lvRetValue);
-	}
+    // write the registervalue
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Write(drvConfig, cid, BCC_REG_TH_ISENSE_OC_ADDR, regVal, &retRegVal);
 
-	// write the registervalue
-	lvRetValue = BCC_Reg_Read(drvConfig, cid, BCC_REG_TH_ISENSE_OC_ADDR, 1, &retRegVal);
+    // check for errors
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: write TH_ISENSE failed! error: %d \n", lvRetValue);
+    }
 
- 	// check for errors
-	if(lvRetValue != BCC_STATUS_SUCCESS)
-	{
-		// report to user
-		cli_printfError("bcc_configuration ERROR: read TH_ISENSE failed! error: %d \n", lvRetValue);
-	}
+    // write the registervalue
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, BCC_REG_TH_ISENSE_OC_ADDR, 1, &retRegVal);
 
-	// check if it didn't work
-	if(regVal != retRegVal)
-	{
-		// report to user
-		cli_printfError("bcc_configuration ERROR: couldn't set the I sense threshold! %d != %d \n", regVal, retRegVal);
-	}
+    // check for errors
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: read TH_ISENSE failed! error: %d \n", lvRetValue);
+    }
 
-	// return to the user
- 	return lvRetValue;
+    // check if it didn't work
+    if(regVal != retRegVal)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: couldn't set the I sense threshold! %d != %d \n", regVal, retRegVal);
+    }
+
+    // return to the user
+    return lvRetValue;
  }
 
  /*!
@@ -544,43 +551,43 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
  bcc_status_t bcc_configuration_changeCyclicTimer(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
     uint8_t newTimeS)
  {
- 	bcc_status_t lvRetValue;
- 	uint16_t regVal = BCC_CYCLIC_TIMER_CONTINOUS;
+    bcc_status_t lvRetValue;
+    uint16_t regVal = BCC_CYCLIC_TIMER_CONTINOUS;
 
- 	// calculate the new time
- 	if(newTimeS == 1)
-	{
- 		// set to 1s
- 		regVal = BCC_CYCLIC_TIMER_1S;
-	}
- 	else if (newTimeS < 4)
-	{
- 		// set to 2s
- 		regVal = BCC_CYCLIC_TIMER_2S;
-	}
- 	else if (newTimeS < 8)
-	{
- 		// set to 4s
- 		regVal = BCC_CYCLIC_TIMER_4S;
-	}
- 	else 
-	{
- 		// set to 8s
- 		regVal = BCC_CYCLIC_TIMER_8S;
-	}
+    // calculate the new time
+    if(newTimeS == 1)
+    {
+        // set to 1s
+        regVal = BCC_CYCLIC_TIMER_1S;
+    }
+    else if (newTimeS < 4)
+    {
+        // set to 2s
+        regVal = BCC_CYCLIC_TIMER_2S;
+    }
+    else if (newTimeS < 8)
+    {
+        // set to 4s
+        regVal = BCC_CYCLIC_TIMER_4S;
+    }
+    else 
+    {
+        // set to 8s
+        regVal = BCC_CYCLIC_TIMER_8S;
+    }
 
- 	// update the register
- 	lvRetValue = BCC_Reg_Update(drvConfig, cid, BCC_REG_SYS_CFG1_ADDR, BCC_RW_CYCLIC_TIMER_MASK, regVal);
+    // update the register
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Update(drvConfig, cid, BCC_REG_SYS_CFG1_ADDR, BCC_RW_CYCLIC_TIMER_MASK, regVal);
 
- 	// check for errors
- 	if(lvRetValue != BCC_STATUS_SUCCESS)
-	{
-		// report to user
-		cli_printfError("bcc_configuration ERROR: update cyclic_timer failed! error: %d \n", lvRetValue);
-	}
+    // check for errors
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: update cyclic_timer failed! error: %d \n", lvRetValue);
+    }
 
- 	// return to the user
- 	return lvRetValue;
+    // return to the user
+    return lvRetValue;
  }
 
   /*!
@@ -596,146 +603,313 @@ static uint16_t CalcRegFromTemp(float temp, bool upperTh);
  bcc_status_t bcc_configuration_changeCellCount(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
     uint8_t newCellCount)
  {
- 	bcc_status_t lvRetValue;
- 	uint16_t regVal, retRegVal; 
- 	int i;
+    bcc_status_t lvRetValue;
+    uint16_t regVal, retRegVal; 
+    int i;
 
- 	// check for error input
- 	if(newCellCount < 0 || newCellCount > 6)
- 	{
- 		return BCC_STATUS_PARAM_RANGE;
- 	}
+    // check for error input
+    if(newCellCount < 0 || newCellCount > 6)
+    {
+        return BCC_STATUS_PARAM_RANGE;
+    }
 
- 	// calc if odd or even 
- 	// TODO should the even and odd be implemented? because the last cell is always used
- 	if (newCellCount % 2)
- 	{
- 		// if it is odd
- 		regVal = BCC_ODD_CELLS;
- 	}
- 	else
- 	{
- 		// is it is even
- 		regVal = BCC_EVEN_CELLS;
- 	}
+    // calc if odd or even 
+    if (newCellCount % 2)
+    {
+        // if it is odd
+        regVal = BCC_ODD_CELLS;
+    }
+    else
+    {
+        // is it is even
+        regVal = BCC_EVEN_CELLS;
+    }
 
- 	// update the register
- 	lvRetValue = BCC_Reg_Update(drvConfig, cid, BCC_REG_SYS_CFG2_ADDR, BCC_RW_NUMB_ODD_MASK, regVal);
+    // update the register
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Update(drvConfig, cid, 
+        BCC_REG_SYS_CFG2_ADDR, BCC_RW_NUMB_ODD_MASK, regVal);
 
- 	// check for errors
- 	if(lvRetValue != BCC_STATUS_SUCCESS)
-	{
-		// report to user
-		cli_printfError("bcc_configuration ERROR: write ODD cells failed! error: %d \n", lvRetValue);
-	}
+    // check for errors
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: write ODD cells failed! error: %d \n", lvRetValue);
+    }
 
-	// read the register to check it
- 	lvRetValue |= BCC_Reg_Read(drvConfig, cid, BCC_REG_SYS_CFG2_ADDR, 1, &retRegVal);
+    // read the register to check it
+    lvRetValue |= bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, BCC_REG_SYS_CFG2_ADDR, 1, &retRegVal);
 
- 	// check for errors
- 	if(lvRetValue != BCC_STATUS_SUCCESS)
-	{
-		// report to user
-		cli_printfError("bcc_configuration ERROR: read ODD failed! error: %d \n", lvRetValue);
-	}
+    // check for errors
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: read ODD failed! error: %d \n", lvRetValue);
+    }
 
-	// check if worked
- 	if(regVal != (retRegVal & BCC_RW_NUMB_ODD_MASK))
-	{
-		// report to user
-		cli_printfError("bcc_configuration ERROR: update ODD cells failed! %d != %d\n", regVal, (retRegVal &BCC_RW_NUMB_ODD_MASK));
-	}
+    // check if worked
+    if(regVal != (retRegVal & BCC_RW_NUMB_ODD_MASK))
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: update ODD cells failed! %d != %d\n", 
+            regVal, (retRegVal &BCC_RW_NUMB_ODD_MASK));
+    }
 
-	// reset the regval
-	regVal = 0;
+    // reset the regval
+    regVal = 0;
 
-	// set the new th enable register 
-	for(i = 0; i < newCellCount; i++)
-	{
-		// check if it is the first 2 cells
-		if(i >= 2)
-		{
-		    // calculate the BCC pin index
-		    regVal |= 1 << ((6-newCellCount) + i);
-		}
-		else
-		{
-		    // it is the first 2 cells
-		    regVal |= 1 << i;
-		}		
-	}
+    // set the new th enable register 
+    for(i = 0; i < newCellCount; i++)
+    {
+        // check if it is the first 2 cells
+        if(i >= 2)
+        {
+            // calculate the BCC pin index
+            regVal |= 1 << ((6-newCellCount) + i);
+        }
+        else
+        {
+            // it is the first 2 cells
+            regVal |= 1 << i;
+        }       
+    }
 
-	//cli_printf("bccCells: %d\n", regVal);
+    //cli_printf("bccCells: %d\n", regVal);
 
-	// update the register 
-	lvRetValue = BCC_Reg_Update(drvConfig, cid, BCC_REG_OV_UV_EN_ADDR, ALL_CELL_MASK, regVal);
+    // update the register 
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Update(drvConfig, cid, BCC_REG_OV_UV_EN_ADDR, ALL_CELL_MASK, regVal);
 
- 	// check for errors
- 	if(lvRetValue != BCC_STATUS_SUCCESS)
-	{
-		// report to user
-		cli_printfError("bcc_configuration ERROR: write th en cells failed! error: %d \n", lvRetValue);
-	}
+    // check for errors
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: write th en cells failed! error: %d \n", 
+            lvRetValue);
+    }
 
-	// read the register to check it
- 	lvRetValue |= BCC_Reg_Read(drvConfig, cid, BCC_REG_OV_UV_EN_ADDR, 1, &retRegVal);
+    // read the register to check it
+    lvRetValue |= bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, BCC_REG_OV_UV_EN_ADDR, 1, &retRegVal);
 
- 	// check for errors
- 	if(lvRetValue != BCC_STATUS_SUCCESS)
-	{
-		// report to user
-		cli_printfError("bcc_configuration ERROR: read th en failed! error: %d \n", lvRetValue);
-	}
+    // check for errors
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: read th en failed! error: %d \n", lvRetValue);
+    }
 
-	// check if worked
- 	if(regVal != (retRegVal & 0x3F))
-	{
-		// report to user
-		cli_printfError("bcc_configuration ERROR: update th en failed! %d != %d\n", regVal, (retRegVal &0x3F));
-	}
+    // check if worked
+    if(regVal != (retRegVal & 0x3F))
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: update th en failed! %d != %d\n", 
+            regVal, (retRegVal &0x3F));
+    }
 
- 	// return to the user
- 	return lvRetValue;
+    // return to the user
+    return lvRetValue;
  }
+
+ /*!
+ * @brief   This function is used to enable or disable the CC_OVR_FLT mask, 
+ *          to set it the fault pin needs to be set or not with this fault.
+ *
+ * @param   drvConfig Pointer to driver instance configuration.
+ * @param   cid Cluster Identification Address.
+ * @param   enable if this fault needs to be enabled.
+ *
+ * @return  BCC error status.
+ */
+ bcc_status_t bcc_configuration_setCCOvrFltEnable(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
+    bool enable)
+{
+    bcc_status_t lvRetValue;
+    uint16_t regVal, retRegVal;
+
+    // check if it needs to be enabled
+    if(enable)
+    {
+        // set the registervalue
+        regVal = BCC_CC_OVR_FLT_EN;
+    }
+    else
+    {
+        // set the registervalue
+        regVal = BCC_CC_OVR_FLT_DIS;
+    }
+    
+    // update the FAULT_MASK3 register
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Update(drvConfig, cid, BCC_REG_FAULT_MASK3_ADDR, BCC_CC_OVR_FLT_DIS, regVal);
+
+    // check for errors
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: write BCC_CC_OVR_FLT failed! error: %d \n", lvRetValue);
+    }
+
+    // read the register to check it
+    lvRetValue |= bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, BCC_REG_FAULT_MASK3_ADDR, 1, &retRegVal);
+
+    // check for errors
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: read BCC_CC_OVR_FLT failed! error: %d \n", lvRetValue);
+    }
+
+    // check if worked
+    if(regVal != (retRegVal & BCC_CC_OVR_FLT_DIS))
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: update BCC_CC_OVR_FLT failed! %d != %d\n", 
+            regVal, (retRegVal & BCC_CC_OVR_FLT_DIS));
+    }
+
+    // return
+    return lvRetValue;
+}
+
+ /*!
+ * @brief   This function is used to enable or disable the CSB_WUP_FLT mask, 
+ *          to set it the fault pin needs to be set or not with this fault.
+ *
+ * @param   drvConfig Pointer to driver instance configuration.
+ * @param   cid Cluster Identification Address.
+ * @param   enable if this fault needs to be enabled.
+ *
+ * @return  BCC error status.
+ */
+ bcc_status_t bcc_configuration_setCSbFltEnable(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
+    bool enable)
+ {
+    bcc_status_t lvRetValue;
+    uint16_t regVal, retRegVal;
+
+    // check if it needs to be enabled
+    if(enable)
+    {
+        // set the registervalue
+        regVal = BCC_CSB_WUP_FLT_EN;
+    }
+    else
+    {
+        // set the registervalue
+        regVal = BCC_CSB_WUP_FLT_DIS;
+    }
+    
+    // update the FAULT_MASK3 register
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Update(drvConfig, cid, BCC_REG_FAULT_MASK1_ADDR, BCC_CSB_WUP_FLT_DIS, regVal);
+
+    // check for errors
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: write BCC_CSB_WUP_FLT failed! error: %d \n", lvRetValue);
+    }
+
+    // read the register to check it
+    lvRetValue |= bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, BCC_REG_FAULT_MASK1_ADDR, 1, &retRegVal);
+
+    // check for errors
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: read BCC_CSB_WUP_FLT failed! error: %d \n", lvRetValue);
+    }
+
+    // check if worked
+    if(regVal != (retRegVal & BCC_CSB_WUP_FLT_DIS))
+    {
+        // report to user
+        cli_printfError("bcc_configuration ERROR: update BCC_CSB_WUP_FLT failed! %d != %d\n", 
+            regVal, (retRegVal & BCC_CSB_WUP_FLT_DIS));
+    }
+
+    // return
+    return lvRetValue;
+ }
+
+/*!
+ * @brief   his function is used to check if the sleep current threshold mask is enabled, 
+ *
+ * @param   drvConfig Pointer to driver instance configuration.
+ * @param   cid Cluster Identification Address.
+ * @param   enabled address of the variable to be true if enabled.
+ *
+ * @return  BCC error status.
+ */
+bcc_status_t bcc_configuration_checkSleepCurrentTh(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
+    bool *enabled)
+{
+    bcc_status_t lvRetValue = BCC_STATUS_PARAM_RANGE;
+    uint16_t retRegVal[3];
+
+    // check for NULL pointer
+    if(enabled == NULL)
+    {
+        // error
+        cli_printfError("bcc_configuration_checkSleepCurrentTh ERROR: NULL pointer!\n");
+        return lvRetValue;
+    }
+
+    // read the register to check it
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, BCC_REG_WAKEUP_MASK1_ADDR, 3, retRegVal);
+
+    if(retRegVal[0] & BCC_IS_OC_WAKEUP_DIS)
+    {
+        cli_printfError("Wake up on IS OC not enabled!\n");
+    }
+
+    // read the register to check it
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, cid, BCC_REG_FAULT_MASK1_ADDR, 3, retRegVal);
+
+    // check if the IS_OC mask is enabled and if there was no error getting it
+    if((!(retRegVal[0] & BCC_IS_OC_FLT_DIS)) && !lvRetValue)
+    {
+        // set the variable to true
+        *enabled = true;
+    }
+    else
+    {
+        // set the variable to false
+        *enabled = false;
+    }
+
+    return lvRetValue;
+}
+
  /*******************************************************************************
  * Private functions
  ******************************************************************************/
 /*!  @brief this function can be used to calculate the register value from the temperature 
  *   @param temp the temperature the user wants the register value from as a double or float
- * 	 @param upperTh true if it is the upper threshold
+ *   @param upperTh true if it is the upper threshold
  *   @return it will return the register value as an uint16
  */
 static uint16_t CalcRegFromTemp(float temp, bool upperTh)
 {
-	uint16_t lvRetValue;
-	float lvmVolt;
+    uint16_t lvRetValue;
+    float lvmVolt;
 
-	//cli_printf("temp: %f, ", temp);
+    // calculate the NTC voltage in mV
+    lvmVolt = (exp(NTC_BETA * ((1.0 / (NTC_DEGC_0 + temp)) -  \
+        (1.0 / (NTC_DEGC_0 + NTC_REF_TEMP)))) * NTC_REF_RES);
 
-	// calculate the NTC voltage in mV
-	lvmVolt = (exp(NTC_BETA * ((1.0 / (NTC_DEGC_0 + temp)) -  \
-         (1.0 / (NTC_DEGC_0 + NTC_REF_TEMP)))) * NTC_REF_RES);
+    lvmVolt= ((NTC_VCOM * 1000 * lvmVolt) / (lvmVolt + NTC_PULL_UP));
 
-	lvmVolt= ((NTC_VCOM * 1000 * lvmVolt) / (lvmVolt + NTC_PULL_UP));
-
-	//cli_printf("volt: %f mv, ", lvmVolt);
-
-	// check if it is the lower or upper threshold
-	if(upperTh)
-	{
-		// set the upper th
-		lvRetValue = BCC_SET_ANX_OT_TH(lvmVolt);
-	}
-	else
-	{
-		// set the lower
-		lvRetValue = BCC_SET_ANX_UT_TH(lvmVolt);
-	}
-	
-	//cli_printf("reg: %d\n", lvRetValue);
-
-	// return the registervalue
-	return lvRetValue;
+    // check if it is the lower or upper threshold
+    if(upperTh)
+    {
+        // set the upper th
+        lvRetValue = BCC_SET_ANX_OT_TH(lvmVolt);
+    }
+    else
+    {
+        // set the lower
+        lvRetValue = BCC_SET_ANX_UT_TH(lvmVolt);
+    }
+    
+    // return the registervalue
+    return lvRetValue;
 }
 
 

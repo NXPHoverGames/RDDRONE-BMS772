@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 - 2020 NXP
+ * Copyright 2016 - 2021 NXP
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -47,7 +47,7 @@
  **         Battery Cell Controller (BCC) module - monitoring functions.
  **         This module contains functions linked to monitoring on BCC6 chip. \n
  ** @note
- ** 		This module was adapted from BCC SW examples by C. van Mierlo.
+ **         This module was adapted from BCC SW examples by C. van Mierlo.
  */
 
 
@@ -55,7 +55,7 @@
  * Includes
  ******************************************************************************/
 
-#include "bcc_monitoring.h" 					// Include header file
+#include "bcc_monitoring.h"                     // Include header file
 #include "data.h"
 #include "gpio.h"
 #include "cli.h"
@@ -64,9 +64,8 @@
 //#include <math.h>
 #include <float.h>
 #include "bcc_configuration.h"
+#include "bcc_spiwrapper.h"
 #include <semaphore.h>
-
-#include <nuttx/vt100.h>
 
 /*******************************************************************************
  * Definitions
@@ -75,45 +74,31 @@
 //#define OUTPUT_CURRENT_MEAS_DOT
 //#define OUTPUT_UPDATE_OTHER_MEAS
 
-//#define OUTPUT_STACK_VOLTAGE
-//#define OUTPUT_BAT_VOLTAGE
-//#define OUTPUT_OUTPUT_STATUS
-//#define OUTPUT_CURRENT
-//#define OUTPUT_TEMP
-//#define OUTPUT_CELL_VOLTAGE
-
-//#define OUTPUT_AVG_CURRENT
-//#define OUTPUT_AVG_TIME
-//#define OUTPUT_AVG_POWER
-//#define OUTPUT_STATE_OF_CHARGE
-//#define OUTPUT_ENERGY_CONSUMED
-//#define OUTPUT_REMAINING_CHARGE
-
 //#define DONT_DO_LAST
 
-#define BCC_REG_MEAS_AN4_ADDR 0x43
+//#define DEBUG_TIMING
+
+#define BCC_REG_MEAS_AN4_ADDR       0x43
 
 /*! @brief Size of NTC look-up table. */
-#define NTC_TABLE_SIZE        (NTC_MAXTEMP - NTC_MINTEMP + 1)
-/* ! @brief 0 degree Celsius converted to Kelvin. 
-// #define NTC_DEGC_0            273.15*/
+#define NTC_TABLE_SIZE              (NTC_MAXTEMP - NTC_MINTEMP + 1)
 
 /*! @brief 0 degree Celsius converted to Kelvin. */
-#define NTC_DEGC_0      273.15
+#define NTC_DEGC_0                  273.15
 
 /*! @brief miliAmpere converted to A with a division. */
-#define MA_TO_A         1000.0
+#define MA_TO_A                     1000.0
 
 /*! @brief microvolt to volt with a division. */
-#define UV_TO_V         1000000.0
+#define UV_TO_V                     1000000.0
 
 /*! @brief 10*temperature to temperature with a division. */
-#define T10_TO_T         10.0
+#define T10_TO_T                    10.0
 
-#define V2RES            0.6 //!< [μV/LSB] Current sense user register resolution
-#define V2RES_DIV_RSHUNT V2RES / SHUNT_RESISTOR_UOHM / 1000000 //!< [(μV/LSB)/uOhm] this times the coulumb count value is current
+#define V2RES                       0.6 //!< [μV/LSB] Current sense user register resolution
+#define V2RES_DIV_RSHUNT            V2RES / SHUNT_RESISTOR_UOHM / 1000000 //!< [(μV/LSB)/uOhm] this times the coulumb count value is current
 
-#define STANDARD_MOVING_AVG_SIZE 10   
+#define STANDARD_MOVING_AVG_SIZE    10   
 
 /*!
  * @brief Calculates final temperature value.
@@ -124,15 +109,11 @@
  * @return Temperature.
  */
 #define NTC_COMP_TEMP(tblIdx, degTenths) \
-    ((((tblIdx) + NTC_MINTEMP) * 10) + (degTenths))
+                                    ((((tblIdx) + NTC_MINTEMP) * 10) + (degTenths))
 
 /*******************************************************************************
  * Global variables (constants)
  ******************************************************************************/
-
-static const char gSaveCursor[]         = VT100_SAVECURSOR;
-static const char gRestoreCursor[]      = VT100_RESTORECURSOR;
-
 /**
  * NTC look up table intended for resistance to temperature conversion. After
  * table initialization, array item contains raw value from a register.
@@ -151,9 +132,6 @@ static uint8_t gMeasurementCounterEndValue = 100;
 static float *gMovingAvgArr;
 static uint8_t gMovingAvgArrElements = 0; 
 static uint8_t gMovingAvgArrIndex = 0; 
-
-uint16_t gShowMeasurements = 0; 
-bool gDoTop = false;
 
 /*! @brief  mutex for the calc delta charge function */
 static pthread_mutex_t gDChargeFuncMutex;   
@@ -176,7 +154,6 @@ static bool dChargeFuncMutexInitialized = false;
  */
 static bcc_status_t getNtcCelsius(uint16_t regVal, int16_t* temp);
 
-
 /*******************************************************************************
  * Private functions
  ******************************************************************************/
@@ -196,17 +173,17 @@ static bcc_status_t getNtcCelsius(uint16_t regVal, int16_t* temp)
                                            of interval (NTC table). */
     int16_t middle;      /* Pointer (index) to the middle of interval
                             (NTC table). */
-    int8_t degTenths;    /* Fractional part of temperature value. */
+    int8_t  degTenths;    /* Fractional part of temperature value. */
 
     BCC_MCU_Assert(temp != NULL);
 
     /* Check range of NTC table. */
-    if (g_ntcTable[NTC_TABLE_SIZE - 1] > regVal)
+    if(g_ntcTable[NTC_TABLE_SIZE - 1] > regVal)
     {
         *temp = NTC_COMP_TEMP(NTC_TABLE_SIZE - 1, 0);
         return BCC_STATUS_PARAM_RANGE;
     }
-    if (g_ntcTable[0] < regVal)
+    if(g_ntcTable[0] < regVal)
     {
         *temp = NTC_COMP_TEMP(0, 0);
         return BCC_STATUS_PARAM_RANGE;
@@ -216,11 +193,11 @@ static bcc_status_t getNtcCelsius(uint16_t regVal, int16_t* temp)
 
     /* Search for an array item which is close to the register value provided
     * by user (regVal). Used method is binary search in sorted array. */
-    while ((left + 1) != right)
+    while((left + 1) != right)
     {
         /* Split interval into halves. */
         middle = (left + right) >> 1U;
-        if (g_ntcTable[middle] <= regVal)
+        if(g_ntcTable[middle] <= regVal)
         {
             /* Select right half (array items are in descending order). */
             right = middle;
@@ -238,11 +215,11 @@ static bcc_status_t getNtcCelsius(uint16_t regVal, int16_t* temp)
 
     /* Calculate fractional part of temperature. */
     degTenths = (g_ntcTable[left] - regVal) /
-            ((g_ntcTable[left] - g_ntcTable[left + 1]) / 10);
+        ((g_ntcTable[left] - g_ntcTable[left + 1]) / 10);
+    
     (*temp) = NTC_COMP_TEMP(left, degTenths);
 
     return BCC_STATUS_SUCCESS;
-
 }
 
 
@@ -283,44 +260,6 @@ int bcc_monitoring_initializeSem(void)
         // set the global value
         gMovingAvgArrElements = STANDARD_MOVING_AVG_SIZE;
 
-        // reset the value 
-        gShowMeasurements = 0;
-        gDoTop = false;
-
-        // set the gShowMeasurements value
-#ifdef OUTPUT_STACK_VOLTAGE 
-        gShowMeasurements |= (1<<CLI_STACK_VOLTAGE);
-#endif
-#ifdef OUTPUT_BAT_VOLTAGE
-        gShowMeasurements |= (1<<CLI_BAT_VOLTAGE);
-#endif
-#ifdef OUTPUT_OUTPUT_STATUS
-        gShowMeasurements |= (1<<CLI_OUTPUT_STATUS);
-#endif
-#ifdef OUTPUT_CURRENT
-        gShowMeasurements |= (1<<CLI_CURRENT);
-#endif
-#ifdef OUTPUT_TEMP
-        gShowMeasurements |= (1<<CLI_TEMPERATURE);
-#endif
-#ifdef OUTPUT_CELL_VOLTAGE
-        gShowMeasurements |= (1<<CLI_CELL_VOLTAGE);
-#endif
-#ifdef OUTPUT_AVG_CURRENT
-        gShowMeasurements |= (1<<CLI_AVG_CURRENT);
-#endif
-#ifdef OUTPUT_AVG_POWER
-        gShowMeasurements |= (1<<CLI_AVG_POWER);
-#endif
-#ifdef OUTPUT_ENERGY_CONSUMED 
-        gShowMeasurements |= (1<<CLI_ENERGY_CONSUMED);
-#endif
-#ifdef OUTPUT_STATE_OF_CHARGE 
-        gShowMeasurements |= (1<<CLI_STATE_OF_CHARGE);
-#endif        
-#ifdef OUTPUT_REMAINING_CHARGE
-        gShowMeasurements |= (1<<CLI_REMAINING_CAP);
-#endif
         // set the variable
         gGetOtherMeasSemInitialized = true;
     }
@@ -351,18 +290,18 @@ void bcc_monitoring_fillNtcTable(const ntc_config_t* const ntcConfig)
     uint16_t i = 0;
     int32_t temp;
 
-    for (temp = NTC_MINTEMP; temp <= NTC_MAXTEMP; temp++)
+    for(temp = NTC_MINTEMP; temp <= NTC_MAXTEMP; temp++)
     {
         // calculate the new exponent arguement (beta*(1/temp(k) - 1/tempRef(k)))
         expArg = ntcConfig->beta * ((1.0 / (NTC_DEGC_0 + temp)) -
-                (1.0 / (NTC_DEGC_0 + ntcConfig->refTemp)));
+            (1.0 / (NTC_DEGC_0 + ntcConfig->refTemp)));
 
         // calculate the NTC value e^expArg * Rref voltage is ((NTC_VCOM * ntcVal) / (ntcVal + ntcConfig->rntc))
         ntcVal = exp(expArg) * ntcConfig->refRes;
 
         //calculate the registervalue for each temperature
         g_ntcTable[i] = (uint16_t)round(((NTC_VCOM * ntcVal) /
-                (ntcVal + ntcConfig->rntc)) / NTC_REGISTER_RES);
+            (ntcVal + ntcConfig->rntc)) / NTC_REGISTER_RES);
 
         // increase the index
         i++;
@@ -385,35 +324,66 @@ void bcc_monitoring_fillNtcTable(const ntc_config_t* const ntcConfig)
 bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig, uint32_t rShunt, 
     float *lowestCellVoltageAdr, pthread_mutex_t *gateMutexAdr)
 {
-	/* Variables *****************************************************************/
+    /* Variables *****************************************************************/
     static bool firstPowerup = true;
-    bcc_status_t error;																			// Error status.
-    uint16_t measurements[BCC_MEAS_CNT]; 														// Array needed to store all measured values.
-    float newFloatValue = 0;																	// Conversion complete flag.
+    bcc_status_t error;                                                                         // Error status.
+    uint16_t measurements[BCC_MEAS_CNT];                                                        // Array needed to store all measured values.
+    float newFloatValue = 0;                                                                    // Conversion complete flag.
     int i = 0, bccIndex, errnoNum, lineCounterVal = 0;
     parameterKind_t parameter;
     int16_t lvTemp = 0;
     static float sumOfMovAvg = 0;
-    float newSumCurrent, avgCurrent, dCharge, batVoltage, lowerstCellVoltage;//, remainingCap;
+    float newSumCurrent, avgCurrent, dCharge, batVoltage, lowestCellVoltage;//, remainingCap;
     int32_t int32Val = 0;
     uint8_t uint8Val = 0;
+    charge_states_t chargeState = data_getChargeState();
+
+#ifdef DEBUG_TIMING
+    struct timespec firstTime, currentTime;
+
+    if(clock_gettime(CLOCK_REALTIME, &firstTime) == -1)
+    {
+        cli_printfError("bcc_monitoring ERROR: failed to get newSampletime time!\n");
+    }
+
+    //cli_printf("time: %ds %dus\n", firstTime.tv_sec, firstTime.tv_nsec/1000);
+#endif
+
+    // lock the BCC SPI until the measurement is done and read
+    if(spi_lockNotUnlockBCCSpi(true))
+    {
+        cli_printfError("bcc_monitoring_update ERROR: couldn't lock BCC SPI\n");
+    }
 
     /* Start ADC conversion ******************************************************/
     error = bcc_monitoring_doBlockingMeasurement(drvConfig);
 
     // check for an error
-    if (error != BCC_STATUS_SUCCESS)
+    if(error != BCC_STATUS_SUCCESS)
     {
         cli_printfError("bcc_monitoring ERROR: Couldn't do measurement error: %d\n", error);
+        
+        // unlock the BCC SPI 
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_update ERROR: couldn't unlock BCC SPI\n");
+        }
+
         return error;
     }
 
     // get the current measument
-    error = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_MEAS_ISENSE1_ADDR,
-                             2, &measurements[BCC_MSR_ISENSE1]);
+    error = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_MEAS_ISENSE1_ADDR,
+        2, &measurements[BCC_MSR_ISENSE1]);
+
+    // unlock the BCC SPI 
+    if(spi_lockNotUnlockBCCSpi(false))
+    {
+        cli_printfError("bcc_monitoring_update ERROR: couldn't unlock BCC SPI\n");
+    }
 
     // check for an error
-    if (error != BCC_STATUS_SUCCESS)
+    if(error != BCC_STATUS_SUCCESS)
     {
         cli_printfError("bcc_monitoring ERROR: couldn't get current error: %d\n", error);
         return error;
@@ -424,16 +394,44 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
     measurements[BCC_MSR_ISENSE1] &= BCC_R_MEAS1_I_MASK;
     measurements[BCC_MSR_ISENSE2] &= BCC_R_MEAS2_I_MASK;
 
-    // convert the battery current to a float                                                                           // Measured ISENSE in [mA]. Value of shunt resistor is used.
+    // convert the battery current to a float in mA
+    // Measured ISENSE in [mA]. Value of shunt resistor is used.
     newFloatValue = BCC_GET_ISENSE_AMP(rShunt,
-                                            measurements[BCC_MSR_ISENSE1],
-                                            measurements[BCC_MSR_ISENSE2]) / MA_TO_A;
+        measurements[BCC_MSR_ISENSE1], measurements[BCC_MSR_ISENSE2]);
 
-    // set the new battery current
+    // Get the system current
+    parameter = I_SYSTEM;
+    if(data_getParameter(parameter, &int32Val, NULL) == NULL)
+    {
+        cli_printfError("bcc_monitoring ERROR: getting new data went wrong in the update! par %d val %d\n", 
+            parameter, int32Val);
+    }
+
+    // Limit the value
+    int32Val &= UINT8_MAX;
+
+    // Check if substracting own board current during charging is needed
+    // Check if the current is positive (charging) (including board current)
+    if(((int)newFloatValue) >= (int32Val))
+    {
+        // Get the state and check if it is in the charging state (CHARGE_START or CHARGE_CB)
+        if(data_getMainState() == CHARGE && 
+            (chargeState == CHARGE_START || chargeState == CHARGE_CB))
+        {
+            // Substract the system current because that is measured as well
+            newFloatValue = newFloatValue - (float)(int32Val);
+        }
+    }
+
+    // convert to A
+    newFloatValue = newFloatValue / MA_TO_A;
+
+    // Set the new battery current
     parameter = I_BATT;
     if(data_setParameter(parameter, &newFloatValue))
     {
-       cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d\n", parameter);
+        cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f \n", 
+            parameter, newFloatValue);
     }
 
 #ifdef OUTPUT_CURRENT_MEAS_DOT
@@ -466,10 +464,9 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
             // reset the error and return
             return SEM_OCCUPIED_ERROR;
         }
-        else if (errnoNum)
+        else if(errnoNum)
         {
             cli_printfError("bcc_monitoring ERROR: sem_trywait error: %d\n", errnoNum);
-            //cli_printf("EAGAIN = %d, EDEADLK = %d, EINTR = %d, EINVAL = &d\n", EAGAIN, EDEADLK, EINTR, EINVAL);
             return BCC_STATUS_PARAM_RANGE;
         }
     }
@@ -479,71 +476,58 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
 
     cli_printf("\n");
 #endif
-
-    if(gShowMeasurements && gDoTop)
-    {
-        // reset the lineCounterVal
-        lineCounterVal = 1;
-    }
-    if(gShowMeasurements & (1<<CLI_CURRENT))
-    {
-        // check if top is on
-        if(gDoTop)
-        {
-            // lock the cli lock
-            cli_printLock(true);
-
-            // save the cursor position
-            cli_printfNoLock("%s \e[%d;1H \e[2K \ri-batt: \t %8.3f A\n" , &gSaveCursor, lineCounterVal, 
-                newFloatValue);
-        }
-        else
-        {
-             // clear the line and write the value
-            cli_printf("\e[2K");
-
-            // print it
-            cli_printf("i-batt: \t %8.3f A\n", newFloatValue);
-        }
-
-        // increase the line counter
-        lineCounterVal++;
-    }
    
 #ifdef OUTPUT_UPDATE_OTHER_MEAS
-    cli_printfTryLock("Updating other meas!\n");
+    cli_printf("Updating other meas!\n");
 #endif
 
+    // lock the BCC SPI until the measurement is done and read
+    if(spi_lockNotUnlockBCCSpi(true))
+    {
+        cli_printfError("bcc_monitoring_update ERROR: couldn't lock BCC SPI\n");
+    }
+
     // get stack voltage
-    error = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_MEAS_STACK_ADDR, 1,
-                         (uint16_t *)(measurements + ((uint8_t)BCC_MSR_STACK_VOLT)));
+    error = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_MEAS_STACK_ADDR, 1,
+        (uint16_t *)(measurements + ((uint8_t)BCC_MSR_STACK_VOLT)));
 
     // check for an error
-    if (error != BCC_STATUS_SUCCESS)
+    if(error != BCC_STATUS_SUCCESS)
     {
-        cli_printfTryLock("%sbcc_monitoring ERROR: Couldn't get stack voltage error: %d\e[39m\n", "\e[31m", error);
+        // unlock the BCC SPI 
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_update ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        cli_printfError("bcc_monitoring ERROR: Couldn't get stack voltage error: %d\n", error);
         return error;
     }
 
     // get the cell voltages and the used analog channels 
-    error = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_MEAS_CELLX_ADDR_MC33772_START,
-                         (BCC_REG_MEAS_ANX_ADDR_END - BCC_REG_MEAS_CELLX_ADDR_MC33772_START) + 1,
-                         (uint16_t *)(measurements + ((uint8_t)BCC_MSR_CELL_VOLT6)));
+    error = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_MEAS_CELLX_ADDR_MC33772_START,
+        (BCC_REG_MEAS_ANX_ADDR_END - BCC_REG_MEAS_CELLX_ADDR_MC33772_START) + 1,
+        (uint16_t *)(measurements + ((uint8_t)BCC_MSR_CELL_VOLT6)));
+
+    // unlock the BCC SPI 
+    if(spi_lockNotUnlockBCCSpi(false))
+    {
+        cli_printfError("bcc_monitoring_update ERROR: couldn't unlock BCC SPI\n");
+    }
 
     // check for an error
-    if (error != BCC_STATUS_SUCCESS)
+    if(error != BCC_STATUS_SUCCESS)
     {
-        cli_printfTryLock("%sbcc_monitoring ERROR: Couldn't other measurements error: %d\e[39m\n", "\e[31m", error);
+        cli_printfError("bcc_monitoring ERROR: Couldn't other measurements error: %d\n", error);
         return error;
     }
     
 
     /* Mask the other registers (starting at 5th register). */
-    for (i = 5U; i < BCC_MEAS_CNT; i++)
+    for(i = 5U; i < BCC_MEAS_CNT; i++)
     {
         measurements[i] &= BCC_R_MEAS_MASK;
     }
-
 
     // calculate the rest
 
@@ -553,7 +537,8 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
     parameter = N_CELLS;
     if(data_getParameter(parameter, &int32Val, NULL) == NULL)
     {
-       cli_printfTryLock("%sbcc_monitoring ERROR: getting new data went wrong in the update! par %d val %d\n\e[39m", "\e[31m", parameter, int32Val);
+        cli_printfError("bcc_monitoring ERROR: getting new data went wrong in the update! par %d val %d\n",
+            parameter, int32Val);
     } 
 
     // limit the value
@@ -584,7 +569,7 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
         if(i == 0)
         {
             // set the first voltage
-            lowerstCellVoltage = newFloatValue;
+            lowestCellVoltage = newFloatValue;
         }
 
         // set the new battery cell voltage
@@ -593,39 +578,18 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
         // set the cell voltage 
         if(data_setParameter(parameter, &newFloatValue))
         {
-           cli_printfTryLock("%sbcc_monitoring ERROR: setting new data went in the update wrong! par %d\e[39m\n", "\e[31m", parameter);
+            cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f\n", 
+                parameter, newFloatValue);
         }    
 
         // add all the cell voltages to the battery voltage
         batVoltage += newFloatValue;
 
         // check if the lowest
-        if(lowerstCellVoltage > newFloatValue)
+        if(lowestCellVoltage > newFloatValue)
         {
             // set the new lowest cell voltage
-            lowerstCellVoltage = newFloatValue;
-        }
-
-        if(gShowMeasurements & (1<<CLI_CELL_VOLTAGE))
-        {
-            // check if top is on
-            if(gDoTop)
-            {
-                // print the cell voltage
-                cli_printfNoLock("\e[%d;1H \e[2K \rv-cell%d:\t %8.3f V\n",/* &gSaveCursor,*/ lineCounterVal, 
-                    i+1, newFloatValue);
-            }
-            else
-            {
-                // clear the line and write the value
-                cli_printfTryLock("\e[2K");
-                
-                // print the cell voltage
-                cli_printfTryLock("v-cell%d:\t %8.3f V\n", i+1, newFloatValue);
-            }      
-            
-            // increase the linecounterval
-            lineCounterVal++;
+            lowestCellVoltage = newFloatValue;
         }
     }
 
@@ -633,19 +597,23 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
     if(lowestCellVoltageAdr != NULL)
     {
         // set the lowest cell voltage in the lowest cell voltage address
-        *lowestCellVoltageAdr = lowerstCellVoltage;
+        *lowestCellVoltageAdr = lowestCellVoltage;
     }
 
     // convert the battery voltage to a float
     newFloatValue = BCC_GET_STACK_VOLT(measurements[BCC_MSR_STACK_VOLT]) / UV_TO_V;         // Stack voltage in [uV].
 
-    // check if the battery stack voltage is almost the sum of the cells for redundancy
+    // check if the battery stack voltage is too different than the sum of the cells for redundancy
     if(((batVoltage - newFloatValue) > (STACK_VOLTAGE_DIFFERENCE_ERROR * int32Val)) ||
        ((batVoltage - newFloatValue) < -(STACK_VOLTAGE_DIFFERENCE_ERROR * int32Val)))
     {
-        // output error
-        cli_printfTryLock("%sbcc_monitoring ERROR: stackvoltage too different from sum of cells! stack: %8.3fV cells: %8.3fV\e[39m\n", "\e[31m",
-            newFloatValue, batVoltage);
+        // check if not in the fault state
+        if(data_getMainState() != FAULT)
+        {
+            // output error
+            cli_printfError("bcc_monitoring ERROR: stackvoltage too different from sum of cells! stack: %8.3fV cells: %8.3fV\n",
+                newFloatValue, batVoltage);
+        }
 
         // set the floatvalue
         batVoltage = newFloatValue;
@@ -654,34 +622,14 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
         data_statusFlagBit(STATUS_BMS_ERROR_BIT, 1);
 
         // TODO add error if this happens? go to FAULT state?
-
-        #warning TODO add error if this happens?
     }
 
     // set the new battery voltage
     parameter = V_BATT;
     if(data_setParameter(parameter, &batVoltage))
     {
-       cli_printfTryLock("%sbcc_monitoring ERROR: setting new data went in the update wrong! par %d\e[39m\n", "\e[31m", parameter);
-    }  
-    if(gShowMeasurements & (1<<CLI_STACK_VOLTAGE))
-    {
-        // check if top is on
-        if(gDoTop)
-        {
-            // print the battery voltage
-            cli_printfNoLock("\e[%d;1H \e[2K \rv-batt:\t\t %8.3f V\n",/* &gSaveCursor,*/ lineCounterVal,
-                batVoltage);
-        }
-        else
-        {
-            // clear the line and write the value
-            cli_printfTryLock("\e[2K");
-            cli_printfTryLock("v-batt:\t\t %8.3f V\n", batVoltage);
-        }
-
-        // increase the line counter
-        lineCounterVal++;
+        cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f\n", 
+            parameter, batVoltage);
     }
 
     // convert the battery voltage to a float
@@ -691,30 +639,8 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
     parameter = V_OUT;
     if(data_setParameter(parameter, &batVoltage))
     {
-       cli_printfTryLock("%sbcc_monitoring ERROR: setting new data went in the update wrong! par %d\e[39m\n", "\e[31m", parameter);
-    }
-
-    // if the battery voltage needs to be shown
-    if(gShowMeasurements & (1<<CLI_BAT_VOLTAGE))
-    {
-        // check if top is on
-        if(gDoTop)
-        {
-            // print the output voltage
-            cli_printfNoLock("\e[%d;1H \e[2K \rv-out: \t\t %8.3f V\n" ,/* &gSaveCursor,*/ lineCounterVal, 
-                batVoltage);
-        }
-        else
-        {
-            // clear the line and write the value
-            cli_printfTryLock("\e[2K");
-            
-            // print it
-            cli_printfTryLock("v-out: \t\t %8.3f V\n", batVoltage);
-        }
-
-        // increase the line counter
-        lineCounterVal++;
+        cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f\n", 
+            parameter, batVoltage);
     }
 
     // check if the voltage is lower than the defined on voltage
@@ -746,28 +672,8 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
     parameter = S_OUT;
     if(data_setParameter(parameter, &uint8Val))
     {
-       cli_printfTryLock("%sbcc_monitoring ERROR: setting new data went in the update wrong! par %d\e[39m\n", "\e[31m", parameter);
-    }
-    
-    // if the measurements needs to be shown
-    if(gShowMeasurements & (1<<CLI_OUTPUT_STATUS))
-    {
-        // check if top is on
-        if(gDoTop)
-        {
-            // print the output status
-            cli_printfNoLock("\e[%d;1H \e[2K \rs-out \t\t\t%d\n" ,/* &gSaveCursor,*/ lineCounterVal, 
-                uint8Val);
-        }
-        else
-        {
-            // clear the line and write the value
-            cli_printfTryLock("\e[2K");
-            cli_printfTryLock("s-out \t\t\t%d\n", uint8Val);
-        }
-
-        // increase the line counter
-        lineCounterVal++;
+        cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %d\n", 
+            parameter, uint8Val);
     }
 
     // if the first time
@@ -775,7 +681,7 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
     if(firstPowerup)
     {
         // calibrate the state of charge, without the current check
-        bcc_monitoring_calibrateSoC(false);
+        bcc_monitoring_calibrateSoC(true, false);
 
         // it is not the first power up anymore
         firstPowerup = false;
@@ -789,7 +695,7 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
     // get the variable to know if the battery temperature measurement should be done
     if(data_getParameter(SENSOR_ENABLE, &uint8Val, NULL) == NULL)
     {
-        cli_printfTryLock("%sbcc_monitoring ERROR: couldn't get SENSOR_ENABLE!\e[39m\n", "\e[31m");
+        cli_printfError("bcc_monitoring ERROR: couldn't get sensor-enable!\n");
         uint8Val = SENSOR_ENABLE_DEFAULT;
         //return lvRetValue;
     }
@@ -803,8 +709,8 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
         // check for errors
         if(error)
         {
-            cli_printfTryLock("%sbcc_monitoring ERROR: failed getting batt temp error: %d\e[39m\n", "\e[31m", error);
-            cli_printfTryLock("Maybe disable the measurement? with \"enable_batt_temp\"\n");
+            cli_printfError("bcc_monitoring ERROR: failed getting batt temp error: %d\n", error);
+            cli_printf("Maybe disable the measurement? with \"bms set sensor-enable 0\"\n");
         }
         else
         {
@@ -815,27 +721,8 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
             parameter = C_BATT;
             if(data_setParameter(parameter, &newFloatValue))
             {
-               cli_printfTryLock("%sbcc_monitoring ERROR: setting new data went in the update wrong! par %d\e[39m\n", "\e[31m", parameter);
-            }
-
-            if(gShowMeasurements & (1<<CLI_TEMPERATURE))
-            {
-                // check if top is on
-                if(gDoTop)
-                {
-                    // print the battery temperature
-                    cli_printfNoLock("\e[%d;1H \e[2K \rc-batt: \t %8.3f C\n" ,/* &gSaveCursor,*/ lineCounterVal, 
-                        newFloatValue);
-                }
-                else
-                {
-                    // clear the line and write the value
-                    cli_printfTryLock("\e[2K");
-                    cli_printfTryLock("c-batt: \t %8.3f C\n", newFloatValue);
-                }          
-
-                // increase the line counter
-                lineCounterVal++;
+                cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f\n", 
+                    parameter, newFloatValue);
             }
         }
     }
@@ -846,7 +733,7 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
     // check for errors
     if(error)
     {
-        cli_printfTryLock("%sbcc_monitoring ERROR: failed getting AFE temp error: %d\e[39m\n", "\e[31m", error);
+        cli_printfError("bcc_monitoring ERROR: failed getting AFE temp error: %d\n", error);
     }
     else
     {
@@ -857,27 +744,8 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
         parameter = C_AFE;
         if(data_setParameter(parameter, &newFloatValue))
         {
-           cli_printfTryLock("%sbcc_monitoring ERROR: setting new data went in the update wrong! par %d\e[39m\n", "\e[31m", parameter);
-        }
-
-        if(gShowMeasurements & (1<<CLI_TEMPERATURE))
-        {
-            // check if top is on
-            if(gDoTop)
-            {
-                // print the afe temperature
-                cli_printfNoLock("\e[%d;1H \e[2K \rc-afe: \t\t %8.3f C\n",/* &gSaveCursor,*/ lineCounterVal, 
-                    newFloatValue);
-            }
-            else
-            {
-                // clear the line and write the value
-                cli_printfTryLock("\e[2K");
-                cli_printfTryLock("c-afe: \t\t %8.3f C\n", newFloatValue);
-            }
-
-            // increase the line counter
-            lineCounterVal++;
+            cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f\n", 
+                parameter, newFloatValue);
         }
     }
 
@@ -887,7 +755,7 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
     // check for errors
     if(error)
     {
-        cli_printfTryLock("%sbcc_monitoring ERROR: failed getting T temp error: %d\e[39m\n", "\e[31m", error);
+        cli_printfError("bcc_monitoring ERROR: failed getting T temp error: %d\n", error);
     }
     else
     {
@@ -898,27 +766,8 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
         parameter = C_T;
         if(data_setParameter(parameter, &newFloatValue))
         {
-           cli_printfTryLock("%sbcc_monitoring ERROR: setting new data went in the update wrong! par %d\e[39m\n", "\e[31m", parameter);
-        }
-
-        if(gShowMeasurements & (1<<CLI_TEMPERATURE))
-        {
-            // check if top is on
-            if(gDoTop)
-            {
-                // print the transistor temperature
-                cli_printfNoLock("\e[%d;1H \e[2K \rc-t: \t\t %8.3f C\n" ,/* &gSaveCursor,*/ lineCounterVal, 
-                    newFloatValue);
-            }
-            else
-            {
-                // clear the line and write the value
-                cli_printfTryLock("\e[2K");
-                cli_printfTryLock("c-t: \t\t %8.3f C\n", newFloatValue);
-            }
-
-            // increase the line counter
-            lineCounterVal++;
+            cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f\n", 
+                parameter, newFloatValue);
         }
     } 
 
@@ -928,7 +777,7 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
     // check for errors
     if(error)
     {
-        cli_printfTryLock("%sbcc_monitoring ERROR: failed getting R temp error: %d\e[39m\n", "\e[31m", error);
+        cli_printfError("bcc_monitoring ERROR: failed getting R temp error: %d\n", error);
     }
     else
     {
@@ -939,80 +788,71 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
         parameter = C_R;
         if(data_setParameter(parameter, &newFloatValue))
         {
-           cli_printfTryLock("%sbcc_monitoring ERROR: setting new data went in the update wrong! par %d\e[39m\n", "\e[31m", parameter);
-        }
-
-        if(gShowMeasurements & (1<<CLI_TEMPERATURE))
-        {
-            // check if top is on
-            if(gDoTop)
-            {
-                // print the resistor temperature
-                cli_printfNoLock("\e[%d;1H \e[2K \rc-r: \t\t %8.3f C\n" ,/* &gSaveCursor,*/ lineCounterVal, 
-                    newFloatValue);
-            }
-            else
-            {
-                // clear the line and write the value
-                cli_printfTryLock("\e[2K");
-                cli_printfTryLock("c-r: \t\t %8.3f C\n", newFloatValue);
-            }
-
-            // increase the line counter
-            lineCounterVal++;
+            cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f\n", 
+                parameter, newFloatValue);
         }
  
     } 
 
-    //cli_printfTryLock("counter: %d max: %d\n", gMeasurementCounter, gMeasurementCounterEndValue);
+    //cli_printfError("counter: %d max: %d\n", gMeasurementCounter, gMeasurementCounterEndValue);
 
     // check if the CC needs to be read
+    // This interval is the (T_MEAS_MAX/t-meas)/elements for t-meas <= 1000
+    // If t-meas is 1000ms, it will be (10000/1000)/10 = 1s. 
     if(gMeasurementCounter >= gMeasurementCounterEndValue)
     {
         // calculate the average current and the delta charge
-        i = bcc_monitoring_calcDCharge(drvConfig, &measurements[BCC_MSR_CC_NB_SAMPLES], &avgCurrent, &dCharge, false);
+        // i = bcc_monitoring_calcDCharge(drvConfig, &measurements[BCC_MSR_CC_NB_SAMPLES], 
+        //     &avgCurrent, &dCharge, false);
+        i = bcc_monitoring_calcDCharge(drvConfig, &measurements[BCC_MSR_CC_NB_SAMPLES], 
+            &avgCurrent, &dCharge, true);
 
         // check for errors
         if(i)
         {
             // return error
-            cli_printfTryLock("%sbcc_monitoring ERROR: failed to calc Dcharge! %d\e[39m\n", "\e[31m", i);
+            cli_printfError("bcc_monitoring ERROR: failed to calc Dcharge! %d\n", i);
             return BCC_STATUS_PARAM_RANGE;
+        }
+
+        // Get the system current
+        parameter = I_SYSTEM;
+        if(data_getParameter(parameter, &int32Val, NULL) == NULL)
+        {
+            cli_printfError("bcc_monitoring ERROR: getting new data went wrong in the update! par %d val %d\n",
+                parameter, int32Val);
+        } 
+
+        // Limit the value
+        int32Val &= UINT8_MAX;
+
+        // Check if substracting own board current during charging is needed
+        // Check if the current is positive (charging) (including board current)
+        if((avgCurrent*1000) >= (int32Val))
+        {
+            // Get the state and check if it is in the charging state (CHARGE_START or CHARGE_CB)
+            if(data_getMainState() == CHARGE && 
+                (chargeState == CHARGE_START || chargeState == CHARGE_CB))
+            {
+                // Substract the system current because that is measured as well
+                avgCurrent = avgCurrent - (float)(int32Val/1000.0);
+            }
         }
 
         // save the average current
         parameter = I_BATT_AVG;
         if(data_setParameter(parameter, &avgCurrent))
         {
-           cli_printfTryLock("%sbcc_monitoring ERROR: setting new data went in the update wrong! par %d %8.3f\n\e[39m", "\e[31m", parameter, newFloatValue);
-        }   
-
-        if(gShowMeasurements & (1<<CLI_AVG_CURRENT))  
-        {  
-            // check if top is on
-            if(gDoTop)
-            {
-                // print the average current and samples
-                cli_printfNoLock("\e[%d;1H \e[2K \ri-avg: \t\t %8.3f A, smpls: %d\n" ,/* &gSaveCursor,*/ lineCounterVal,
-                    avgCurrent, measurements[BCC_MSR_CC_NB_SAMPLES]);
-            }
-            else
-            {
-                // clear the line and write the value
-                cli_printfTryLock("\e[2K");
-                // output the average current if needed
-                cli_printfTryLock("i-avg: \t\t %8.3f A, smpls: %d\n", avgCurrent, measurements[BCC_MSR_CC_NB_SAMPLES]);
-            }
-
-            // increase the line counter
-            lineCounterVal++; 
+            cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f\n", 
+                parameter, avgCurrent);
         }
-        
+
         // get the consumed power
         parameter = E_USED;
         if(data_getParameter(parameter, &newFloatValue, NULL) == NULL)
         {
-             cli_printfTryLock("%sbcc_monitoring ERROR: getting value went wrong in the update! par: %d\e[39m\n", "\e[31m", parameter);
+            cli_printfError("bcc_monitoring ERROR: getting value went wrong in the update! par: %d\n", 
+                parameter);
         }
 
         // add the difference in charge in Ah times the battery output voltage
@@ -1022,60 +862,20 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
         parameter = E_USED;
         if(data_setParameter(parameter, &newFloatValue))
         {
-           cli_printfTryLock("%sbcc_monitoring ERROR: setting new data went in the update wrong! par %d %8.3f\n\e[39m", "\e[31m", parameter, newFloatValue);
-        }   
-
-        // check if outputing the energy consumed is needed 
-        if(gShowMeasurements & (1<<CLI_ENERGY_CONSUMED))
-        {
-            // check if top is on
-            if(gDoTop)
-            {
-                // print the energy used
-                cli_printfNoLock("\e[%d;1H \e[2K \re-used: \t %8.3f Wh\n" ,/* &gSaveCursor,*/ lineCounterVal, 
-                    newFloatValue);
-            }
-            else
-            {
-                // clear the line and write the value
-                cli_printfTryLock("\e[2K");
-                cli_printfTryLock("e-used: \t %8.3f Wh\n", newFloatValue);
-            }
-
-            // increase the line counter
-            lineCounterVal++;
+            cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f\n", 
+                parameter, newFloatValue);
         }
 
         // get the capacity 
         parameter = A_REM;
         if(data_getParameter(parameter, &newFloatValue, NULL) == NULL)
         {
-             cli_printfTryLock("%sbcc_monitoring ERROR: getting value went wrong in the update! par: %d\e[39m\n", "\e[31m", parameter);
+            cli_printfError("bcc_monitoring ERROR: getting value went wrong in the update! par: %d\n", 
+                parameter);
         }
 
         // calculate the new remaining capacity with the difference in charge
-        newFloatValue = (newFloatValue + dCharge);   
-
-        // output remaining and Dcharge if needed
-        if(gShowMeasurements & (1<<CLI_REMAINING_CAP))
-        {
-            // check if top is on
-            if(gDoTop)
-            {
-                // print the remaning capacity
-                cli_printfNoLock("\e[%d;1H \e[2K \ra-rem: \t\t %8.3f Ah\n"/*, DCharge: %8.3f\n" */,/* &gSaveCursor,*/ lineCounterVal, 
-                    newFloatValue);//, dCharge);
-            }
-            else
-            {
-                // clear the line and write the value
-                cli_printfTryLock("\e[2K");
-                cli_printfTryLock("a-rem: \t\t %8.3f Ah\n"/*, DCharge: %8.3f\n"*/, newFloatValue, dCharge);
-            }
-
-            // increase the line counter
-            lineCounterVal++;
-        }
+        newFloatValue = (newFloatValue + dCharge);
 
         // limit the remaining capacity if less than 0
         if(newFloatValue < 0)
@@ -1088,42 +888,11 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
         parameter = A_REM;
         if(data_setParameter(parameter, &newFloatValue))
         {
-           cli_printfTryLock("%sbcc_monitoring ERROR: setting new data went in the update wrong! par %d %8.3f\n\e[39m", "\e[31m", parameter, newFloatValue);
-        }   
-
-        // if state of charge needs to be outputted
-        if(gShowMeasurements & (1<<CLI_STATE_OF_CHARGE))
-        {
-            // get the FCC 
-            parameter = A_FULL;
-            if(data_getParameter(parameter, &dCharge, NULL) == NULL)
-            {
-                 cli_printfTryLock("%sbcc_monitoring ERROR: getting value went wrong in the update! par: %d\e[39m\n", "\e[31m", parameter);
-            }
-
-            // calcultate the state of charge
-            uint8Val = (uint8_t)round((newFloatValue/dCharge)*100);
-
-            // check if top is on
-            if(gDoTop)
-            {
-                // print the state of charge
-                cli_printfNoLock("\e[%d;1H \e[2K \rs-charge:\t      %3d %%\n" ,/* &gSaveCursor,*/ lineCounterVal, 
-                    uint8Val);
-            }
-            else
-            {
-                 // clear the line and write the value
-                cli_printfTryLock("\e[2K");
-                // output the state of charge
-                cli_printfTryLock("s-charge:\t%d %%\n", uint8Val);
-            }
-
-            // increase the line counter
-            lineCounterVal++;
+            cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f\n", 
+                parameter, newFloatValue);
         }
 
-        //save the remaining capacity in dCharge
+        // save the remaining capacity in dCharge
         dCharge = newFloatValue;
 
         // remove the old value from the sum
@@ -1132,10 +901,11 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
         // add the new value to the sum 
         sumOfMovAvg += avgCurrent;
 
-        // divide by the amount of elements
+        // divide the sum of currents by the amount of elements
+        // To get the average current over the whole moving average (10s)
         newFloatValue = sumOfMovAvg/gMovingAvgArrElements;
 
-         // set the new value in the array
+        // set the new value in the array
         gMovingAvgArr[gMovingAvgArrIndex] = avgCurrent;
 
         // increase the index 
@@ -1145,14 +915,24 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
         parameter = A_FULL;
         if(data_getParameter(parameter, &newSumCurrent, NULL) == NULL)
         {
-             cli_printfTryLock("%sbcc_monitoring ERROR: getting value went wrong in the update! par: %d\e[39m\n", "\e[31m", parameter);
+            cli_printfError("bcc_monitoring ERROR: getting value went wrong in the update! par: %d\n",
+                parameter);
         }
 
         // get the max charge Current
         parameter = I_CHARGE_MAX;
         if(data_getParameter(parameter, &avgCurrent, NULL) == NULL)
         {
-             cli_printfTryLock("%sbcc_monitoring ERROR: getting value went wrong in the update! par: %d\e[39m\n", "\e[31m", parameter);
+            cli_printfError("bcc_monitoring ERROR: getting value went wrong in the update! par: %d\n",
+                parameter);
+        }
+
+        // Save the 10s moving avg current
+        parameter = I_BATT_10S_AVG;
+        if(data_setParameter(parameter, &newFloatValue))
+        {
+            cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f\n", 
+                parameter, newFloatValue);
         }
 
         // check if the current is higher than the max charge current
@@ -1179,52 +959,43 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
         // set the time to charge
         parameter = T_FULL;
 
-        //cli_printfTryLock("hours to full charge: %8.3f\n", dCharge);
+        // set the parameter in the data struct
         if(data_setParameter(parameter, &dCharge))
         {
-           cli_printfTryLock("%sbcc_monitoring ERROR: setting new data went in the update wrong! par %d\e[39m\n", "\e[31m", parameter);
-        }   
+            cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f\n", 
+                parameter, dCharge);
+        }
 
         // this calculate the avg power V*Iavg
         newFloatValue = batVoltage * newFloatValue;
         
-        if(gShowMeasurements & (1<<CLI_AVG_POWER))
-        {
-            // check if top is on
-            if(gDoTop)
-            {
-                // print the average power
-                cli_printfNoLock("\e[%d;1H \e[2K \rp-avg: \t\t %8.3f W\n" ,/* &gSaveCursor,*/ lineCounterVal, 
-                    newFloatValue);
-
-                // restore the cursor position
-                cli_printfNoLock("%s", &gRestoreCursor);
-            }
-            else
-            {
-                // clear the line and write the value
-                cli_printfTryLock("\e[2K");
-                // output the average power
-                cli_printfTryLock("p-avg: \t\t %8.3f W\n", newFloatValue);
-            }            
-
-            // increase the line counter 
-            lineCounterVal++;
-        }
-
         // set the average power
         parameter = P_AVG;
         if(data_setParameter(parameter, &newFloatValue))
         {
-           cli_printfTryLock("%sbcc_monitoring ERROR: setting new data went in the update wrong! par %d\e[39m\n", "\e[31m", parameter);
+            cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f\n", 
+                parameter, newFloatValue);
         }   
 
         // reset the measurement counter
         gMeasurementCounter = 0;
-    }
 
-    // unlock the printlock mutex
-    cli_printLock(false);
+#ifdef DEBUG_TIMING
+
+        // get the current time
+        if(clock_gettime(CLOCK_REALTIME, &currentTime) == -1)
+        {
+            cli_printfError("bcc_monitoring ERROR: failed to get newSampletime time!\n");
+        }
+
+        // calculate the difference in time
+        int32Val = (currentTime.tv_sec*1000000 + currentTime.tv_nsec/1000) - 
+            (firstTime.tv_sec*1000000 + firstTime.tv_nsec/1000); 
+
+        cli_printf("dtime: %dus\n", int32Val);
+#endif
+    
+    }
 
     // increase the measurementCounter 
     gMeasurementCounter++;
@@ -1236,6 +1007,8 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
  * @brief   This function is used to do a meaurement
  *          This function is blocking and will wait until the measurement is done
  *
+ * @note    Even blocks task switch
+ *
  * @param   drvConfig the address the BCC driver configuration
  *
  * @return  bcc_status_t Error code
@@ -1246,36 +1019,76 @@ bcc_status_t bcc_monitoring_doBlockingMeasurement(bcc_drv_config_t* const drvCon
     int i = 0;
     bool completed = false;
 
+    // lock on this thread (no task switch!)
+    sched_lock();
+
+    // lock the BCC SPI until the measurement is done and read
+    if(spi_lockNotUnlockBCCSpi(true))
+    {
+        cli_printfError("bcc_monitoring_update ERROR: couldn't lock BCC SPI\n");
+    }
+
     // do the measuremetns until no error is given for 5 tries 
     do
     {
-        //cli_printf("starting conversion! %d\n", i+1);
         // do the measurements
-        error = BCC_Meas_StartConversion(drvConfig, BCC_CID_DEV1);                      // Error verification.
+        error = bcc_spiwrapper_BCC_Meas_StartConversion(drvConfig, BCC_CID_DEV1);                      // Error verification.
 
         // increase i to only loop an amount of time
         i++;
+
     }while(error != BCC_STATUS_SUCCESS && i < 5);
     
     // check for errors
-    if (error != BCC_STATUS_SUCCESS)
+    if(error != BCC_STATUS_SUCCESS)
     {
+        // unlock the BCC SPI
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_update ERROR: couldn't unlock BCC SPI\n");
+        }
+
         // return error
-        cli_printfError("bcc_monitoring_doBlockingMeasurement ERROR: Couldn't start conversion! error: %d\n", error);
+        cli_printfError("bcc_monitoring_doBlockingMeasurement ERROR: Couldn't start conversion! error: %d i = %d\n", 
+            error, i);
+
+        // unlock this thread (enable task switch!)
+        sched_unlock();
+
         return error;
     }
 
     // wait until the conversion is complete
     do                                                                                          // Conversion.
     {
-        error = BCC_Meas_IsConverting(drvConfig, BCC_CID_DEV1, &completed);
-        if (error != BCC_STATUS_SUCCESS)
+        error = bcc_spiwrapper_BCC_Meas_IsConverting(drvConfig, BCC_CID_DEV1, &completed);
+        if(error != BCC_STATUS_SUCCESS)
         {
+            // unlock the BCC SPI 
+            if(spi_lockNotUnlockBCCSpi(false))
+            {
+                cli_printfError("bcc_monitoring_update ERROR: couldn't unlock BCC SPI\n");
+            }
+
             // return error
-            cli_printfError("bcc_monitoring_doBlockingMeasurement ERROR: Couldn't check conversion! error: %d\n", error);
+            cli_printfError("bcc_monitoring_doBlockingMeasurement ERROR: Couldn't check conversion! error: %d i %d\n", 
+                error, i);
+
+            // unlock this thread (enable task switch!)
+            sched_unlock();
+
             return error;
         }
-    } while (!completed);
+    }while(!completed);
+
+    // unlock the BCC SPI 
+    if(spi_lockNotUnlockBCCSpi(false))
+    {
+        cli_printfError("bcc_monitoring_update ERROR: couldn't unlock BCC SPI\n");
+    }
+
+    // unlock this thread (enable task switch!)
+    sched_unlock();
 
     // return to the user
     return error;
@@ -1304,7 +1117,7 @@ bcc_status_t bcc_monitoring_checkOutput(bcc_drv_config_t* const drvConfig, bool 
     }
 
     // get the AN4 measurement
-    lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, (BCC_REG_MEAS_AN4_ADDR),
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, (BCC_REG_MEAS_AN4_ADDR),
         1, &regVal); 
 
     // check for errors
@@ -1374,8 +1187,6 @@ bcc_status_t bcc_monitoring_checkNCells(bcc_drv_config_t* const drvConfig, bool 
 
     // reset the battery voltage
     cellVoltageTotal = 0;
-
-    //nCells = 6;
     
     // get the cell voltages
     for(i = 0; i < nCells; i++)
@@ -1393,8 +1204,8 @@ bcc_status_t bcc_monitoring_checkNCells(bcc_drv_config_t* const drvConfig, bool 
         }
 
         // read the cell voltage
-        lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, (BCC_REG_MEAS_CELLX_ADDR_END - bccIndex),
-        1, &regVal); 
+        lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, 
+            (BCC_REG_MEAS_CELLX_ADDR_END - bccIndex), 1, &regVal); 
 
         // check for errors
         if(lvRetValue != BCC_STATUS_SUCCESS)
@@ -1416,7 +1227,7 @@ bcc_status_t bcc_monitoring_checkNCells(bcc_drv_config_t* const drvConfig, bool 
     }
 
     // read the stack voltage
-    lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_MEAS_STACK_ADDR,
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_MEAS_STACK_ADDR,
         1, &regVal); 
 
     // check for errors
@@ -1439,7 +1250,6 @@ bcc_status_t bcc_monitoring_checkNCells(bcc_drv_config_t* const drvConfig, bool 
         // output error
         cli_printfError("bcc_monitoring ERROR: stackvoltage too different from sum of cells!\nstack: %.3fV cells: %.3fV\n",
             stackVoltage, cellVoltageTotal);
-
 
         // set the error in the status flags
         data_statusFlagBit(STATUS_BMS_ERROR_BIT, 1);
@@ -1497,8 +1307,8 @@ bcc_status_t bcc_monitoring_getOutputVoltage(bcc_drv_config_t* const drvConfig)
     float outputVoltage;
 
     // read the output voltage (AN4)
-    lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, (BCC_REG_MEAS_ANX_ADDR_END - 4),
-    1, &regVal); 
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, (BCC_REG_MEAS_ANX_ADDR_END - 4),
+        1, &regVal); 
 
     // check for errors
     if(lvRetValue != BCC_STATUS_SUCCESS)
@@ -1518,11 +1328,85 @@ bcc_status_t bcc_monitoring_getOutputVoltage(bcc_drv_config_t* const drvConfig)
     // set the output voltage
     if(data_setParameter(V_OUT, &outputVoltage))
     {
-       cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d\n", 
-        V_OUT);
+        cli_printfError("bcc_monitoring ERROR: setting new data went in the update wrong! par %d: %.3f \n", 
+            V_OUT, outputVoltage);
 
-       // set an error
-       lvRetValue = BCC_STATUS_PARAM_RANGE;
+        // set an error
+        lvRetValue = BCC_STATUS_PARAM_RANGE;
+    }
+
+    // return to the user
+    return lvRetValue;
+}
+
+/*
+ * @brief   This function is used to get the cell voltages
+ *          it will read the cell voltages without reading the other measurements
+ * @note    A measurement should be done first
+ *
+ * @param   drvConfig the address the BCC driver configuration
+ *
+ * @return  bcc_status_t Error code
+ */
+bcc_status_t bcc_monitoring_getCellVoltages(bcc_drv_config_t* const drvConfig)
+{
+    bcc_status_t lvRetValue = BCC_STATUS_PARAM_RANGE;
+    uint8_t nCells, i, bccIndex;
+    uint16_t regVal[6];
+    float cellVoltage;
+    parameterKind_t parameter;
+
+    // get the number of cells
+    if(data_getParameter(N_CELLS, &nCells, NULL) == NULL)
+    {
+        cli_printfError("bcc_monitoring_getCellVoltages ERROR: getting n-cells went wrong!\n");
+        nCells = N_CELLS_DEFAULT;
+    }
+
+    // read the cell voltages
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, (BCC_REG_MEAS_CELLX_ADDR_END - 5),
+        6, regVal); 
+
+    // check for errors
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        cli_printfError("bcc_monitoring_getCellVoltages ERROR: reading cell voltages failed: %d\n", lvRetValue);
+        return lvRetValue;
+    }    
+
+    // loop throught the cells
+    for(i = 0; i < nCells; i++)
+    {
+        // check if it isn't is one of the first 2 cells
+        if(i >= 2)
+        {
+            // calculate the BCC pin index
+            bccIndex = (6-nCells) + i;
+        }
+        else
+        {
+            // it is one of the first 2 cells
+            bccIndex = i;
+        }
+
+        // Mask the registers  
+        regVal[5 - bccIndex] &= BCC_R_MEAS_MASK;
+
+        // convert the cell voltage to a float
+        cellVoltage = BCC_GET_VOLT(regVal[5 - bccIndex]) / UV_TO_V; 
+
+        // set the new battery cell voltage
+        parameter = (parameterKind_t)(V_CELL1 + i);
+
+        // set the cell voltage 
+        if(data_setParameter(parameter, &cellVoltage))
+        {
+            cli_printfError("bcc_monitoring_getCellVoltages ERROR: setting new data went in the update wrong! par %d: %.3f \n", 
+                parameter, cellVoltage);
+
+            // set an error
+            lvRetValue = BCC_STATUS_PARAM_RANGE;
+        }    
     }
 
     // return to the user
@@ -1544,14 +1428,17 @@ bcc_status_t bcc_monitoring_getBattCurrent(bcc_drv_config_t* const drvConfig, ui
     bcc_status_t lvRetValue = BCC_STATUS_PARAM_RANGE;
     uint16_t regVal[2];
     float current;
+    charge_states_t chargeState = data_getChargeState();
 
     // get the current measument
-    lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_MEAS_ISENSE1_ADDR, 2, regVal);
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_MEAS_ISENSE1_ADDR, 
+        2, regVal);
 
     // check for an error
-    if (lvRetValue != BCC_STATUS_SUCCESS)
+    if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printfError("bcc_monitoring_getBattCurrent ERROR: couldn't get current error: %d\n", lvRetValue);
+        cli_printfError("bcc_monitoring_getBattCurrent ERROR: couldn't get current error: %d\n", 
+            lvRetValue);
         return lvRetValue;
     }
 
@@ -1559,17 +1446,45 @@ bcc_status_t bcc_monitoring_getBattCurrent(bcc_drv_config_t* const drvConfig, ui
     regVal[0] &= BCC_R_MEAS1_I_MASK;
     regVal[1] &= BCC_R_MEAS2_I_MASK;
 
-    // convert the battery current to a float                                                                           // Measured ISENSE in [mA]. Value of shunt resistor is used.
-    current = BCC_GET_ISENSE_AMP(rShunt, regVal[0], regVal[1]) / MA_TO_A;
+    // convert the battery current to a float in mA                                                                         // Measured ISENSE in [mA]. Value of shunt resistor is used.
+    current = BCC_GET_ISENSE_AMP(rShunt, regVal[0], regVal[1]);
+
+    // Get the system current
+    if(data_getParameter(I_SYSTEM, &regVal[0], NULL) == NULL)
+    {
+        cli_printfError("bcc_monitoring ERROR: getting new data went wrong in the update! par %d val %d\n", 
+            I_SYSTEM, regVal[0]);
+    } 
+
+    // Limit the value
+    regVal[0] &= UINT8_MAX;
+
+    // Check if substracting own board current during charging is needed
+    // Check if the current is positive (charging) (including board current)
+    if((int)(current) >= (regVal[0]))
+    {
+        // Get the state and check if it is in the charging state (CHARGE_START or CHARGE_CB)
+        if(data_getMainState() == CHARGE && 
+            (chargeState == CHARGE_START || chargeState == CHARGE_CB))
+        {
+            // Substract the system current because that is measured as well
+            current = current - (float)(regVal[0]);
+        }
+    }
+
+    // Convert to A
+    current = current / MA_TO_A;
 
     // set the current
     if(data_setParameter(I_BATT, &current))
     {
-       cli_printfError("bcc_monitoring_getBattCurrent ERROR: setting new data went in the update wrong! par %d\n", I_BATT);
-       cli_printf("Measured current: %.3fA\n", current);
+        cli_printfError("bcc_monitoring_getBattCurrent ERROR: setting new data went in the update wrong! par %d: %.3f \n", 
+            I_BATT, current);
 
-       // set an error
-       lvRetValue = BCC_STATUS_PARAM_RANGE;
+        cli_printf("Measured current: %.3fA\n", current);
+
+        // set an error
+        lvRetValue = BCC_STATUS_PARAM_RANGE;
     }
 
     // return to the user
@@ -1592,74 +1507,129 @@ bcc_status_t bcc_monitoring_getIsenseOpenLoad(bcc_drv_config_t* const drvConfig,
     uint16_t regVal[1], retRegVal[1];
     uint8_t timeout;
 
-    lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_CFG1_ADDR, 1, regVal);
-    if (lvRetValue != BCC_STATUS_SUCCESS)
+    // lock the BCC SPI until done
+    if(spi_lockNotUnlockBCCSpi(true))
     {
-        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_CFG1: %d\n", lvRetValue);
-        return lvRetValue;
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't lock BCC SPI\n");
     }
 
-    // cli_printf("SYS_CFG1 read: %x\n", regVal[0]);
+    // read the register
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_CFG1_ADDR, 
+        1, regVal);
+
+    // check for errors
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // unlock the BCC SPI until done
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_CFG1: %d\n", 
+            lvRetValue);
+        return lvRetValue;
+    }
 
     timeout = (regVal[0]) >> 10;
     regVal[0] &= ~(7680);
     regVal[0] |= 5184;
 
-    // cli_printf("SYS_CFG1 write: %x\n", regVal[0]);
-
-    lvRetValue = BCC_Reg_Write(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_CFG1_ADDR, regVal[0], retRegVal);
-    if (lvRetValue != BCC_STATUS_SUCCESS)
+    // write the registers and check for errors
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Write(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_CFG1_ADDR, 
+        regVal[0], retRegVal);
+    if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't write SYS_CFG1: %d\n", lvRetValue);
+        // unlock the BCC SPI until done
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't write SYS_CFG1: %d\n", 
+            lvRetValue);
         return lvRetValue;
     }
 
-    lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_CFG1_ADDR, 1, regVal);
-    if (lvRetValue != BCC_STATUS_SUCCESS)
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_CFG1_ADDR, 
+        1, regVal);
+    if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_CFG1: %d\n", lvRetValue);
+        // unlock the BCC SPI until done
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_CFG1: %d\n", 
+            lvRetValue);
         return lvRetValue;
     }
 
-    // cli_printf("SYS_CFG1 written: %x\n", regVal[0]);
-
-    lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_DIAG_ADDR, 1, regVal);
-    if (lvRetValue != BCC_STATUS_SUCCESS)
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_DIAG_ADDR, 
+        1, regVal);
+    if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printfError("bcc_monitoring_getIsenseOpenLoad: couldn't get SYS_DIAG: %d\n", lvRetValue);
+        // unlock the BCC SPI until done
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad: couldn't get SYS_DIAG: %d\n", 
+            lvRetValue);
         return lvRetValue;
     }
-    // cli_printf("SYS_DIAG read: %x\n", regVal[0]);
 
     regVal[0] |= 1024;
 
-    // cli_printf("SYS_DIAG write: %x\n", regVal[0]);
-
-    lvRetValue = BCC_Reg_Write(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_DIAG_ADDR, regVal[0], retRegVal);
-    if (lvRetValue != BCC_STATUS_SUCCESS)
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Write(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_DIAG_ADDR, 
+        regVal[0], retRegVal);
+    if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't write SYS_DIAG: %d\n", lvRetValue);
+        // unlock the BCC SPI until done
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't write SYS_DIAG: %d\n", 
+            lvRetValue);
         return lvRetValue;
     }
-    lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_DIAG_ADDR, 1, regVal);
-    if (lvRetValue != BCC_STATUS_SUCCESS)
+
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_DIAG_ADDR, 
+        1, regVal);
+    if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_DIAG: %d\n", lvRetValue);
+        // unlock the BCC SPI until done
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_DIAG: %d\n", 
+            lvRetValue);
         return lvRetValue;
     }
 
-    // cli_printf("SYS_DIAG written: %x\n", regVal[0]);
-
+    // sleep for 20ms
     usleep(20*1000UL);
 
-    lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_FAULT1_STATUS_ADDR, 1, regVal);
-
-    // cli_printf("FAULT1 read: %x\n", regVal[0]);
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_FAULT1_STATUS_ADDR, 
+        1, regVal);
 
     // check for an error
-    if (lvRetValue != BCC_STATUS_SUCCESS)
+    if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get fault 1 error: %d\n", lvRetValue);
+        // unlock the BCC SPI until done
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get fault 1 error: %d\n", 
+            lvRetValue);
         return lvRetValue;
     }
 
@@ -1674,63 +1644,107 @@ bcc_status_t bcc_monitoring_getIsenseOpenLoad(bcc_drv_config_t* const drvConfig,
         *openLoadDetected = false;
     }
 
-    lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_DIAG_ADDR, 1, regVal);
-    if (lvRetValue != BCC_STATUS_SUCCESS)
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_DIAG_ADDR, 
+        1, regVal);
+    if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_DIAG: %d\n", lvRetValue);
+        // unlock the BCC SPI until done
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_DIAG: %d\n", 
+            lvRetValue);
         return lvRetValue;
     }
-    // cli_printf("SYS_DIAG read: %x\n", regVal[0]);
 
     regVal[0] &= ~(1024);
 
-    // cli_printf("SYS_DIAG write: %x\n", regVal[0]);
-
-    lvRetValue = BCC_Reg_Write(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_DIAG_ADDR, regVal[0], retRegVal);
-    if (lvRetValue != BCC_STATUS_SUCCESS)
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Write(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_DIAG_ADDR, 
+        regVal[0], retRegVal);
+    if(lvRetValue != BCC_STATUS_SUCCESS)
     {
+        // unlock the BCC SPI until done
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+        }
+
         cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't write SYS_DIAG: %d\n", lvRetValue);
         return lvRetValue;
     }
 
-    lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_DIAG_ADDR, 1, regVal);
-    if (lvRetValue != BCC_STATUS_SUCCESS)
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_DIAG_ADDR, 
+        1, regVal);
+    if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_DIAG: %d\n", lvRetValue);
+        // unlock the BCC SPI until done
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_DIAG: %d\n", 
+            lvRetValue);
         return lvRetValue;
     }
-
-    // cli_printf("SYS_DIAG written: %x\n", regVal[0]);
 
     usleep(6*1000UL);
 
-    lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_CFG1_ADDR, 1, regVal);
-    if (lvRetValue != BCC_STATUS_SUCCESS)
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_CFG1_ADDR, 
+        1, regVal);
+    if(lvRetValue != BCC_STATUS_SUCCESS)
     {
-        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_CFG1: %d\n", lvRetValue);
+        // unlock the BCC SPI until done
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_CFG1: %d\n", 
+            lvRetValue);
         return lvRetValue;
     }
-    // cli_printf("SYS_CFG1 read: %x\n", regVal[0]);
 
     regVal[0] &= ~(7232);
     regVal[0] |= (512 + (timeout << 10));
 
-    // cli_printf("SYS_CFG1 write: %x\n", regVal[0]);
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Write(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_CFG1_ADDR, 
+        regVal[0], retRegVal);
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // unlock the BCC SPI until done
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+        }
 
-    lvRetValue = BCC_Reg_Write(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_CFG1_ADDR, regVal[0], retRegVal);
-    if (lvRetValue != BCC_STATUS_SUCCESS)
-    {
-        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't write SYS_CFG1: %d\n", lvRetValue);
-        return lvRetValue;
-    }    
-    lvRetValue = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_CFG1_ADDR, 1, regVal);
-    if (lvRetValue != BCC_STATUS_SUCCESS)
-    {
-        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_CFG1: %d\n", lvRetValue);
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't write SYS_CFG1: %d\n", 
+            lvRetValue);
         return lvRetValue;
     }
 
-    // cli_printf("SYS_CFG1 written: %x\n", regVal[0]);
+    lvRetValue = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_CFG1_ADDR, 
+        1, regVal);
+    if(lvRetValue != BCC_STATUS_SUCCESS)
+    {
+        // unlock the BCC SPI until done
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't get SYS_CFG1: %d\n", 
+            lvRetValue);
+        return lvRetValue;
+    }
+
+    // unlock the BCC SPI until done
+    if(spi_lockNotUnlockBCCSpi(false))
+    {
+        cli_printfError("bcc_monitoring_getIsenseOpenLoad ERROR: couldn't unlock BCC SPI\n");
+    }
 
     // return to the user
     return lvRetValue;
@@ -1750,7 +1764,7 @@ int bcc_monitoring_doAllCalculations(void)
     int error = 0;
     int semValue;
 
-     // check if semaphore is initialzed
+    // check if semaphore is initialzed
     if(!gGetOtherMeasSemInitialized)
     {
         // set the error 
@@ -1775,15 +1789,11 @@ int bcc_monitoring_doAllCalculations(void)
         return error;
     }
 
-    //cli_printf("sem: %d\n", semValue);
-    //usleep(100);
-
     // check if needed 
     while(semValue < 1 && error == 0)
     {
         // increase the semaphore
         error = sem_post(&gGetOtherMeasurementSem);
-        //cli_printf("sem2: %d\n", semValue);
 
         // check for error
         if(error)
@@ -1794,7 +1804,8 @@ int bcc_monitoring_doAllCalculations(void)
             sem_getvalue(&gGetOtherMeasurementSem, &semValue);
 
             // get the error to the user
-            cli_printfError("bcc_monitoring ERROR: other meas semaphore error: %d sem: %d\n", error, semValue);
+            cli_printfError("bcc_monitoring ERROR: other meas semaphore error: %d sem: %d\n", 
+                error, semValue);
         }
 
         // check if semaphore needs to be posted
@@ -1902,17 +1913,35 @@ int bcc_monitoring_calcDCharge(bcc_drv_config_t* const drvConfig, uint16_t *samp
 
     if(samplesAdr == NULL || avgCurrentAdr == NULL || deltaChargeAdr == NULL)
     {
+        // unlock the mutex
+        pthread_mutex_unlock(&gDChargeFuncMutex);
+
         cli_printfError("bcc_monitoring ERROR: gave NULL pointer!\n");
         return lvRetValue;
     }
 
+    // lock the BCC SPI until the measurement is done and read
+    if(spi_lockNotUnlockBCCSpi(true))
+    {
+        cli_printfError("bcc_monitoring ERROR: couldn't lock BCC SPI\n");
+    }
+
     // read the CC registers and reset them
-    error = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_CC_NB_SAMPLES_ADDR,
-                             ((BCC_REG_COULOMB_CNT2_ADDR - BCC_REG_CC_NB_SAMPLES_ADDR) + 1), measurements);
+    error = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, BCC_REG_CC_NB_SAMPLES_ADDR,
+        ((BCC_REG_COULOMB_CNT2_ADDR - BCC_REG_CC_NB_SAMPLES_ADDR) + 1), measurements);
 
     // get the sample time
     if(clock_gettime(CLOCK_REALTIME, &newSampletime) == -1)
     {
+        // unlock the BCC SPI 
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        // unlock the mutex
+        pthread_mutex_unlock(&gDChargeFuncMutex);
+
         cli_printfError("bcc_monitoring ERROR: failed to get newSampletime time!\n");
         return lvRetValue;
     }
@@ -1926,26 +1955,34 @@ int bcc_monitoring_calcDCharge(bcc_drv_config_t* const drvConfig, uint16_t *samp
     }
 
     // check for an error
-    if (error != BCC_STATUS_SUCCESS)
+    if(error != BCC_STATUS_SUCCESS)
     {
+        // unlock the BCC SPI 
+        if(spi_lockNotUnlockBCCSpi(false))
+        {
+            cli_printfError("bcc_monitoring ERROR: couldn't unlock BCC SPI\n");
+        }
+
+        // unlock the mutex
+        pthread_mutex_unlock(&gDChargeFuncMutex);
+
         cli_printfError("bcc_monitoring ERROR: Couldn't get CC registers error: %d\n", error);
         return error;
     }
 
-     // maybe set CC_RST of ADC_CFG to reset CC or check CC_RST_CFG from ADC2_OFFSET_COMP
+    // maybe set CC_RST of ADC_CFG to reset CC or check CC_RST_CFG from ADC2_OFFSET_COMP
     if(resetCC)
     {
         // reset the CC by writing the CC_RST bit in ADC_CFG
-        error = BCC_Reg_Update(drvConfig, BCC_CID_DEV1, BCC_REG_ADC_CFG_ADDR,  BCC_W_CC_RST_MASK,  0xFF);
+        error = bcc_spiwrapper_BCC_Reg_Update(drvConfig, BCC_CID_DEV1, BCC_REG_ADC_CFG_ADDR, 
+            BCC_W_CC_RST_MASK,  0xFF);
 
         // check for errors
-        if (error != BCC_STATUS_SUCCESS)
+        if(error != BCC_STATUS_SUCCESS)
         {
             cli_printfError("bcc_monitoring ERROR: Couldn't reset CC registers error: %d\n", error);
             //return error;
         }
-
-        //cli_printf("CCmsb: %d CClsb: %d samples: %d\n", measurements[BCC_MSR_COULOMB_CNT1], measurements[BCC_MSR_COULOMB_CNT2], measurements[BCC_MSR_CC_NB_SAMPLES]);
     }
 
     // calulate the average power
@@ -1961,13 +1998,15 @@ int bcc_monitoring_calcDCharge(bcc_drv_config_t* const drvConfig, uint16_t *samp
     //chargek = chargek-1 + dCharge
 
     // get the sum of the current in A
-    newSumCurrent = (((measurements[BCC_MSR_COULOMB_CNT1] << 16) +  measurements[BCC_MSR_COULOMB_CNT2]) * V2RES_DIV_RSHUNT);
+    newSumCurrent = (((measurements[BCC_MSR_COULOMB_CNT1] << 16) +  measurements[BCC_MSR_COULOMB_CNT2]) * 
+        V2RES_DIV_RSHUNT);
 
     // get the average current in A over the 
     *avgCurrentAdr = ((newSumCurrent)/(measurements[BCC_MSR_CC_NB_SAMPLES]));
     
     // get the difference in time in ms (could use T_meas)
-    dt = ((newSampletime.tv_nsec / 1000000) + (newSampletime.tv_sec * 1000)) - ((oldSampleTime.tv_nsec / 1000000) + (oldSampleTime.tv_sec * 1000));
+    dt = ((newSampletime.tv_nsec / 1000000) + (newSampletime.tv_sec * 1000)) - ((oldSampleTime.tv_nsec / 1000000) + 
+        (oldSampleTime.tv_sec * 1000));
 
     // check for limits
     if(dt < 0)
@@ -1975,8 +2014,6 @@ int bcc_monitoring_calcDCharge(bcc_drv_config_t* const drvConfig, uint16_t *samp
         // set it to 0
         dt = 0;
     }
-
-    //cli_printf("dt: %dms\n", dt);
     
     // get the difference in charge in Ah
     *deltaChargeAdr = *avgCurrentAdr * (float)dt/(3600000);
@@ -1992,6 +2029,12 @@ int bcc_monitoring_calcDCharge(bcc_drv_config_t* const drvConfig, uint16_t *samp
     oldSampleTime.tv_nsec = newSampletime.tv_nsec;
     oldSampleTime.tv_sec = newSampletime.tv_sec;
 
+    // unlock the BCC SPI 
+    if(spi_lockNotUnlockBCCSpi(false))
+    {
+        cli_printfError("bcc_monitoring ERROR: couldn't unlock BCC SPI\n");
+    }
+
     // unlock the mutex
     pthread_mutex_unlock(&gDChargeFuncMutex);
 
@@ -2002,16 +2045,19 @@ int bcc_monitoring_calcDCharge(bcc_drv_config_t* const drvConfig, uint16_t *samp
 
 /*
  * @brief   This function can be used to calibrate the state of charge (SoC)
+ * @note    A measurement needs to be done first and the cell voltages need to be saved
  * @note    A predefined table and the lowest cell voltage will be used for this
- * @note    can be called from mulitple threads
+ * @note    Can be called from mulitple threads
  * @warning The battery (voltage) needs to be relaxed before this is used!
  *
- * @param   currentCheck if true the current check will be done,
+ * @param   calibrateARem if true, it will set the a-rem to calibrate SoC (mostly needed).
+ *          If false, it will calibrate a-full based on a-rem with correct SoC (charge complete). 
+ * @param   CurrentCheck if true the current check will be done,
  *          Keep this default on true, except for a power-up check
  *
  * @return  0 if succesfull, otherwise it will indicate the error
  */
-int bcc_monitoring_calibrateSoC(bool currentCheck)
+int bcc_monitoring_calibrateSoC(bool calibrateARem, bool currentCheck)
 {
     int lvRetValue = -1;
     float lowestCellVoltage, cellVoltageOrCapacity;
@@ -2023,8 +2069,7 @@ int bcc_monitoring_calibrateSoC(bool currentCheck)
         // get the sleepcurrent in mA and place it in nCells
         if(data_getParameter(I_SLEEP_OC, &nCells, NULL) == NULL)
         {
-           cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting sleep current went wrong!\n");
-           //return lvRetValue;
+            cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting sleep current went wrong!\n");
         }
         // if it went good
         else
@@ -2032,8 +2077,7 @@ int bcc_monitoring_calibrateSoC(bool currentCheck)
             // get the battery current and place it in cellVoltageOrCapacity
             if(data_getParameter(I_BATT, &cellVoltageOrCapacity, NULL) == NULL)
             {
-               cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting current went wrong!\n");
-               //return lvRetValue;
+                cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting current went wrong!\n");
             }
             // if it went good
             else
@@ -2045,7 +2089,8 @@ int bcc_monitoring_calibrateSoC(bool currentCheck)
                 {
                     // output the error message
                     cli_printfError("bcc_monitoring_calibrateSoC ERROR: Battery is not relaxed!\n");
-                    cli_printf("battery current %.0fmA > %dmA sleepcurrent\n", cellVoltageOrCapacity*1000, nCells);
+                    cli_printf("battery current %.0fmA > %dmA sleepcurrent\n", 
+                        cellVoltageOrCapacity*1000, nCells);
 
                     // return
                     return lvRetValue;
@@ -2058,15 +2103,15 @@ int bcc_monitoring_calibrateSoC(bool currentCheck)
     // get the number of cells
     if(data_getParameter(N_CELLS, &nCells, NULL) == NULL)
     {
-       cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting cell count went wrong!\n");
-       return lvRetValue;
+        cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting cell count went wrong!\n");
+        return lvRetValue;
     }
 
     // get the first cell voltage 
     if(data_getParameter(V_CELL1, &lowestCellVoltage, NULL) == NULL)
     {
-       cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting cell1 voltage went wrong!\n");
-       return lvRetValue;
+        cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting cell1 voltage went wrong!\n");
+        return lvRetValue;
     }
 
     //cli_printf("Cell1 voltage: %.3f\n", lowestCellVoltage);
@@ -2077,12 +2122,9 @@ int bcc_monitoring_calibrateSoC(bool currentCheck)
         // get the first cell voltage 
         if(data_getParameter((parameterKind_t)(V_CELL1 + i), &cellVoltageOrCapacity, NULL) == NULL)
         {
-           cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting cell%d voltage went wrong!\n", i+1);
-           return lvRetValue;
+            cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting cell%d voltage went wrong!\n", i+1);
+            return lvRetValue;
         }
-
-        //cli_printf("Cell%d voltage: %.3f\n", i+1, cellVoltageOrCapacity);
-
 
         // compare if it is less than the lowest
         if(cellVoltageOrCapacity < lowestCellVoltage)
@@ -2092,26 +2134,29 @@ int bcc_monitoring_calibrateSoC(bool currentCheck)
         }
     }
 
+    // make the lowest cell voltage a mV value
+    lowestCellVoltage = lowestCellVoltage * 1000;
+
     // get the battery type variable
     if(data_getParameter(BATTERY_TYPE, &batteryType, NULL) == NULL)
     {
-       cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting battery type went wrong!\n");
-       batteryType = BATTERY_TYPE_DEFAULT;
-       //return lvRetValue;
+        cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting battery type went wrong!\n");
+        batteryType = BATTERY_TYPE_DEFAULT;
     }
 
     // find the initial state of charge
     for(i = 0; i < ((cellmvVsSOCLookupTableAllSize[batteryType]) - 1); i++)
     {
-        // check the cell voltage
-        if((lowestCellVoltage*1000) > ((cellmvVsSOCLookupTableAll[batteryType][i].milliVolt - cellmvVsSOCLookupTableAll[batteryType][i+1].milliVolt)/2) 
-            + cellmvVsSOCLookupTableAll[batteryType][i+1].milliVolt)
+        // check if the lowest cell voltage is higher than the next voltage
+        if((lowestCellVoltage) > cellmvVsSOCLookupTableAll[batteryType][i+1].milliVolt)
         {
-            //cli_printf(" > %dmv\n", ((cellmvVsSOCLookupTableAll[batteryType][i].milliVolt - cellmvVsSOCLookupTableAll[batteryType][i+1].milliVolt)/2) + cellmvVsSOCLookupTableAll[batteryType][i+1].milliVolt);
-            // set the state of charge
-            StateOfCharge = (cellmvVsSOCLookupTableAll[batteryType][i]).SoC;
-
-            //cli_printf("i = %d, SoC: %d == %d\n", i, StateOfCharge, (cellmvVsSOCLookupTableAll[batteryType][i]).SoC);
+            // set the state of charge using linearly interpolation
+            StateOfCharge = (cellmvVsSOCLookupTableAll[batteryType][i+1]).SoC +
+                (int)round((float)(lowestCellVoltage - (cellmvVsSOCLookupTableAll[batteryType][i+1]).milliVolt) *
+                (float)((float)((cellmvVsSOCLookupTableAll[batteryType][i]).SoC - 
+                (cellmvVsSOCLookupTableAll[batteryType][i+1]).SoC) /
+                ((cellmvVsSOCLookupTableAll[batteryType][i]).milliVolt - 
+                (cellmvVsSOCLookupTableAll[batteryType][i+1]).milliVolt)));
 
             // escape the for loop
             break;
@@ -2119,10 +2164,6 @@ int bcc_monitoring_calibrateSoC(bool currentCheck)
         // check if it couldn't find it
         else if(i == ((cellmvVsSOCLookupTableAllSize[batteryType]) - 2))
         {
-            //cli_printf(" > %dmv\n", ((cellmvVsSOCLookupTableAll[batteryType][i].milliVolt - cellmvVsSOCLookupTableAll[batteryType][i+1].milliVolt)/2) + cellmvVsSOCLookupTableAll[batteryType][i+1].milliVolt);
-
-            //cli_printf("i = %d, SoC: %d == %d\n", i, 0, 0);
-
             // set to 0
             StateOfCharge = 0;
         }
@@ -2140,22 +2181,88 @@ int bcc_monitoring_calibrateSoC(bool currentCheck)
         StateOfCharge = 100;
     }
 
-    // get the full charge capacity 
-    if(data_getParameter(A_FULL, &cellVoltageOrCapacity, NULL) == NULL)
+    // check if a-rem needs to be calibrated to calibrate the SoC
+    if(calibrateARem)
     {
-       cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting a-full went wrong!\n");
-       return lvRetValue;
-    }
-    
-    // calculate the new remaining capacity
-    cellVoltageOrCapacity = (cellVoltageOrCapacity/100) * StateOfCharge;
+        // get the full charge capacity 
+        if(data_getParameter(A_FULL, &cellVoltageOrCapacity, NULL) == NULL)
+        {
+            cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting a-full went wrong!\n");
+            return lvRetValue;
+        }
+        
+        // calculate the new remaining capacity
+        cellVoltageOrCapacity = (cellVoltageOrCapacity/100) * StateOfCharge;
 
-    // set the new remaining capacity
-    // NOTE: the state of charge is calculated with a change of the remaining capacity or the full charge capacity
-    if(data_setParameter(A_REM, &cellVoltageOrCapacity))
+        // set the new remaining capacity
+        // NOTE: the state of charge is calculated with a change of the remaining capacity or the full charge capacity
+        if(data_setParameter(A_REM, &cellVoltageOrCapacity))
+        {
+            cli_printfError("bcc_monitoring_calibrateSoC ERROR: setting new remaining capacity went wrong!\n");
+            return lvRetValue;
+        }
+    }
+    else
     {
-       cli_printfError("bcc_monitoring_calibrateSoC ERROR: setting new remaining capacity went wrong!\n");
-       return lvRetValue;
+        cli_printf("Re-calibrating a-full\n");
+
+        // get the remaining capacity 
+        if(data_getParameter(A_REM, &cellVoltageOrCapacity, NULL) == NULL)
+        {
+            cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting a-rem went wrong!\n");
+            return lvRetValue;
+        }
+        
+        // calculate the new full capacity based on the SoC
+        cellVoltageOrCapacity = (cellVoltageOrCapacity/StateOfCharge) * 100;
+
+        // get the factory capacity
+        if(data_getParameter(A_FACTORY, &lowestCellVoltage, NULL) == NULL)
+        {
+            cli_printfError("bcc_monitoring_calibrateSoC ERROR: getting a-factory went wrong!\n");
+            return lvRetValue;
+        }
+
+        // check if the new full capacity is larger than the factory capacity
+        if(cellVoltageOrCapacity > lowestCellVoltage)
+        {
+            // limit the full capacity to the factory capacity 
+            cellVoltageOrCapacity = lowestCellVoltage;
+
+            // set the new remaining capacity
+            // NOTE: the state of charge is calculated with a change of the remaining capacity or the full charge capacity
+            if(data_setParameter(A_FULL, &cellVoltageOrCapacity))
+            {
+                cli_printfError("bcc_monitoring_calibrateSoC ERROR: setting new full capacity went wrong!\n");
+                return lvRetValue;
+            }
+
+            // Correct the remaining capacity
+            // calculate the new remaining capacity
+            cellVoltageOrCapacity = (cellVoltageOrCapacity/100) * StateOfCharge;
+
+            // set the new remaining capacity
+            // NOTE: the state of charge is calculated with a change of the remaining capacity or the full charge capacity
+            if(data_setParameter(A_REM, &cellVoltageOrCapacity))
+            {
+                cli_printfError("bcc_monitoring_calibrateSoC ERROR: setting new remaining capacity went wrong!\n");
+                return lvRetValue;
+            }
+
+            cli_printf("Calculated a-full is > a-factory\nSetting a-full at %fAh and a-rem at %fAh\n",
+                lowestCellVoltage, cellVoltageOrCapacity);
+        }
+        // if the full charge capacity is OK
+        else
+        {
+            // set the new remaining capacity
+            // NOTE: the state of charge is calculated with a change of the remaining capacity or the full charge capacity
+            if(data_setParameter(A_FULL, &cellVoltageOrCapacity))
+            {
+                cli_printfError("bcc_monitoring_calibrateSoC ERROR: setting new full capacity went wrong!\n");
+                return lvRetValue;
+            }
+        }
     }
 
     // set the returnvalue to 0
@@ -2196,10 +2303,8 @@ int bcc_monitoring_checkBalancingDone(bcc_drv_config_t* const drvConfig, uint8_t
     }
 
     // read the register
-    error = BCC_Reg_Read(drvConfig, BCC_CID_DEV1, (BCC_REG_CB1_CFG_ADDR + bccIndex),
+    error = bcc_spiwrapper_BCC_Reg_Read(drvConfig, BCC_CID_DEV1, (BCC_REG_CB1_CFG_ADDR + bccIndex),
         1, &retReg);
-
-    //cli_printf("CB%d_CFG: %d\n", bccIndex+1, retReg);
 
     // make the return value
     lvRetValue = error;
@@ -2218,145 +2323,6 @@ int bcc_monitoring_checkBalancingDone(bcc_drv_config_t* const drvConfig, uint8_t
 
     // return
     return lvRetValue;
-}
-
-/*
- * @brief   This function is used to enable or disable the display of the measurements
- *
- * @param   showCommand which measurements to enable or disable
- * @param   value the new value of that bit
- *
- * @return  none
- */
-void bcc_monitoring_setShowMeas(showCommands_t showCommand, bool value)
-{
-    int i;
-    int32_t int32Val;
-    int lineCounterVal = 0;
-
-    // check if a bit
-    if(showCommand < CLI_ALL)
-    {
-        // check the value
-        if(value)
-        {
-            // set the bit
-            gShowMeasurements |= (1 << showCommand);
-
-            // reset the screen
-            if(gDoTop)
-            {
-                cli_printf("\e[2J");
-            }
-        }
-        else
-        {
-            // clear the bit
-            gShowMeasurements &= ~(1 << showCommand);
-        }
-    }
-    else
-    {
-        if(showCommand == CLI_ALL)
-        {
-            // reset the value
-            if(!value)
-            {
-                gShowMeasurements = 0;
-            }
-            else
-            {
-                // set each bit
-                for(i = 0; i < CLI_ALL; i++)
-                {
-                    // set the value
-                    gShowMeasurements |= (1<<i);
-                }
-            }
-
-            if(gDoTop)
-            {
-                // clear the screen 
-                cli_printf("\e[2J");
-
-                for(i = 0; i < CLI_ALL; i++)
-                {
-                    if(gShowMeasurements & (1<<i))
-                    {
-                        // increase the linecounter value
-                        lineCounterVal++;
-
-                        if(i == CLI_CELL_VOLTAGE)
-                        {
-                            // get the cell count
-                            if(data_getParameter(N_CELLS, &int32Val, NULL) == NULL)
-                            {
-                               cli_printfError("bcc_monitoring_setShowMeas ERROR: getting cell count went wrong!\n");
-                            } 
-                            // add some more 
-                            lineCounterVal += ((int32Val & 0xFF) - 1);
-                        }
-                        else if(i == CLI_TEMPERATURE)
-                        {
-                            // add some more 
-                            lineCounterVal += 3;
-                        }
-                    }
-                }
-
-                // set the line 
-                cli_printf("\e[%d;0H", ++lineCounterVal);
-
-                // save the value
-                //cli_printf("%s", &gSaveCursor);
-            }
-        }
-        if(showCommand == CLI_TOP)
-        {
-            // set the topvariable
-            gDoTop = value;
-
-            // check if reset is needed 
-            if(value)
-            {
-
-               cli_printf("\e[2J");
-
-                lineCounterVal = 0;
-
-                for(i = 0; i < CLI_ALL; i++)
-                {
-                    if(gShowMeasurements & (1<<i))
-                    {
-                        lineCounterVal++;
-                        if(i == CLI_CELL_VOLTAGE)
-                        {
-                            // get the cell count
-                            if(data_getParameter(N_CELLS, &int32Val, NULL) == NULL)
-                            {
-                               cli_printfError("bcc_monitoring_setShowMeas ERROR: getting cell count went wrong!\n");
-                            } 
-                            // add some more 
-                            lineCounterVal += ((int32Val & 0xFF) - 1);
-                        }
-                        else if(i == CLI_TEMPERATURE)
-                        {
-                            // add some more 
-                            lineCounterVal += 3;
-                        }
-                    }
-                }
-
-                // set the line 
-                cli_printf("\e[%d;0H", ++lineCounterVal);
-                //cli_printf("this line %d\n", lineCounterVal);
-
-                 // save the line
-                //cli_printf("%c[2J", 7);
-                //cli_printf("%s", &gSaveCursor);
-            }
-        }
-    }
 }
 
 /*******************************************************************************

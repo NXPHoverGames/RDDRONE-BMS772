@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 - 2020 NXP
+ * Copyright 2016 - 2021 NXP
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -42,37 +42,35 @@
  ******************************************************************************/
 #include "BCC/Derivatives/bcc.h"
 
-
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
-
 
 /*******************************************************************************
  * API
  ******************************************************************************/
 
- /*!
-  * @brief This function performs one 40b transfer via SPI bus. Intended for SPI
-  * mode only. This function needs to be implemented for specified MCU by the
-  * user.
-  *
-  * The byte order of buffers is given by BCC_MSG_BIGEND macro (in bcc.h).
-  *
-  * @param drvInstance Instance of BCC driver.
-  * @param transBuf Pointer to 40b data buffer to be sent.
-  * @param recvBuf Pointer to 40b data buffer for received data.
-  *
-  * @return bcc_status_t Error code.
-  */
+/*!
+ * @brief This function performs one 40b transfer via SPI bus. Intended for SPI
+ * mode only. This function needs to be implemented for specified MCU by the
+ * user.
+ *
+ * The byte order of buffers is given by BCC_MSG_BIGEND macro (in bcc.h).
+ *
+ * @param drvInstance Instance of BCC driver.
+ * @param transBuf Pointer to 40b data buffer to be sent.
+ * @param recvBuf Pointer to 40b data buffer for received data.
+ *
+ * @return bcc_status_t Error code.
+ */
 bcc_status_t BCC_MCU_TransferSpi(uint8_t drvInstance, uint8_t transBuf[],
-         uint8_t recvBuf[]);
+    uint8_t recvBuf[]);
 
 /*!
- * 		MODIFIED. NOT USED BUT NEEDED TO COMPILE BCC SW LIBRARY.
+ *      MODIFIED. NOT USED BUT NEEDED TO COMPILE BCC SW LIBRARY.
  */
 bcc_status_t BCC_MCU_TransferTpl(uint8_t drvInstance, uint8_t transBuf[],
-        uint8_t recvBuf[], uint16_t recvTrCnt);
+    uint8_t recvBuf[], uint16_t recvTrCnt);
 
 /*!
  * @brief User implementation of assert.
@@ -99,12 +97,12 @@ void BCC_MCU_WriteCsbPin(uint8_t drvInstance, uint8_t value);
 void BCC_MCU_WriteRstPin(uint8_t drvInstance, uint8_t value);
 
 /*!
- *		MODIFIED. NOT USED BUT NEEDED TO COMPILE BCC SW LIBRARY.
+ *      MODIFIED. NOT USED BUT NEEDED TO COMPILE BCC SW LIBRARY.
  */
 void BCC_MCU_WriteEnPin(uint8_t drvInstance, uint8_t value);
 
 /*!
- *		MODIFIED. NOT USED BUT NEEDED TO COMPILE BCC SW LIBRARY.
+ *      MODIFIED. NOT USED BUT NEEDED TO COMPILE BCC SW LIBRARY.
  */
 uint32_t BCC_MCU_ReadIntbPin(uint8_t drvInstance);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 - 2020 NXP
+ * Copyright 2016 - 2021 NXP
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -40,7 +40,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "BCC/bcc_wait.h"		// Include header file
+#include "BCC/bcc_wait.h"       // Include header file
 
 #define MS_TO_US 1000
 

@@ -2,7 +2,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020 NXP 
+ * Copyright 2020-2021 NXP 
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -38,13 +38,19 @@
 // To avoid conflicts with definitions given in the source DSDL file, all entities created by the code generator
 // are named with an underscore at the end, like foo_bar_().
 //
-// Generator:     nunavut-0.5.1 (serialization was enabled)
-// Source file:   /home/hovergames/nuttx/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/register/Value.1.0.uavcan
-// Generated at:  2020-11-18 09:48:47.822955 UTC
+// Generator:     nunavut-1.1.0 (serialization was enabled)
+// Source file:   /home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/register/Value.1.0.uavcan
+// Generated at:  2021-04-12 07:48:19.733646 UTC
 // Is deprecated: no
 // Fixed port-ID: None
 // Full name:     uavcan.register.Value
 // Version:       1.0
+//
+// Language Options
+//     target_endianness:  any
+//     omit_float_serialization_support:  False
+//     enable_serialization_asserts:  False
+//     enable_override_variable_array_capacity:  True
 
 #ifndef UAVCAN_REGISTER_VALUE_1_0_INCLUDED_
 #define UAVCAN_REGISTER_VALUE_1_0_INCLUDED_
@@ -67,6 +73,19 @@
 #include <uavcan/primitive/array/Real64_1_0.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_TARGET_ENDIANNESS == 1693710260,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/register/Value.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_OMIT_FLOAT_SERIALIZATION_SUPPORT == 0,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/register/Value.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_ENABLE_SERIALIZATION_ASSERTS == 0,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/register/Value.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_ENABLE_OVERRIDE_VARIABLE_ARRAY_CAPACITY == 1,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/register/Value.1.0.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
 
 #ifdef __cplusplus
 extern "C" {
@@ -169,11 +188,16 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
         return -NUNAVUT_ERROR_INVALID_ARGUMENT;
     }
 
+
     const size_t capacity_bytes = *inout_buffer_size_bytes;
+#ifndef uavcan_register_Value_1_0_DISABLE_SERIALIZATION_BUFFER_CHECK_
+
     if ((8U * (size_t) capacity_bytes) < 2072UL)
     {
         return -NUNAVUT_ERROR_SERIALIZATION_BUFFER_TOO_SMALL;
     }
+#endif
+
     // Notice that fields that are not an integer number of bytes long may overrun the space allocated for them
     // in the serialization buffer up to the next byte boundary. This is by design and is guaranteed to be safe.
     size_t offset_bits = 0U;
@@ -185,12 +209,7 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
 
     if (0U == obj->_tag_)  // uavcan.primitive.Empty.1.0 empty
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 0ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes0_ = 0UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes0_) <= capacity_bytes);
         int8_t _err0_ = uavcan_primitive_Empty_1_0_serialize_(
             &obj->empty, &buffer[offset_bits / 8U], &_size_bytes0_);
         if (_err0_ < 0)
@@ -198,18 +217,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err0_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes0_ * 8U) == 0ULL);
         offset_bits += _size_bytes0_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (1U == obj->_tag_)  // uavcan.primitive.String.1.0 string
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2064ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes1_ = 258UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes1_) <= capacity_bytes);
         int8_t _err1_ = uavcan_primitive_String_1_0_serialize_(
             &obj->_string, &buffer[offset_bits / 8U], &_size_bytes1_);
         if (_err1_ < 0)
@@ -217,19 +229,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err1_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes1_ * 8U) >= 16ULL);
-        NUNAVUT_ASSERT((_size_bytes1_ * 8U) <= 2064ULL);
         offset_bits += _size_bytes1_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (2U == obj->_tag_)  // uavcan.primitive.Unstructured.1.0 unstructured
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2064ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes2_ = 258UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes2_) <= capacity_bytes);
         int8_t _err2_ = uavcan_primitive_Unstructured_1_0_serialize_(
             &obj->unstructured, &buffer[offset_bits / 8U], &_size_bytes2_);
         if (_err2_ < 0)
@@ -237,19 +241,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err2_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes2_ * 8U) >= 16ULL);
-        NUNAVUT_ASSERT((_size_bytes2_ * 8U) <= 2064ULL);
         offset_bits += _size_bytes2_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (3U == obj->_tag_)  // uavcan.primitive.array.Bit.1.0 bit
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2064ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes3_ = 258UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes3_) <= capacity_bytes);
         int8_t _err3_ = uavcan_primitive_array_Bit_1_0_serialize_(
             &obj->bit, &buffer[offset_bits / 8U], &_size_bytes3_);
         if (_err3_ < 0)
@@ -257,19 +253,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err3_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes3_ * 8U) >= 16ULL);
-        NUNAVUT_ASSERT((_size_bytes3_ * 8U) <= 2064ULL);
         offset_bits += _size_bytes3_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (4U == obj->_tag_)  // uavcan.primitive.array.Integer64.1.0 integer64
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2056ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes4_ = 257UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes4_) <= capacity_bytes);
         int8_t _err4_ = uavcan_primitive_array_Integer64_1_0_serialize_(
             &obj->integer64, &buffer[offset_bits / 8U], &_size_bytes4_);
         if (_err4_ < 0)
@@ -277,19 +265,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err4_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes4_ * 8U) >= 8ULL);
-        NUNAVUT_ASSERT((_size_bytes4_ * 8U) <= 2056ULL);
         offset_bits += _size_bytes4_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (5U == obj->_tag_)  // uavcan.primitive.array.Integer32.1.0 integer32
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2056ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes5_ = 257UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes5_) <= capacity_bytes);
         int8_t _err5_ = uavcan_primitive_array_Integer32_1_0_serialize_(
             &obj->integer32, &buffer[offset_bits / 8U], &_size_bytes5_);
         if (_err5_ < 0)
@@ -297,19 +277,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err5_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes5_ * 8U) >= 8ULL);
-        NUNAVUT_ASSERT((_size_bytes5_ * 8U) <= 2056ULL);
         offset_bits += _size_bytes5_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (6U == obj->_tag_)  // uavcan.primitive.array.Integer16.1.0 integer16
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2056ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes6_ = 257UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes6_) <= capacity_bytes);
         int8_t _err6_ = uavcan_primitive_array_Integer16_1_0_serialize_(
             &obj->integer16, &buffer[offset_bits / 8U], &_size_bytes6_);
         if (_err6_ < 0)
@@ -317,19 +289,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err6_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes6_ * 8U) >= 8ULL);
-        NUNAVUT_ASSERT((_size_bytes6_ * 8U) <= 2056ULL);
         offset_bits += _size_bytes6_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (7U == obj->_tag_)  // uavcan.primitive.array.Integer8.1.0 integer8
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2064ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes7_ = 258UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes7_) <= capacity_bytes);
         int8_t _err7_ = uavcan_primitive_array_Integer8_1_0_serialize_(
             &obj->integer8, &buffer[offset_bits / 8U], &_size_bytes7_);
         if (_err7_ < 0)
@@ -337,19 +301,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err7_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes7_ * 8U) >= 16ULL);
-        NUNAVUT_ASSERT((_size_bytes7_ * 8U) <= 2064ULL);
         offset_bits += _size_bytes7_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (8U == obj->_tag_)  // uavcan.primitive.array.Natural64.1.0 natural64
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2056ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes8_ = 257UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes8_) <= capacity_bytes);
         int8_t _err8_ = uavcan_primitive_array_Natural64_1_0_serialize_(
             &obj->natural64, &buffer[offset_bits / 8U], &_size_bytes8_);
         if (_err8_ < 0)
@@ -357,19 +313,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err8_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes8_ * 8U) >= 8ULL);
-        NUNAVUT_ASSERT((_size_bytes8_ * 8U) <= 2056ULL);
         offset_bits += _size_bytes8_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (9U == obj->_tag_)  // uavcan.primitive.array.Natural32.1.0 natural32
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2056ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes9_ = 257UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes9_) <= capacity_bytes);
         int8_t _err9_ = uavcan_primitive_array_Natural32_1_0_serialize_(
             &obj->natural32, &buffer[offset_bits / 8U], &_size_bytes9_);
         if (_err9_ < 0)
@@ -377,19 +325,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err9_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes9_ * 8U) >= 8ULL);
-        NUNAVUT_ASSERT((_size_bytes9_ * 8U) <= 2056ULL);
         offset_bits += _size_bytes9_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (10U == obj->_tag_)  // uavcan.primitive.array.Natural16.1.0 natural16
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2056ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes10_ = 257UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes10_) <= capacity_bytes);
         int8_t _err10_ = uavcan_primitive_array_Natural16_1_0_serialize_(
             &obj->natural16, &buffer[offset_bits / 8U], &_size_bytes10_);
         if (_err10_ < 0)
@@ -397,19 +337,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err10_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes10_ * 8U) >= 8ULL);
-        NUNAVUT_ASSERT((_size_bytes10_ * 8U) <= 2056ULL);
         offset_bits += _size_bytes10_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (11U == obj->_tag_)  // uavcan.primitive.array.Natural8.1.0 natural8
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2064ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes11_ = 258UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes11_) <= capacity_bytes);
         int8_t _err11_ = uavcan_primitive_array_Natural8_1_0_serialize_(
             &obj->natural8, &buffer[offset_bits / 8U], &_size_bytes11_);
         if (_err11_ < 0)
@@ -417,19 +349,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err11_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes11_ * 8U) >= 16ULL);
-        NUNAVUT_ASSERT((_size_bytes11_ * 8U) <= 2064ULL);
         offset_bits += _size_bytes11_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (12U == obj->_tag_)  // uavcan.primitive.array.Real64.1.0 real64
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2056ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes12_ = 257UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes12_) <= capacity_bytes);
         int8_t _err12_ = uavcan_primitive_array_Real64_1_0_serialize_(
             &obj->real64, &buffer[offset_bits / 8U], &_size_bytes12_);
         if (_err12_ < 0)
@@ -437,19 +361,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err12_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes12_ * 8U) >= 8ULL);
-        NUNAVUT_ASSERT((_size_bytes12_ * 8U) <= 2056ULL);
         offset_bits += _size_bytes12_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (13U == obj->_tag_)  // uavcan.primitive.array.Real32.1.0 real32
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2056ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes13_ = 257UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes13_) <= capacity_bytes);
         int8_t _err13_ = uavcan_primitive_array_Real32_1_0_serialize_(
             &obj->real32, &buffer[offset_bits / 8U], &_size_bytes13_);
         if (_err13_ < 0)
@@ -457,19 +373,11 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err13_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes13_ * 8U) >= 8ULL);
-        NUNAVUT_ASSERT((_size_bytes13_ * 8U) <= 2056ULL);
         offset_bits += _size_bytes13_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else if (14U == obj->_tag_)  // uavcan.primitive.array.Real16.1.0 real16
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 2056ULL) <= (capacity_bytes * 8U));
         size_t _size_bytes14_ = 257UL;  // Nested object (max) size, in bytes.
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits / 8U + _size_bytes14_) <= capacity_bytes);
         int8_t _err14_ = uavcan_primitive_array_Real16_1_0_serialize_(
             &obj->real16, &buffer[offset_bits / 8U], &_size_bytes14_);
         if (_err14_ < 0)
@@ -477,10 +385,7 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
             return _err14_;
         }
         // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
-        NUNAVUT_ASSERT((_size_bytes14_ * 8U) >= 8ULL);
-        NUNAVUT_ASSERT((_size_bytes14_ * 8U) <= 2056ULL);
         offset_bits += _size_bytes14_ * 8U;  // Advance by the size of the nested object.
-        NUNAVUT_ASSERT(offset_bits <= (capacity_bytes * 8U));
     }
     else
     {
@@ -490,21 +395,19 @@ static inline int8_t uavcan_register_Value_1_0_serialize_(
     if (offset_bits % 8U != 0U)  // Pad to 8 bits. TODO: Eliminate redundant padding checks.
     {
         const uint8_t _pad0_ = (uint8_t)(8U - offset_bits % 8U);
-        NUNAVUT_ASSERT(_pad0_ > 0);
         const int8_t _err15_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, _pad0_);  // Optimize?
         if (_err15_ < 0)
         {
             return _err15_;
         }
         offset_bits += _pad0_;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     }
     // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
 
-    NUNAVUT_ASSERT(offset_bits >= 8ULL);
-    NUNAVUT_ASSERT(offset_bits <= 2072ULL);
 
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
+
+
+
     *inout_buffer_size_bytes = (size_t) (offset_bits / 8U);
 
     return NUNAVUT_SUCCESS;
@@ -537,6 +440,7 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
         return -NUNAVUT_ERROR_INVALID_ARGUMENT;
     }
 
+
     const size_t capacity_bytes = *inout_buffer_size_bytes;
     const size_t capacity_bits = capacity_bytes * (size_t) 8U;
     size_t offset_bits = 0U;
@@ -554,11 +458,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
 
     if (0U == out_obj->_tag_)  // uavcan.primitive.Empty.1.0 empty
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes15_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err16_ = uavcan_primitive_Empty_1_0_deserialize_(
                 &out_obj->empty, &buffer[offset_bits / 8U], &_size_bytes15_);
             if (_err16_ < 0)
@@ -570,11 +471,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (1U == out_obj->_tag_)  // uavcan.primitive.String.1.0 string
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes16_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err17_ = uavcan_primitive_String_1_0_deserialize_(
                 &out_obj->_string, &buffer[offset_bits / 8U], &_size_bytes16_);
             if (_err17_ < 0)
@@ -586,11 +484,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (2U == out_obj->_tag_)  // uavcan.primitive.Unstructured.1.0 unstructured
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes17_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err18_ = uavcan_primitive_Unstructured_1_0_deserialize_(
                 &out_obj->unstructured, &buffer[offset_bits / 8U], &_size_bytes17_);
             if (_err18_ < 0)
@@ -602,11 +497,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (3U == out_obj->_tag_)  // uavcan.primitive.array.Bit.1.0 bit
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes18_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err19_ = uavcan_primitive_array_Bit_1_0_deserialize_(
                 &out_obj->bit, &buffer[offset_bits / 8U], &_size_bytes18_);
             if (_err19_ < 0)
@@ -618,11 +510,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (4U == out_obj->_tag_)  // uavcan.primitive.array.Integer64.1.0 integer64
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes19_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err20_ = uavcan_primitive_array_Integer64_1_0_deserialize_(
                 &out_obj->integer64, &buffer[offset_bits / 8U], &_size_bytes19_);
             if (_err20_ < 0)
@@ -634,11 +523,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (5U == out_obj->_tag_)  // uavcan.primitive.array.Integer32.1.0 integer32
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes20_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err21_ = uavcan_primitive_array_Integer32_1_0_deserialize_(
                 &out_obj->integer32, &buffer[offset_bits / 8U], &_size_bytes20_);
             if (_err21_ < 0)
@@ -650,11 +536,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (6U == out_obj->_tag_)  // uavcan.primitive.array.Integer16.1.0 integer16
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes21_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err22_ = uavcan_primitive_array_Integer16_1_0_deserialize_(
                 &out_obj->integer16, &buffer[offset_bits / 8U], &_size_bytes21_);
             if (_err22_ < 0)
@@ -666,11 +549,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (7U == out_obj->_tag_)  // uavcan.primitive.array.Integer8.1.0 integer8
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes22_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err23_ = uavcan_primitive_array_Integer8_1_0_deserialize_(
                 &out_obj->integer8, &buffer[offset_bits / 8U], &_size_bytes22_);
             if (_err23_ < 0)
@@ -682,11 +562,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (8U == out_obj->_tag_)  // uavcan.primitive.array.Natural64.1.0 natural64
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes23_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err24_ = uavcan_primitive_array_Natural64_1_0_deserialize_(
                 &out_obj->natural64, &buffer[offset_bits / 8U], &_size_bytes23_);
             if (_err24_ < 0)
@@ -698,11 +575,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (9U == out_obj->_tag_)  // uavcan.primitive.array.Natural32.1.0 natural32
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes24_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err25_ = uavcan_primitive_array_Natural32_1_0_deserialize_(
                 &out_obj->natural32, &buffer[offset_bits / 8U], &_size_bytes24_);
             if (_err25_ < 0)
@@ -714,11 +588,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (10U == out_obj->_tag_)  // uavcan.primitive.array.Natural16.1.0 natural16
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes25_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err26_ = uavcan_primitive_array_Natural16_1_0_deserialize_(
                 &out_obj->natural16, &buffer[offset_bits / 8U], &_size_bytes25_);
             if (_err26_ < 0)
@@ -730,11 +601,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (11U == out_obj->_tag_)  // uavcan.primitive.array.Natural8.1.0 natural8
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes26_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err27_ = uavcan_primitive_array_Natural8_1_0_deserialize_(
                 &out_obj->natural8, &buffer[offset_bits / 8U], &_size_bytes26_);
             if (_err27_ < 0)
@@ -746,11 +614,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (12U == out_obj->_tag_)  // uavcan.primitive.array.Real64.1.0 real64
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes27_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err28_ = uavcan_primitive_array_Real64_1_0_deserialize_(
                 &out_obj->real64, &buffer[offset_bits / 8U], &_size_bytes27_);
             if (_err28_ < 0)
@@ -762,11 +627,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (13U == out_obj->_tag_)  // uavcan.primitive.array.Real32.1.0 real32
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes28_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err29_ = uavcan_primitive_array_Real32_1_0_deserialize_(
                 &out_obj->real32, &buffer[offset_bits / 8U], &_size_bytes28_);
             if (_err29_ < 0)
@@ -778,11 +640,8 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
     else if (14U == out_obj->_tag_)  // uavcan.primitive.array.Real16.1.0 real16
     {
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         {
             size_t _size_bytes29_ = (size_t)(capacity_bytes - nunavutChooseMin((offset_bits / 8U), capacity_bytes));
-            NUNAVUT_ASSERT(offset_bits % 8U == 0U);
             const int8_t _err30_ = uavcan_primitive_array_Real16_1_0_deserialize_(
                 &out_obj->real16, &buffer[offset_bits / 8U], &_size_bytes29_);
             if (_err30_ < 0)
@@ -798,9 +657,9 @@ static inline int8_t uavcan_register_Value_1_0_deserialize_(
     }
 
     offset_bits = (offset_bits + 7U) & ~(size_t) 7U;  // Align on 8 bits.
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
+
     *inout_buffer_size_bytes = (size_t) (nunavutChooseMin(offset_bits, capacity_bits) / 8U);
-    NUNAVUT_ASSERT(capacity_bytes >= *inout_buffer_size_bytes);
+
 
     return NUNAVUT_SUCCESS;
 }
@@ -816,10 +675,12 @@ static inline void uavcan_register_Value_1_0_initialize_(uavcan_register_Value_1
         size_t size_bytes = 0;
         const uint8_t buf = 0;
         const int8_t err = uavcan_register_Value_1_0_deserialize_(out_obj, &buf, &size_bytes);
-        NUNAVUT_ASSERT(err >= 0);
+
         (void) err;
     }
 }
+
+
 
 /// Mark option "empty" active without initializing it. Does nothing if @param obj is NULL.
 static inline void uavcan_register_Value_1_0_select_empty_(uavcan_register_Value_1_0* const obj)

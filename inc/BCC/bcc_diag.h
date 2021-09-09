@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 - 2020 NXP
+ * Copyright 2016 - 2021 NXP
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -47,7 +47,7 @@
  **         Battery Cell Controller (BCC) module - diagnostic functions.
  **         This module contains functions linked to diagnostics on BCC6 chip. \n
  ** @note
- ** 		This module was adapted from BCC SW examples by A. Meyer.
+ **         This module was adapted from BCC SW examples by A. Meyer.
  */
 
 #ifndef BCC_DIAG_H_
@@ -59,7 +59,7 @@
 
 /* Global */
 
- #include "bcc_define.h"							// Include definitions and external functions
+ #include "bcc_define.h"                            // Include definitions and external functions
 
 /* Modules */
 

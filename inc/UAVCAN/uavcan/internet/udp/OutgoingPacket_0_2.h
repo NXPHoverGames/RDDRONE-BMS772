@@ -2,7 +2,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020 NXP 
+ * Copyright 2020-2021 NXP 
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -38,13 +38,19 @@
 // To avoid conflicts with definitions given in the source DSDL file, all entities created by the code generator
 // are named with an underscore at the end, like foo_bar_().
 //
-// Generator:     nunavut-0.5.1 (serialization was enabled)
-// Source file:   /home/hovergames/nuttx/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/internet/udp/8174.OutgoingPacket.0.2.uavcan
-// Generated at:  2020-11-18 09:48:49.963384 UTC
+// Generator:     nunavut-1.1.0 (serialization was enabled)
+// Source file:   /home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/internet/udp/8174.OutgoingPacket.0.2.uavcan
+// Generated at:  2021-04-12 07:48:01.404273 UTC
 // Is deprecated: no
 // Fixed port-ID: 8174
 // Full name:     uavcan.internet.udp.OutgoingPacket
 // Version:       0.2
+//
+// Language Options
+//     target_endianness:  any
+//     omit_float_serialization_support:  False
+//     enable_serialization_asserts:  False
+//     enable_override_variable_array_capacity:  True
 
 #ifndef UAVCAN_INTERNET_UDP_OUTGOING_PACKET_0_2_INCLUDED_
 #define UAVCAN_INTERNET_UDP_OUTGOING_PACKET_0_2_INCLUDED_
@@ -53,6 +59,19 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_TARGET_ENDIANNESS == 1693710260,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/internet/udp/8174.OutgoingPacket.0.2.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_OMIT_FLOAT_SERIALIZATION_SUPPORT == 0,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/internet/udp/8174.OutgoingPacket.0.2.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_ENABLE_SERIALIZATION_ASSERTS == 0,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/internet/udp/8174.OutgoingPacket.0.2.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
+static_assert( NUNAVUT_SUPPORT_LANGUAGE_OPTION_ENABLE_OVERRIDE_VARIABLE_ARRAY_CAPACITY == 1,
+              "/home/cis/drones/s32k-bms/software/rddrone-bms772/src/nxp_bms/BMS_v1/public_regulated_data_types/uavcan/internet/udp/8174.OutgoingPacket.0.2.uavcan is trying to use a serialization library that was compiled with "
+              "different language options. This is dangerous and therefore not allowed." );
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,10 +99,24 @@ static_assert(uavcan_internet_udp_OutgoingPacket_0_2_EXTENT_BYTES_ >= uavcan_int
 #define uavcan_internet_udp_OutgoingPacket_0_2_NAT_ENTRY_MIN_TTL (86400UL)
 
 /// Array metadata for: saturated uint8[<=45] destination_address
+#ifndef uavcan_internet_udp_OutgoingPacket_0_2_destination_address_ARRAY_CAPACITY_
 #define uavcan_internet_udp_OutgoingPacket_0_2_destination_address_ARRAY_CAPACITY_           45U
+#elif !defined(uavcan_internet_udp_OutgoingPacket_0_2_DISABLE_SERIALIZATION_BUFFER_CHECK_)
+#  define uavcan_internet_udp_OutgoingPacket_0_2_DISABLE_SERIALIZATION_BUFFER_CHECK_
+#endif
+#if uavcan_internet_udp_OutgoingPacket_0_2_destination_address_ARRAY_CAPACITY_ > 45U
+#  error uavcan_internet_udp_OutgoingPacket_0_2_destination_address_ARRAY_CAPACITY_ > 45U
+#endif
 #define uavcan_internet_udp_OutgoingPacket_0_2_destination_address_ARRAY_IS_VARIABLE_LENGTH_ true
 /// Array metadata for: saturated uint8[<=508] payload
+#ifndef uavcan_internet_udp_OutgoingPacket_0_2_payload_ARRAY_CAPACITY_
 #define uavcan_internet_udp_OutgoingPacket_0_2_payload_ARRAY_CAPACITY_           508U
+#elif !defined(uavcan_internet_udp_OutgoingPacket_0_2_DISABLE_SERIALIZATION_BUFFER_CHECK_)
+#  define uavcan_internet_udp_OutgoingPacket_0_2_DISABLE_SERIALIZATION_BUFFER_CHECK_
+#endif
+#if uavcan_internet_udp_OutgoingPacket_0_2_payload_ARRAY_CAPACITY_ > 508U
+#  error uavcan_internet_udp_OutgoingPacket_0_2_payload_ARRAY_CAPACITY_ > 508U
+#endif
 #define uavcan_internet_udp_OutgoingPacket_0_2_payload_ARRAY_IS_VARIABLE_LENGTH_ true
 
 typedef struct
@@ -97,7 +130,7 @@ typedef struct
     /// saturated uint8[<=45] destination_address
     struct  /// Array address equivalence guarantee: &elements[0] == &destination_address
     {
-        uint8_t elements[45];
+        uint8_t elements[uavcan_internet_udp_OutgoingPacket_0_2_destination_address_ARRAY_CAPACITY_];
         size_t count;
     } destination_address;
 
@@ -110,7 +143,7 @@ typedef struct
     /// saturated uint8[<=508] payload
     struct  /// Array address equivalence guarantee: &elements[0] == &payload
     {
-        uint8_t elements[508];
+        uint8_t elements[uavcan_internet_udp_OutgoingPacket_0_2_payload_ARRAY_CAPACITY_];
         size_t count;
     } payload;
 } uavcan_internet_udp_OutgoingPacket_0_2;
@@ -139,34 +172,51 @@ static inline int8_t uavcan_internet_udp_OutgoingPacket_0_2_serialize_(
         return -NUNAVUT_ERROR_INVALID_ARGUMENT;
     }
 
+
     const size_t capacity_bytes = *inout_buffer_size_bytes;
+#ifndef uavcan_internet_udp_OutgoingPacket_0_2_DISABLE_SERIALIZATION_BUFFER_CHECK_
+
     if ((8U * (size_t) capacity_bytes) < 4488UL)
     {
         return -NUNAVUT_ERROR_SERIALIZATION_BUFFER_TOO_SMALL;
     }
+#endif
+
     // Notice that fields that are not an integer number of bytes long may overrun the space allocated for them
     // in the serialization buffer up to the next byte boundary. This is by design and is guaranteed to be safe.
     size_t offset_bits = 0U;
 
+
+
+
+
     {   // saturated uint16 session_id
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 16ULL) <= (capacity_bytes * 8U));
         // Saturation code not emitted -- native representation matches the serialized representation.
-        (void) memmove(&buffer[offset_bits / 8U], &obj->session_id, 2U);
+        const int8_t _err0_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, obj->session_id, 16U);
+        if (_err0_ < 0)
+        {
+            return _err0_;
+        }
         offset_bits += 16U;
     }
+
+
+
 
     {   // saturated uint16 destination_port
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 16ULL) <= (capacity_bytes * 8U));
         // Saturation code not emitted -- native representation matches the serialized representation.
-        (void) memmove(&buffer[offset_bits / 8U], &obj->destination_port, 2U);
+        const int8_t _err1_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, obj->destination_port, 16U);
+        if (_err1_ < 0)
+        {
+            return _err1_;
+        }
         offset_bits += 16U;
     }
 
+
+
+
     {   // saturated uint8[<=45] destination_address
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 368ULL) <= (capacity_bytes * 8U));
         if (obj->destination_address.count > 45)
         {
             return -NUNAVUT_ERROR_REPRESENTATION_BAD_ARRAY_LENGTH;
@@ -174,21 +224,23 @@ static inline int8_t uavcan_internet_udp_OutgoingPacket_0_2_serialize_(
         // Array length prefix: truncated uint8
         buffer[offset_bits / 8U] = (uint8_t)(obj->destination_address.count);  // C std, 6.3.1.3 Signed and unsigned integers
         offset_bits += 8U;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         // Optimization prospect: this item is aligned at the byte boundary, so it is possible to use memmove().
         nunavutCopyBits(&buffer[0], offset_bits, obj->destination_address.count * 8U, &obj->destination_address.elements[0], 0U);
         offset_bits += obj->destination_address.count * 8U;
     }
 
+
+
+
     {   // saturated bool use_masquerading
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 1ULL) <= (capacity_bytes * 8U));
         buffer[offset_bits / 8U] = obj->use_masquerading ? 1U : 0U;
         offset_bits += 1U;
     }
 
+
+
+
     {   // saturated bool use_dtls
-        NUNAVUT_ASSERT((offset_bits + 1ULL) <= (capacity_bytes * 8U));
         if (obj->use_dtls)
         {
             buffer[offset_bits / 8U] = (uint8_t)(buffer[offset_bits / 8U] | (1U << (offset_bits % 8U)));
@@ -200,50 +252,55 @@ static inline int8_t uavcan_internet_udp_OutgoingPacket_0_2_serialize_(
         offset_bits += 1U;
     }
 
+
+
+
     {   // void6
-        NUNAVUT_ASSERT((offset_bits + 6ULL) <= (capacity_bytes * 8U));
-        const int8_t _err0_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, 6U);  // Optimize?
-        if (_err0_ < 0)
+        const int8_t _err2_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, 6U);  // Optimize?
+        if (_err2_ < 0)
         {
-            return _err0_;
+            return _err2_;
         }
         offset_bits += 6UL;
     }
 
+
+
+
     {   // saturated uint8[<=508] payload
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
-        NUNAVUT_ASSERT((offset_bits + 4080ULL) <= (capacity_bytes * 8U));
         if (obj->payload.count > 508)
         {
             return -NUNAVUT_ERROR_REPRESENTATION_BAD_ARRAY_LENGTH;
         }
         // Array length prefix: truncated uint16
-        (void) memmove(&buffer[offset_bits / 8U], &obj->payload.count, 2U);
+        const int8_t _err3_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, obj->payload.count, 16U);
+        if (_err3_ < 0)
+        {
+            return _err3_;
+        }
         offset_bits += 16U;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
         // Optimization prospect: this item is aligned at the byte boundary, so it is possible to use memmove().
         nunavutCopyBits(&buffer[0], offset_bits, obj->payload.count * 8U, &obj->payload.elements[0], 0U);
         offset_bits += obj->payload.count * 8U;
     }
 
+
     if (offset_bits % 8U != 0U)  // Pad to 8 bits. TODO: Eliminate redundant padding checks.
     {
         const uint8_t _pad0_ = (uint8_t)(8U - offset_bits % 8U);
-        NUNAVUT_ASSERT(_pad0_ > 0);
-        const int8_t _err1_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, _pad0_);  // Optimize?
-        if (_err1_ < 0)
+        const int8_t _err4_ = nunavutSetUxx(&buffer[0], capacity_bytes, offset_bits, 0U, _pad0_);  // Optimize?
+        if (_err4_ < 0)
         {
-            return _err1_;
+            return _err4_;
         }
         offset_bits += _pad0_;
-        NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     }
     // It is assumed that we know the exact type of the serialized entity, hence we expect the size to match.
 
-    NUNAVUT_ASSERT(offset_bits >= 64ULL);
-    NUNAVUT_ASSERT(offset_bits <= 4488ULL);
 
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
+
+
+
     *inout_buffer_size_bytes = (size_t) (offset_bits / 8U);
 
     return NUNAVUT_SUCCESS;
@@ -276,22 +333,30 @@ static inline int8_t uavcan_internet_udp_OutgoingPacket_0_2_deserialize_(
         return -NUNAVUT_ERROR_INVALID_ARGUMENT;
     }
 
+
     const size_t capacity_bytes = *inout_buffer_size_bytes;
     const size_t capacity_bits = capacity_bytes * (size_t) 8U;
     size_t offset_bits = 0U;
 
+
+
+
+
     // saturated uint16 session_id
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     out_obj->session_id = nunavutGetU16(&buffer[0], capacity_bytes, offset_bits, 16);
     offset_bits += 16U;
 
+
+
+
     // saturated uint16 destination_port
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     out_obj->destination_port = nunavutGetU16(&buffer[0], capacity_bytes, offset_bits, 16);
     offset_bits += 16U;
 
+
+
+
     // saturated uint8[<=45] destination_address
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     // Array length prefix: truncated uint8
     if ((offset_bits + 8U) <= capacity_bits)
     {
@@ -302,16 +367,17 @@ static inline int8_t uavcan_internet_udp_OutgoingPacket_0_2_deserialize_(
         out_obj->destination_address.count = 0U;
     }
     offset_bits += 8U;
-    if (out_obj->destination_address.count > 45)
+    if (out_obj->destination_address.count > 45U)
     {
         return -NUNAVUT_ERROR_REPRESENTATION_BAD_ARRAY_LENGTH;
     }
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     nunavutGetBits(&out_obj->destination_address.elements[0], &buffer[0], capacity_bytes, offset_bits, out_obj->destination_address.count * 8U);
     offset_bits += out_obj->destination_address.count * 8U;
 
+
+
+
     // saturated bool use_masquerading
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     if (offset_bits < capacity_bits)
     {
         out_obj->use_masquerading = (buffer[offset_bits / 8U] & 1U) != 0U;
@@ -321,6 +387,9 @@ static inline int8_t uavcan_internet_udp_OutgoingPacket_0_2_deserialize_(
         out_obj->use_masquerading = false;
     }
     offset_bits += 1U;
+
+
+
 
     // saturated bool use_dtls
     if (offset_bits < capacity_bits)
@@ -333,26 +402,31 @@ static inline int8_t uavcan_internet_udp_OutgoingPacket_0_2_deserialize_(
     }
     offset_bits += 1U;
 
+
+
+
     // void6
     offset_bits += 6;
 
+
+
+
     // saturated uint8[<=508] payload
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     // Array length prefix: truncated uint16
     out_obj->payload.count = nunavutGetU16(&buffer[0], capacity_bytes, offset_bits, 16);
     offset_bits += 16U;
-    if (out_obj->payload.count > 508)
+    if (out_obj->payload.count > 508U)
     {
         return -NUNAVUT_ERROR_REPRESENTATION_BAD_ARRAY_LENGTH;
     }
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
     nunavutGetBits(&out_obj->payload.elements[0], &buffer[0], capacity_bytes, offset_bits, out_obj->payload.count * 8U);
     offset_bits += out_obj->payload.count * 8U;
 
+
     offset_bits = (offset_bits + 7U) & ~(size_t) 7U;  // Align on 8 bits.
-    NUNAVUT_ASSERT(offset_bits % 8U == 0U);
+
     *inout_buffer_size_bytes = (size_t) (nunavutChooseMin(offset_bits, capacity_bits) / 8U);
-    NUNAVUT_ASSERT(capacity_bytes >= *inout_buffer_size_bytes);
+
 
     return NUNAVUT_SUCCESS;
 }
@@ -368,10 +442,12 @@ static inline void uavcan_internet_udp_OutgoingPacket_0_2_initialize_(uavcan_int
         size_t size_bytes = 0;
         const uint8_t buf = 0;
         const int8_t err = uavcan_internet_udp_OutgoingPacket_0_2_deserialize_(out_obj, &buf, &size_bytes);
-        NUNAVUT_ASSERT(err >= 0);
+
         (void) err;
     }
 }
+
+
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020 NXP
+ * Copyright 2020-2021 NXP
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -35,7 +35,7 @@
  **     Project     : SmartBattery_RDDRONE_BMS772
  **     Processor   : S32K144
  **     Version     : 1.00
- **     Date   		: 2020-05-23
+ **     Date        : 2020-05-23
  **     Abstract    :
  **        uavcan module.
  **        This module contains all functions needed for uavcan
@@ -57,12 +57,13 @@
  * Includes
  ******************************************************************************/
 #include <stdio.h>
+#include "cli.h"
 
 /*******************************************************************************
  * Defines
  ******************************************************************************/
-#define UAVCAN_MAX_SUB_ID 		8191
-#define UAVCAN_UNSET_SUB_ID 	65535
+#define UAVCAN_MAX_SUB_ID       8191
+#define UAVCAN_UNSET_SUB_ID     65535
  
 /*******************************************************************************
  * Types
@@ -72,19 +73,21 @@
  * public functions
  ******************************************************************************/
 /*!
- * @brief 	this function initializes the UAVCAN part
+ * @brief   this function initializes the UAVCAN part
  *
- * 			It will create the task to check and update the data		
+ *          It will create the task to check and update the data        
  *
- * @return 	If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error:
+ * @param   none
+ *
+ * @return  If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error:
  *
  */
 int uavcan_initialize(void);
 
 /*!
- * @brief 	this function will increase the semaphore so the UAVCAN task will send the BMS status using UAVCAN	
+ * @brief   this function will increase the semaphore so the UAVCAN task will send the BMS status using UAVCAN  
  *
- * @return 	If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error:
+ * @return  If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error:
  *
  */
 int uavcan_sendBMSStatus(void);

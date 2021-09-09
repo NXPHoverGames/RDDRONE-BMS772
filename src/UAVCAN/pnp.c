@@ -3,7 +3,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020 NXP
+ * Copyright 2020-2021 NXP
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -237,7 +237,7 @@ int32_t PNPProcess(CanardInstance* ins, CanardTransfer* transfer){
 }
 
 
-CanardNodeID PNPGetNodeID(){
+CanardNodeID PNPGetNodeID(void){
     return node_id;
 }
 
