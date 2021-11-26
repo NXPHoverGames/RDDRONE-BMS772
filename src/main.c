@@ -62,7 +62,7 @@
 /****************************************************************************
  * Defines
  ****************************************************************************/
-#define BMS_VERSION_STRING "bms4.0-10.1"
+#define BMS_VERSION_STRING "bms4.1-10.1"
 //#define DONT_DO_UAVCAN
 
 #ifndef MCU_POWER_DOMAIN
@@ -684,7 +684,9 @@ int bms_main(int argc, char *argv[])
         if(!resetCauseExWatchdog)
         {
             cli_printf("SELF-TEST NFC: \e[31mFAIL\e[39m\n");
-            return lvRetValue;
+
+            //Don't let the whole BMS fail if the NFC fails
+            //return lvRetValue;
         }
     }
 

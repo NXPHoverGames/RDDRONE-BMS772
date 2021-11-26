@@ -65,10 +65,11 @@
 
 #define NTAG5_SLAVE_ADR                 0x54 //84
 
-#define I2C_SLAVE_CONF_REG_ADR          0x10A9
-#define I2C_SLAVE_CONF_REG_BYTE         0x0
+#define I2C_SLAVE_CONF_SES_REG_ADR      0x10A9
+#define I2C_SLAVE_CONF_SES_REG_BYTE     0x0
                                     
-
+// The NTAG configuration register
+// Keep in mind that not all bits of the session (SES) register can be written.
 #define I2C_CONF_SES_REG_ADR            0x10A1
 #define I2C_CONF_CONF_REG_ADR           0x1037
 #define I2C_CONF_CONF0_REG_BYTE         0
@@ -146,14 +147,15 @@
 
 
 #define I2C_CONF_CONF2_REG_BYTE         2
-// not used in this code
 
 
+// Register to reset the NTAG to apply the changes of the configuration registers to the session registers
 #define I2C_RESET_GEN_SES_REG_ADR       0x10AA
+#define I2C_RESET_GEN_SES_REG_BYTE      0
 #define I2C_RESET_GEN_REG_VAL           0xE7
 
 
-
+// The session status register can only be cleared if R/W
 #define I2C_STATUS_SES_REG_ADR          0x10A0
 #define I2C_STATUS0_REG_BYTE            0
 #define STATUS0_EEPROM_WR_BUSY_BIT      7
@@ -165,6 +167,10 @@
 #define STATUS0_VCC_SUPPLY_OK_BIT       1
 #define STATUS0_NFC_FIELD_OK_BIT        0
 
+#define STATUS0_NFC_FIELD_OK_PRESENT    1 << STATUS0_NFC_FIELD_OK_BIT
+#define STATUS0_NFC_FIELD_OK_ABSENT     0 << STATUS0_NFC_FIELD_OK_BIT
+
+
 #define I2C_STATUS1_REG_BYTE            1
 #define STATUS1_VCC_BOOT_OK_BIT         7
 #define STATUS1_NFC_BOOT_OK_BIT         6
@@ -172,20 +178,20 @@
 #define STATUS1_GPIO1_IN_STATUS_BIT     4
 #define STATUS1_GPIO0_IN_STATUS_BIT     3
 #define STATUS1_ALM_PLM_BIT             2
-#define STATUS1_I2C_IF_LOCKED_BIT       1 // is the only R/W bit of status1
+#define STATUS1_I2C_IF_LOCKED_BIT       1 // is the only R/W bit of status1 (to be cleared)
 #define STATUS1_NFC_IF_LOCKED_BIT       0
 
-#define STATUS1_I2C_LOCKED_LOCKED       1
-#define STATUS1_I2C_LOCKED_UNLOCKED     0
+#define STATUS1_I2C_LOCKED_LOCKED       1 << STATUS1_I2C_IF_LOCKED_BIT
+#define STATUS1_I2C_LOCKED_UNLOCKED     0 << STATUS1_I2C_IF_LOCKED_BIT
 
+#define STATUS1_NFC_LOCKED_LOCKED       1 << STATUS1_NFC_IF_LOCKED_BIT
+#define STATUS1_NFC_LOCKED_UNLOCKED     0 << STATUS1_NFC_IF_LOCKED_BIT
 
 
 // the event detection configuration register
 #define I2C_EH_CONFIG_CONF_REG_ADR      0x103D
 #define EH_CONFIG_CONF_BYTE             0
 #define ED_CONFIG_CONF_BYTE             2 // (uses same value as other ED_CONFIG)
-
-
 
 // the event detection configuration session register 
 #define I2C_ED_CONFIG_SES_REG_ADR       0x10A8
@@ -212,6 +218,32 @@
 #define I2C_ED_INTR_CLEAR_SES_REG_ADR   0x10AB
 #define ED_INTR_CLEAR_REG_BYTE          0
 #define ED_INTR_CLEAR_VALUE             1
+
+
+
+// The Watch Dog Timer Configuration Register
+// Only read the WDT session register
+#define I2C_WDT_SES_REG_ADR             0x10A6
+#define I2C_WDT_CONF_REG_ADR            0x103C
+#define I2C_WDT_CONF_LSB_REG_BYTE       0
+#define I2C_WDT_CONF_LSB_VALUE          0x24 // for 10ms
+
+#define I2C_WDT_CONF_MSB_REG_BYTE       1
+#define I2C_WDT_CONF_MSB_VALUE          0x04 // for 10ms
+
+#define I2C_WDT_WDT_EN_REG_BYTE         2
+#define I2C_WDT_WDT_EN_REG_BIT          0
+#define WDT_EN_WDT_ENABLED              1
+#define WDT_EN_WDT_DISABLED             0
+#define WDT_EN_WDT_ENABLED_VAL          WDT_EN_WDT_ENABLED << I2C_WDT_WDT_EN_REG_BIT
+#define WDT_EN_WDT_DISABLED_VAL         WDT_EN_WDT_DISABLED << I2C_WDT_WDT_EN_REG_BIT
+
+#define I2C_WDT_WDT_EN_VALUE            (WDT_EN_WDT_ENABLED_VAL    \
+                                        )
+
+#define I2C_WDT_SRAM_COPY_REG_BYTE      3
+#define I2C_WDT_SRAM_COPY_BYTES_BIT     0
+#define I2C_WDT_SRAM_COPY_REG_VAL       0 << I2C_WDT_SRAM_COPY_BYTES_BIT
 
 
 
@@ -438,13 +470,15 @@
 
 #define AMOUNT_RETRIES                  1000
 #define ERROR_COULD_NOT_WRITE           (-222)
+#define ERROR_COULD_NOT_READ            (-333)
 #define NTAG_EEPROM_WRITE_DELAY_US      4000
 #define NTAG_SRAM_WRITE_DELAY_US        400 
 
 #define NORMAL_TO_MILI                  1000
 #define CONVERT_TO_1_10TH               10
 //#define DEBUG_NFC
-
+//#define DEBUG_NFC_INIT                                        
+//#define DEBUG_NFC_WRITE
 /****************************************************************************
  * Private Variables
  ****************************************************************************/
@@ -456,6 +490,9 @@ const char gWakingUpString[]    = "Waking up BMS, please tap again!\n";
 
 /*! @brief String that will be placed in the NTAG if the data is outdated (not updated) */
 const char gChargeRelaxString[] = "Charge-relaxation state\n";
+
+/*! @brief Variable to disable the NFC if it failed */
+static bool gDisableNFC = false;
 
 /****************************************************************************
  * Private Functions
@@ -474,6 +511,21 @@ const char gChargeRelaxString[] = "Charge-relaxation state\n";
  */
 int nfc_writeI2cData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* writeReg, uint8_t writeBytes, 
     bool dontWait);
+
+/*!
+ * @brief   This function can be used to read a data via the I2C from the NTAGs normal register (not session register)
+ * @note    It will check if it is allowed to read from the NTAG before reading. 
+ *  
+ * @param   slaveAdr the slave address of the I2C device
+ * @param   regAdr the address of the register to read from (2 bytes)
+ * @param   readReg address of the variable to read
+ * @param   readBytes the amount of bytes to read max 255
+ * @param   reTry if true, it will retry to read if failed (maybe WDT timeout happend)
+ *
+ * @return  0 if ok, -1 if there is an error
+ */
+int nfc_readI2cData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* readReg, uint8_t readBytes, 
+    bool reTry);
 
 /****************************************************************************
  * Public Functions
@@ -497,6 +549,14 @@ int nfc_initialize(bool skipSelfTest)
     uint8_t regVal[4];
     uint8_t writeVal[4];
     int i;
+    bool applyReset = false;
+
+    // check if the NFC is disabled
+    if(gDisableNFC)
+    {
+        // return OK to not output an error
+        return 0;
+    }
 
     // reset the register values
     for(i = 0; i < 4; i++)
@@ -531,12 +591,12 @@ int nfc_initialize(bool skipSelfTest)
         }
 
         // read the slave address 
-        if(i2c_nfcReadSessionRegByte(NTAG5_SLAVE_ADR, I2C_SLAVE_CONF_REG_ADR, 
-            I2C_SLAVE_CONF_REG_BYTE, regVal, 2))
+        if(i2c_nfcReadSessionRegByte(NTAG5_SLAVE_ADR, I2C_SLAVE_CONF_SES_REG_ADR, 
+            I2C_SLAVE_CONF_SES_REG_BYTE, regVal, 2))
         {
             // output error to user
-            cli_printfError("nfc ERROR: Can't read register: %x byte %d\n", 
-                I2C_SLAVE_CONF_REG_ADR, I2C_SLAVE_CONF_REG_BYTE);
+            cli_printfError("nfc ERROR: Can't read register: 0x%x byte %d\n", 
+                I2C_SLAVE_CONF_SES_REG_ADR, I2C_SLAVE_CONF_SES_REG_BYTE);
 
             return -1;
         }
@@ -565,19 +625,18 @@ int nfc_initialize(bool skipSelfTest)
             I2C_STATUS0_REG_BYTE, regVal, 2))
         {
             // output error to the user
-            cli_printfError("nfc ERROR: Can't read register: %x byte %d\n", 
+            cli_printfError("nfc ERROR: Can't read register: 0x%x byte %d\n", 
                 I2C_STATUS_SES_REG_ADR, 0);
 
             return -1;
         }
 
-#ifdef DEBUG_NFC
+#ifdef DEBUG_NFC_INIT
 
         // print it
-        cli_printf("status0: %x, 1: %x\n", regVal[0], regVal[1]);
+        cli_printf("status0: 0x%x, 1: 0x%x\n", regVal[0], regVal[1]);
 
 #endif
-
         // other check
         // if VCC = 1 (2nd bit of STATUS_REG) and there was a response to register read, then NTAG5 is there
         if(!(regVal[0] >> STATUS0_VCC_SUPPLY_OK_BIT) & 1)
@@ -597,79 +656,53 @@ int nfc_initialize(bool skipSelfTest)
             return lvRetValue;
         }
 
-        // make the write val
-        writeVal[0] = STATUS1_I2C_LOCKED_LOCKED << STATUS1_I2C_IF_LOCKED_BIT;
-
-        // lock arbiter on I2C
-        lvRetValue = i2c_nfcWriteSessionRegByte(NTAG5_SLAVE_ADR, I2C_STATUS_SES_REG_ADR, 
-            I2C_STATUS1_REG_BYTE, writeVal, (1 << STATUS1_I2C_IF_LOCKED_BIT), 1);
-
-        // check for errors
-        if(lvRetValue)
-        {
-            cli_printfError("nfc ERROR: Can't lock to I2C! %d\n", lvRetValue);
-        }
-
         // read the configuration register
-        if(i2c_readData(NTAG5_SLAVE_ADR, I2C_CONF_CONF_REG_ADR, 
-            regVal, 4, false))
+        if(nfc_readI2cData(NTAG5_SLAVE_ADR, I2C_CONF_CONF_REG_ADR, 
+            regVal, 4, true))
         {
-            cli_printfError("nfc ERROR: Can't read register: %x \n", 
+            cli_printfError("nfc ERROR: Can't read register: 0x%x \n", 
                 I2C_CONF_CONF_REG_ADR);
 
             return -1;
         }
 
-#ifdef DEBUG_NFC
+#ifdef DEBUG_NFC_INIT
         // print the configuration register 
-        cli_printf("conf 0: %x, 1: %x, 2: %x\n", regVal[0], regVal[1], regVal[2]);
+        cli_printf("conf 0: 0x%x, 1: 0x%x, 2: 0x%x\n", regVal[0], regVal[1], regVal[2]);
 #endif
 
         // check if in the right mode
         if((regVal[0] != I2C_CONF_CONF0_VALUE) || (regVal[1] != I2C_CONF_CONF1_VALUE))
         {
-
-#ifdef DEBUG_NFC
+#ifdef DEBUG_NFC_INIT
 
             cli_printf("NFC configuration register has wrong value\n");
 #endif
             // set the writevalues
             writeVal[0] = I2C_CONF_CONF0_VALUE;
             writeVal[1] = I2C_CONF_CONF1_VALUE;
+            writeVal[2] = regVal[2];
+            writeVal[3] = regVal[3];
 
-#ifdef DEBUG_NFC
-
-            cli_printf("NFC writing correct value, 0: %x, 1: %x\n",
+#ifdef DEBUG_NFC_INIT
+            cli_printf("NFC writing correct value, 0: 0x%x, 1: 0x%x\n",
                 writeVal[0], writeVal[1]);
 #endif
             // write the correct configuration
             lvRetValue = nfc_writeI2cData(NTAG5_SLAVE_ADR, I2C_CONF_CONF_REG_ADR, 
-                writeVal, 2, false);
+                writeVal, 4, false);
 
             // check for errors
             if(lvRetValue)
             {
-                cli_printfError("nfc ERROR: Can't write to register: %x\n", 
+                cli_printfError("nfc ERROR: Can't write to register: 0x%x\n", 
                     I2C_CONF_CONF_REG_ADR);
 
                 return lvRetValue;
             }
 
-            // read again 
-            if(i2c_readData(NTAG5_SLAVE_ADR, I2C_CONF_CONF_REG_ADR, 
-                regVal, 4, false))
-            {
-                cli_printfError("nfc ERROR: Can't read register: %x \n", 
-                    I2C_CONF_CONF_REG_ADR);
-
-                return -1;
-            }
-
-#ifdef DEBUG_NFC
-
-            // print the configuration register 
-            cli_printf("conf 1: %x, 2: %x, 3: %x\n", regVal[0], regVal[1], regVal[2]);
-#endif
+            // make sure to do a reset later on to apply the configuration values
+            applyReset = true;
         }
             
         // write the session register with the correct value as well
@@ -678,7 +711,8 @@ int nfc_initialize(bool skipSelfTest)
         if(i2c_nfcReadSessionRegByte(NTAG5_SLAVE_ADR, I2C_CONF_SES_REG_ADR, 
             I2C_CONF_CONF0_REG_BYTE, regVal, 3))
         {
-            cli_printfError("nfc ERROR: Can't read status register\n");
+            cli_printfError("nfc ERROR: Can't read session register 0x%x\n",
+                    I2C_CONF_SES_REG_ADR);
 
             return -1;
         }
@@ -686,68 +720,29 @@ int nfc_initialize(bool skipSelfTest)
         // check if it has the correct value
         if((regVal[0] != I2C_CONF_CONF0_VALUE) || (regVal[1] != I2C_CONF_CONF1_VALUE))
         {
+            // make sure to do a reset later on to apply the configuration values
+            applyReset = true;
 
-#ifdef DEBUG_NFC
+#ifdef DEBUG_NFC_INIT
             // print the configuration register 
-            cli_printf("ses conf 1: %x, 2: %x, 3: %x\n", regVal[0], regVal[1], regVal[2]);
+            cli_printf("ses conf 1: 0x%x, 2: 0x%x, 3: 0x%x\n", regVal[0], regVal[1], regVal[2]);
 #endif
-
-            // set the writevalues
-            writeVal[0] = I2C_CONF_CONF0_VALUE;
-            writeVal[1] = I2C_CONF_CONF1_VALUE;
-
-#ifdef DEBUG_NFC
-            cli_printf("NFC writing correct value, 0: %x, 1: %x\n",
-                writeVal[0], writeVal[1]);
-#endif
-
-            // write the session configuration register
-            if(i2c_nfcWriteSessionRegByte(NTAG5_SLAVE_ADR, I2C_CONF_SES_REG_ADR, 
-                I2C_CONF_CONF0_REG_BYTE, writeVal, 0xFF, 2))
-            {
-                cli_printfError("nfc ERROR: Can't read status register\n");
-
-                return -1;
-            }
-
-            // the session register
-            if(i2c_nfcReadSessionRegByte(NTAG5_SLAVE_ADR, I2C_CONF_SES_REG_ADR, 
-                I2C_CONF_CONF0_REG_BYTE, regVal, 3))
-            {
-                cli_printfError("nfc ERROR: Can't read status register\n");
-
-                return -1;
-            }
-
-#ifdef DEBUG_NFC
-            // print the configuration register 
-            cli_printf("ses conf 1: %x, 2: %x, 3: %x\n", regVal[0], regVal[1], regVal[2]);
-#endif
-
-            // check if it is not set up properly
-            if((regVal[0] != I2C_CONF_CONF0_VALUE) || (regVal[1] != I2C_CONF_CONF1_VALUE))
-            {
-                cli_printfError("nfc ERROR: config reg has the wrong value = %x, %x should be %x, %x\n",
-                    regVal[0], regVal[1], I2C_CONF_CONF0_VALUE, I2C_CONF_CONF1_VALUE);
-
-                return -1;
-            }
         }
 
         // check if the Event Detect configuration has the correct value
         // read the ED config (conf) register
-        if(i2c_readData(NTAG5_SLAVE_ADR, I2C_EH_CONFIG_CONF_REG_ADR, 
-            regVal, 3, false))
+        if(nfc_readI2cData(NTAG5_SLAVE_ADR, I2C_EH_CONFIG_CONF_REG_ADR, 
+            regVal, 4, true))
         {
-            cli_printfError("nfc ERROR: Can't read register: %x \n", 
+            cli_printfError("nfc ERROR: Can't read register: 0x%x \n", 
                 I2C_EH_CONFIG_CONF_REG_ADR);
 
             return -1;
         }
 
-#ifdef DEBUG_NFC
+#ifdef DEBUG_NFC_INIT
         // print the ED register 
-        cli_printf("ed: %x\n", regVal[2]);
+        cli_printf("ed: 0x%x\n", regVal[2]);
 #endif
 
         // if it doesn't have the correct value
@@ -757,16 +752,28 @@ int nfc_initialize(bool skipSelfTest)
             writeVal[0] = regVal[0];
             writeVal[1] = regVal[1];
             writeVal[2] = I2C_ED_CONFIG_VALUE;
+            writeVal[3] = regVal[3];
 
-#ifdef DEBUG_NFC
+#ifdef DEBUG_NFC_INIT
 
-            cli_printf("NFC writing correct value, ed: %x\n",
+            cli_printf("NFC writing correct value, ed: 0x%x\n",
                 writeVal[2]);
 #endif
-
             // write the correct configuration
             lvRetValue = nfc_writeI2cData(NTAG5_SLAVE_ADR, I2C_EH_CONFIG_CONF_REG_ADR, 
-                writeVal, 3, false);
+                writeVal, 4, false);
+
+            // check for errors
+            if(lvRetValue)
+            {
+                cli_printfError("nfc ERROR: Can't write to register: 0x%x\n", 
+                    I2C_EH_CONFIG_CONF_REG_ADR);
+
+                return lvRetValue;
+            }
+
+            // make sure to do a reset later on to apply the configuration values
+            applyReset = true;
         }
 
         // check if the Event Detect configuration session register has the correct value
@@ -774,7 +781,8 @@ int nfc_initialize(bool skipSelfTest)
         if(i2c_nfcReadSessionRegByte(NTAG5_SLAVE_ADR, I2C_ED_CONFIG_SES_REG_ADR, 
             ED_CONFIG_REG_SES_BYTE, regVal, 1))
         {
-            cli_printfError("nfc ERROR: Can't read status register\n");
+            cli_printfError("nfc ERROR: Can't read session register 0x%x\n",
+                    I2C_ED_CONFIG_SES_REG_ADR);
 
             return -1;
         }
@@ -782,18 +790,21 @@ int nfc_initialize(bool skipSelfTest)
         // if it doesn't have the correct value
         if(regVal[0] != I2C_ED_CONFIG_VALUE)
         {
+            // make sure to do a reset later on to apply the configuration values
+            applyReset = true;
+
             // set the correct value
 
-#ifdef DEBUG_NFC
+#ifdef DEBUG_NFC_INIT
             // print the configuration register 
-            cli_printf("ses ed 1: %x\n", regVal[0]);
+            cli_printf("ses ed 1: 0x%x\n", regVal[0]);
 #endif
 
             // set the writevalues
             writeVal[0] = I2C_ED_CONFIG_VALUE;
 
-#ifdef DEBUG_NFC
-            cli_printf("NFC writing correct value, byte%d: %x\n",
+#ifdef DEBUG_NFC_INIT
+            cli_printf("NFC writing correct value, byte%d: 0x%x\n",
                 ED_CONFIG_REG_SES_BYTE, writeVal[0]);
 #endif
 
@@ -801,41 +812,247 @@ int nfc_initialize(bool skipSelfTest)
             if(i2c_nfcWriteSessionRegByte(NTAG5_SLAVE_ADR, I2C_ED_CONFIG_SES_REG_ADR, 
                 ED_CONFIG_REG_SES_BYTE, writeVal, 0xFF, 1))
             {
-                cli_printfError("nfc ERROR: Can't read status register\n");
-
-                return -1;
-            }
-
-            // the session register
-            if(i2c_nfcReadSessionRegByte(NTAG5_SLAVE_ADR, I2C_ED_CONFIG_SES_REG_ADR, 
-                ED_CONFIG_REG_SES_BYTE, regVal, 1))
-            {
-                cli_printfError("nfc ERROR: Can't read status register\n");
-
-                return -1;
-            }
-
-#ifdef DEBUG_NFC
-            // print the configuration register 
-            cli_printf("ses ed 1: %x\n", regVal[0]);
-#endif
-
-            // check if it is set properly
-            if(regVal[0] != I2C_ED_CONFIG_VALUE)
-            {
-                cli_printfError("nfc ERROR: ED CONFIG reg has the wrong value = %x should be %x\n",
-                    regVal[0], I2C_ED_CONFIG_VALUE);
+                cli_printfError("nfc ERROR: Can't write session register 0x%x\n",
+                    I2C_ED_CONFIG_SES_REG_ADR);
 
                 return -1;
             }
         }
 
-        // make the write val
-        writeVal[0] = STATUS1_I2C_LOCKED_UNLOCKED << STATUS1_I2C_IF_LOCKED_BIT;
+        // Read the watchdog configuration register
+        if(nfc_readI2cData(NTAG5_SLAVE_ADR, I2C_WDT_CONF_REG_ADR, 
+            regVal, 4, true))
+        {
+            cli_printfError("nfc ERROR: Can't read register: 0x%x \n", 
+                I2C_WDT_CONF_REG_ADR);
 
-        // unlock arbiter on I2C
-        lvRetValue = i2c_nfcWriteSessionRegByte(NTAG5_SLAVE_ADR, I2C_STATUS_SES_REG_ADR, 
-            I2C_STATUS1_REG_BYTE, writeVal, (1 << STATUS1_I2C_IF_LOCKED_BIT), 1);
+            return -1;
+        }
+
+        // check if the watchdog register has the correct value
+        if((regVal[I2C_WDT_CONF_LSB_REG_BYTE] != I2C_WDT_CONF_LSB_VALUE) ||
+            (regVal[I2C_WDT_CONF_MSB_REG_BYTE] != I2C_WDT_CONF_MSB_VALUE) ||
+            (regVal[I2C_WDT_WDT_EN_REG_BYTE] != I2C_WDT_WDT_EN_VALUE))
+        {
+            // set the correct configuration WDT value
+            // make the value
+            writeVal[I2C_WDT_CONF_LSB_REG_BYTE] = I2C_WDT_CONF_LSB_VALUE;
+            writeVal[I2C_WDT_CONF_MSB_REG_BYTE] = I2C_WDT_CONF_MSB_VALUE;
+            writeVal[I2C_WDT_WDT_EN_REG_BYTE] = I2C_WDT_WDT_EN_VALUE;
+            writeVal[I2C_WDT_SRAM_COPY_REG_BYTE] = regVal[I2C_WDT_SRAM_COPY_REG_BYTE];
+
+#ifdef DEBUG_NFC_INIT
+            cli_printf("WDT configuration register has the wrong value!\n 0x%x, 0x%x, 0x%x, 0x%x\n", 
+                regVal[0], regVal[1], regVal[2], regVal[3]);
+            cli_printf("Writing: 0x%x, 0x%x, 0x%x, 0x%x\n", writeVal[0], writeVal[1],
+                writeVal[2], writeVal[3]);
+#endif
+            // write the correct configuration
+            lvRetValue = nfc_writeI2cData(NTAG5_SLAVE_ADR, I2C_WDT_CONF_REG_ADR, 
+                writeVal, 4, false);
+
+            // check for errors
+            if(lvRetValue)
+            {
+                cli_printfError("nfc ERROR: Can't write to register: 0x%x\n", 
+                    I2C_WDT_CONF_REG_ADR);
+
+                return lvRetValue;
+            }
+
+            // make sure to do a reset later on to apply the configuration values
+            applyReset = true;
+        }
+
+        // read the watchdog session register
+        if(i2c_nfcReadSessionRegByte(NTAG5_SLAVE_ADR, I2C_WDT_SES_REG_ADR, 
+            I2C_WDT_CONF_LSB_REG_BYTE, regVal, 3))
+        {
+            cli_printfError("nfc ERROR: Can't read session register 0x%x\n",
+                I2C_WDT_SES_REG_ADR);
+
+            return -1;
+        }
+
+        // check if the watchdog session register has the correct value
+        if((regVal[I2C_WDT_CONF_LSB_REG_BYTE] != I2C_WDT_CONF_LSB_VALUE) ||
+            (regVal[I2C_WDT_CONF_MSB_REG_BYTE] != I2C_WDT_CONF_MSB_VALUE) ||
+            (regVal[I2C_WDT_WDT_EN_REG_BYTE] != I2C_WDT_WDT_EN_VALUE))
+        {
+#ifdef DEBUG_NFC_INIT
+            cli_printf("WDT session register has the wrong value!\n 0x%x, 0x%x, 0x%x\n", 
+                regVal[0], regVal[1], regVal[2]);
+#endif
+            // make sure to do a reset later on to apply the configuration values
+            applyReset = true;
+        }
+
+        // check if the NTAG reset is needed to apply the changes
+        if(applyReset)
+        {
+            // make the value that needs to be written to the reset generator register
+            writeVal[0] = I2C_RESET_GEN_REG_VAL;
+
+#ifdef DEBUG_NFC_INIT
+            cli_printf("resetting NTAG! by writing 0x%x\n", writeVal[0]);
+#endif
+            // write to the reset generator session register
+            lvRetValue = i2c_nfcWriteSessionRegByte(NTAG5_SLAVE_ADR, I2C_RESET_GEN_SES_REG_ADR, 
+                I2C_RESET_GEN_SES_REG_BYTE, writeVal, writeVal[0], 1);
+
+            // check for errors
+            // The I2C write should fail because with a reset, the NTAG will NACK!
+            if(!lvRetValue)
+            {
+                cli_printfError("nfc ERROR: Can't write to reset session register: 0x%x\n", 
+                    I2C_RESET_GEN_SES_REG_ADR);
+
+                // return with an error
+                return -1;
+            }
+            else
+            {
+                cli_printfGreen("nfc: Ignore I2C write error, this is due to NTAG I2C reset!\n");
+
+                // set the return value to OK
+                lvRetValue = 0;
+            }
+
+            // wait 5ms for the NTAG to start it up again
+            usleep(5*1000u);
+
+            // check all the registers again and fail if one is not correct
+
+            // read the configuration register
+            if(nfc_readI2cData(NTAG5_SLAVE_ADR, I2C_CONF_CONF_REG_ADR, 
+                regVal, 4, true))
+            {
+                cli_printfError("nfc ERROR: Can't read register: 0x%x \n", 
+                    I2C_CONF_CONF_REG_ADR);
+
+                // return with an error
+                return -1;
+            }
+
+            // check if it doesn't contain the correct values
+            if((regVal[0] != I2C_CONF_CONF0_VALUE) || (regVal[1] != I2C_CONF_CONF1_VALUE))
+            {
+                cli_printf("nfc ERROR: configuration config registers still have the wrong values! conf 0: 0x%x, 1: 0x%x\n",
+                    regVal[0], regVal[1]);
+                
+                // return with an error
+                return -1;
+            }
+
+            // read the session configuration register
+            if(i2c_nfcReadSessionRegByte(NTAG5_SLAVE_ADR, I2C_CONF_SES_REG_ADR, 
+                I2C_CONF_CONF0_REG_BYTE, regVal, 3))
+            {
+                cli_printfError("nfc ERROR: Can't read configuration session register 0x%x\n",
+                        I2C_CONF_SES_REG_ADR);
+
+                // return with an error
+                return -1;
+            }
+
+            // check if it doesn't contain the correct values
+            if((regVal[0] != I2C_CONF_CONF0_VALUE) || (regVal[1] != I2C_CONF_CONF1_VALUE))
+            {
+                 cli_printf("nfc ERROR: session configuration session registers still have the wrong values! conf 0: 0x%x, 1: 0x%x\n",
+                    regVal[0], regVal[1]);
+
+                // return with an error
+                return -1;
+            }
+
+            // read the configuration event detection register
+            if(nfc_readI2cData(NTAG5_SLAVE_ADR, I2C_EH_CONFIG_CONF_REG_ADR, 
+                regVal, 4, true))
+            {
+                cli_printfError("nfc ERROR: Can't read register: 0x%x \n", 
+                    I2C_EH_CONFIG_CONF_REG_ADR);
+
+                // return with an error
+                return -1;
+            }
+
+            // check if it doesn't contain the correct value
+            if(regVal[2] != I2C_ED_CONFIG_VALUE)
+            {
+                cli_printf("nfc ERROR: configuration event detect byte 2 register still has wrong value! 0x%x\n",
+                    regVal[2]);
+
+                // return with an error
+                return -1;
+            }
+
+            // read the ED config session register
+            if(i2c_nfcReadSessionRegByte(NTAG5_SLAVE_ADR, I2C_ED_CONFIG_SES_REG_ADR, 
+                ED_CONFIG_REG_SES_BYTE, regVal, 1))
+            {
+                cli_printfError("nfc ERROR: Can't read session register 0x%x\n",
+                        I2C_ED_CONFIG_SES_REG_ADR);
+
+                // return with an error
+                return -1;
+            }
+
+            // check if it doesn't contain the correct value
+            if(regVal[0] != I2C_ED_CONFIG_VALUE)
+            {
+                cli_printf("nfc ERROR: session event detect byte 2 register still has the wrong value! 0x%x\n",
+                    regVal[0]);
+
+                // return with an error
+                return -1;
+            }
+
+            // Read the watchdog configuration register
+            if(nfc_readI2cData(NTAG5_SLAVE_ADR, I2C_WDT_CONF_REG_ADR, 
+                regVal, 4, true))
+            {
+                cli_printfError("nfc ERROR: Can't read configuration register: 0x%x \n", 
+                    I2C_WDT_CONF_REG_ADR);
+
+                // return with an error
+                return -1;
+            }
+
+            // check if the watchdog registers doesn't contain the correct values
+            if((regVal[I2C_WDT_CONF_LSB_REG_BYTE] != I2C_WDT_CONF_LSB_VALUE) ||
+                (regVal[I2C_WDT_CONF_MSB_REG_BYTE] != I2C_WDT_CONF_MSB_VALUE) ||
+                (regVal[I2C_WDT_WDT_EN_REG_BYTE] != I2C_WDT_WDT_EN_VALUE))
+            {
+                cli_printf("nfc ERROR: configuration WDT registers still has the wrong values! 0: 0x%x, 1: 0x%x, 2: 0x%x\n",
+                    regVal[0], regVal[1], regVal[2]);
+
+                // return with an error
+                return -1;
+            }
+
+            // read the watchdog session register
+            if(i2c_nfcReadSessionRegByte(NTAG5_SLAVE_ADR, I2C_WDT_SES_REG_ADR, 
+                I2C_WDT_CONF_LSB_REG_BYTE, regVal, 3))
+            {
+                cli_printfError("nfc ERROR: Can't read session register 0x%x\n",
+                    I2C_WDT_SES_REG_ADR);
+
+                // return with an error
+                return -1;
+            }
+
+            // check if the watchdog session register doesn't contain the correct values
+            if((regVal[I2C_WDT_CONF_LSB_REG_BYTE] != I2C_WDT_CONF_LSB_VALUE) ||
+                (regVal[I2C_WDT_CONF_MSB_REG_BYTE] != I2C_WDT_CONF_MSB_VALUE) ||
+                (regVal[I2C_WDT_WDT_EN_REG_BYTE] != I2C_WDT_WDT_EN_VALUE))
+            {
+                cli_printf("NFC session WDT register still has the wrong values! 0: 0x%x, 1: 0x%x, 2: 0x%x\n",
+                    regVal[0], regVal[1], regVal[2]);
+
+                // return with an error
+                return -1;
+            }
+        }
 
         // say it is initialized
         gNfcInitialized = true;
@@ -910,6 +1127,13 @@ int nfc_updateBMSStatus(bool setOutdatedText, bool wakingUpMessage)
     */
     uint8_t NDEFTxtRecord[NDEF_TEXT_RECORD_LENGHT+4] = {};
 
+    // check if the NFC is disabled
+    if(gDisableNFC)
+    {
+        // return OK to not output an error
+        return 0;
+    }
+
     // last byte needs to be 0xFE otherwise it will be discarded afterwards
 
     // construct the NDEF header for the bms status text message 
@@ -952,7 +1176,7 @@ int nfc_updateBMSStatus(bool setOutdatedText, bool wakingUpMessage)
             if(lvRetValue)
             {
     #ifdef DEBUG_NFC
-                cli_printfError("nfc ERROR: Can't write data to register: %x NFC read?\n", 
+                cli_printfError("nfc ERROR: Can't write data to register: 0x%x NFC read?\n", 
                     NTAG_MEM_EEPROM_START);
     #endif
 
@@ -991,7 +1215,7 @@ int nfc_updateBMSStatus(bool setOutdatedText, bool wakingUpMessage)
             if(lvRetValue)
             {
     #ifdef DEBUG_NFC
-                cli_printfError("nfc ERROR: Can't write data to register: %x NFC read?\n", 
+                cli_printfError("nfc ERROR: Can't write data to register: 0x%x NFC read?\n", 
                     NTAG_MEM_EEPROM_START);
     #endif
 
@@ -1021,7 +1245,7 @@ int nfc_updateBMSStatus(bool setOutdatedText, bool wakingUpMessage)
 
         for(i = 0; i < (NDEF_HEADER_STRING_LEGHT>>2) + 1; i++)
         {
-            cli_printf("%d: %x, ", i, NDEFTxtRecord[(i*4)]);
+            cli_printf("%d: 0x%x, ", i, NDEFTxtRecord[(i*4)]);
             cli_printf("%x, ", NDEFTxtRecord[(i*4)+1]);
             cli_printf("%x, ", NDEFTxtRecord[(i*4)+2]);
             cli_printf("%x \n", NDEFTxtRecord[(i*4)+3]);    
@@ -1051,6 +1275,12 @@ int nfc_updateBMSStatus(bool setOutdatedText, bool wakingUpMessage)
 
             // output error
             cli_printfError("NFC ERROR: NFC not initialized!\n");
+
+            // output warning to disable the NFC
+            cli_printfWarning("NFC WARNING: NFC will be disabled!\n");
+
+            // disable the NFC
+            gDisableNFC = true;
         }
         else
         {
@@ -1345,7 +1575,7 @@ int nfc_updateBMSStatus(bool setOutdatedText, bool wakingUpMessage)
             if(lvRetValue)
             {
 #ifdef DEBUG_NFC
-                cli_printfError("nfc ERROR: Can't write data to register: %x NFC read?\n", 
+                cli_printfError("nfc ERROR: Can't write data to register: 0x%x NFC read?\n", 
                     NTAG_MEM_EEPROM_START);
 #endif
 
@@ -1386,7 +1616,7 @@ int nfc_updateBMSStatus(bool setOutdatedText, bool wakingUpMessage)
 //       if(nfc_writeI2cData(NTAG5_SLAVE_ADR, NTAG_MEM_BLOCK_START_SRAM + i, uint8Val, 4, true))
 //       {
 // #ifdef DEBUG_NFC
-//         cli_printfError("nfc ERROR: Can't write data to register: %x NFC read?\n", 
+//         cli_printfError("nfc ERROR: Can't write data to register: 0x%x NFC read?\n", 
 //           NTAG_MEM_EEPROM_START + i);
 // #endif
 //       }
@@ -1425,6 +1655,112 @@ int nfc_writeI2cData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* writeReg, uint8
     uint16_t tries = 0;
     bool valuesWritten = false;
 
+    // check if the number of bytes is a division of 4
+    if(writeBytes % 4 == 0)
+    {
+        // do this at least once 
+        do
+        {
+            // check the session register if the NTAG is busy
+            // read the STATUS_REG session register
+            ret = i2c_nfcReadSessionRegByte(NTAG5_SLAVE_ADR, I2C_STATUS_SES_REG_ADR, 
+                I2C_STATUS0_REG_BYTE, regVal, 2);
+
+            // check for errors
+            if(ret)
+            {
+                // output error to the user
+                cli_printfError("nfc ERROR: Can't read register: 0x%x byte %d E%d\n", 
+                    I2C_STATUS_SES_REG_ADR, 0, ret);
+            }
+            else
+            {
+                // check if there is not an NFC field, 
+                // if the arbitter is not locked on NFC (if allowed to write)
+                // and if the event detection GPIO is not active
+                if(((regVal[I2C_STATUS0_REG_BYTE] & STATUS0_NFC_FIELD_OK_PRESENT) == STATUS0_NFC_FIELD_OK_ABSENT) &&
+                    ((regVal[I2C_STATUS1_REG_BYTE] & STATUS1_NFC_LOCKED_LOCKED) == STATUS1_NFC_LOCKED_UNLOCKED)
+                    && (gpio_readPin(NFC_ED) == NFC_ED_PIN_INACTIVE))
+                {
+                    // write the data 
+                    ret |= i2c_writeData(slaveAdr, regAdr, writeReg, writeBytes);
+
+                    // state that you've written the value(s)
+                    valuesWritten = true;
+                }
+                else if(dontWait)
+                {
+                    // error back 
+                    ret = ERROR_COULD_NOT_WRITE;
+                }
+                else
+                {
+                    // sleep for a little while
+                    usleep(1);
+                }
+  #ifdef DEBUG_NFC_WRITE
+                if(gpio_readPin(NFC_ED) != NFC_ED_PIN_INACTIVE)
+                {
+                    cli_printfGreen("NFC_ED active\n");
+                }
+
+                if(((regVal[I2C_STATUS0_REG_BYTE] & STATUS0_NFC_FIELD_OK_PRESENT) == STATUS0_NFC_FIELD_OK_PRESENT))
+                {
+                    cli_printf("NFC field present! 0x%x\n", regVal[I2C_STATUS0_REG_BYTE]);
+                }
+
+                if(((regVal[I2C_STATUS1_REG_BYTE] & STATUS1_NFC_LOCKED_LOCKED) == STATUS1_NFC_LOCKED_LOCKED))
+                {
+                    cli_printf("NFC locked! 0x%x\n", regVal[I2C_STATUS1_REG_BYTE]);
+                }
+  #endif
+            }
+
+        // loop if dontWait is false and while the tries have not been done yet and there is no error
+        }while((!dontWait) && ((++tries) < AMOUNT_RETRIES) && 
+            (!ret) && (!valuesWritten));
+    }
+    // not writing a multiple of 4 bytes
+    else
+    {
+        // ouptut to the user
+        cli_printfError("nfc ERROR: Not writing a multiple of 4 bytes to 0x%x!\n", regAdr);
+
+        // return an error
+        ret = -1;
+    }
+
+    // check if timeout hapend 
+    if(tries >= AMOUNT_RETRIES)
+    {
+        // error back 
+        ret = ERROR_COULD_NOT_WRITE;
+    }
+
+    // return
+    return ret;
+}
+
+/*!
+ * @brief   This function can be used to read a data via the I2C from the NTAGs normal register (not session register)
+ * @note    It will check if it is allowed to read from the NTAG before reading. 
+ *  
+ * @param   slaveAdr the slave address of the I2C device
+ * @param   regAdr the address of the register to read from (2 bytes)
+ * @param   readReg address of the variable to read
+ * @param   readBytes the amount of bytes to read max 255
+ * @param   reTry if true, it will retry to read if failed (maybe WDT timeout happend)
+ *
+ * @return  0 if ok, -1 if there is an error
+ */
+int nfc_readI2cData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* readReg, uint8_t readBytes, 
+    bool reTry)
+{
+    int ret;
+    uint8_t regVal[2];
+    uint16_t tries = 0;
+    bool valuesRead = false;
+
     // do this at least once 
     do
     {
@@ -1437,76 +1773,60 @@ int nfc_writeI2cData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* writeReg, uint8
         if(ret)
         {
             // output error to the user
-            cli_printfError("nfc ERROR: Can't read register: %x byte %d E%d\n", 
+            cli_printfError("nfc ERROR: Can't read register: 0x%x byte %d E%d\n", 
                 I2C_STATUS_SES_REG_ADR, 0, ret);
         }
         else
         {
-            // check if the arbitter is not locked on NFC (if allowed to write)
-            // and if the GPIO is not active
-            if((!(regVal[I2C_STATUS1_REG_BYTE] & (1 << STATUS1_NFC_IF_LOCKED_BIT)))
+            // check if there is not an NFC field, 
+            // if the arbitter is not locked on NFC (if allowed to write)
+            // and if the event detection GPIO is not active
+            if(((regVal[I2C_STATUS0_REG_BYTE] & STATUS0_NFC_FIELD_OK_PRESENT) == STATUS0_NFC_FIELD_OK_ABSENT) &&
+                ((regVal[I2C_STATUS1_REG_BYTE] & STATUS1_NFC_LOCKED_LOCKED) == STATUS1_NFC_LOCKED_UNLOCKED)
                 && (gpio_readPin(NFC_ED) == NFC_ED_PIN_INACTIVE))
             {
-                // make the write val
-                regVal[0] = STATUS1_I2C_LOCKED_LOCKED << STATUS1_I2C_IF_LOCKED_BIT;
-
-                // lock arbiter on I2C
-                ret = i2c_nfcWriteSessionRegByte(NTAG5_SLAVE_ADR, I2C_STATUS_SES_REG_ADR, 
-                    I2C_STATUS1_REG_BYTE, regVal, (1 << STATUS1_I2C_IF_LOCKED_BIT), 1);
-
-                // check for errors
+                // Read the watchdog configuration register
+                ret = i2c_readData(slaveAdr, regAdr, readReg, readBytes, false);
                 if(ret)
                 {
-                    cli_printfError("nfc ERROR: Can't lock to I2C! %d\n", ret);
+                    if(((tries) >= AMOUNT_RETRIES) || !reTry)
+                    {
+                        cli_printfError("nfc ERROR: Can't read register: 0x%x \n", 
+                            regAdr);
+                    }
+                    else
+                    {
+                        cli_printf("nfc: re-trying read to 0x%x, could be cut off by WDT!\n",
+                            regAdr);
+                        // keep trying
+                        ret = 0;
+                    }
                 }
-
-                // write the data 
-                ret |= i2c_writeData(slaveAdr, regAdr, writeReg, writeBytes);
-
-                // make the new value to write to unlock the I2C
-                regVal[0] = STATUS1_I2C_LOCKED_UNLOCKED << STATUS1_I2C_IF_LOCKED_BIT;
-
-                // unlock arbiter on I2C
-                ret |= i2c_nfcWriteSessionRegByte(NTAG5_SLAVE_ADR, I2C_STATUS_SES_REG_ADR, 
-                    I2C_STATUS1_REG_BYTE, regVal, (1 << STATUS1_I2C_IF_LOCKED_BIT), 1);
-
-                // check for errors
-                if(ret)
+                else
                 {
-                    cli_printfError("nfc ERROR: Can't unlock to I2C! %d\n", ret);
-
+                    valuesRead = true;
                 }
-
-                // state that you've written the value(s)
-                valuesWritten = true;
             }
-            else if(dontWait)
+            else if(reTry)
             {
-                // error back 
-                ret = ERROR_COULD_NOT_WRITE;
+                // sleep for a little time
+                usleep(1);
             }
             else
             {
-                // sleep for a little while
-                usleep(1);
+                // if reTry is disabled state that read is not possible
+                ret = ERROR_COULD_NOT_READ;
             }
-#ifdef DEBUG_NFC
-            if(gpio_readPin(NFC_ED) != NFC_ED_PIN_INACTIVE)
-            {
-                cli_printfGreen("NFC_ED active\n");
-            }
-#endif
         }
-
-    // loop if dontWait is false and while the tries have not been done yet and there is no error
-    }while((!dontWait) && ((++tries) < AMOUNT_RETRIES) && 
-        (!ret) && (!valuesWritten));
+    // loop if retry is true and while the tries have not been done yet and there is no error
+    }while((reTry) && ((++tries) < AMOUNT_RETRIES) && 
+        (!ret) && (!valuesRead));
 
     // check if timeout hapend 
     if(tries >= AMOUNT_RETRIES)
     {
         // error back 
-        ret = ERROR_COULD_NOT_WRITE;
+        ret = ERROR_COULD_NOT_READ;
     }
 
     // return
