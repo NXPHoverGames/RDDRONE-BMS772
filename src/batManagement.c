@@ -3,7 +3,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020-2021 NXP
+ * Copyright 2020-2022 NXP
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -1298,7 +1298,6 @@ int batManagement_checkFault(uint32_t *BMSFault, bool resetFaultPin)
             {
                 cli_printfWarning("not resetting communication errors, max (255) not reached\n", lvBccFaultStatus[BCC_FS_COMM]);
             }
-            
         }
     }
 

@@ -3,7 +3,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2021 NXP
+ * Copyright 2021-2022 NXP
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -70,7 +70,8 @@
  * Private Variables
  ****************************************************************************/
 /*! @brief variable to indicate of it is initialized */
-static bool gSMBusInitialized             = false;  
+static bool gSMBusInitialized             = false;
+static bool gDontDoSMBus                  = false;
 const char SMBus_path_sbs[]               = "/dev/sbs0";  
 
 /*! @brief  The manufactrure name*/
@@ -144,6 +145,13 @@ int SMBus_updateInformation(bool resetCurrent)
     void* dataReturn;
     int32_t intVal;
 
+    // check if SMBus shouldn't be done
+    if(gDontDoSMBus)
+    {
+        // just return without an error
+        return 0;
+    }
+
     // check if it is not initialized
     if(!gSMBusInitialized)
     {
@@ -152,6 +160,9 @@ int SMBus_updateInformation(bool resetCurrent)
         
         // set the error
         lvRetValue = EXIT_FAILURE;
+
+        // don't do SMBus anymore
+        gDontDoSMBus = true;
     }
     else
     {
@@ -217,8 +228,12 @@ int SMBus_updateInformation(bool resetCurrent)
              */
 
             cli_printfError("SMBus ERROR: could not open FD: %d\n", fd);
+        
+            // don't do SMBus anymore
+            gDontDoSMBus = true;
 
-            return -1;
+            // error on exit
+            lvRetValue = -1;
         }
         else
         {

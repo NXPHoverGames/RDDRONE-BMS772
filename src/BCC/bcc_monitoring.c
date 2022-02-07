@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 - 2021 NXP
+ * Copyright 2016 - 2022 NXP
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -59,6 +59,7 @@
 #include "data.h"
 #include "gpio.h"
 #include "cli.h"
+#include "spi.h"
 #include <errno.h>
 
 //#include <math.h>
@@ -329,7 +330,7 @@ bcc_status_t bcc_monitoring_updateMeasurements(bcc_drv_config_t* const drvConfig
     bcc_status_t error;                                                                         // Error status.
     uint16_t measurements[BCC_MEAS_CNT];                                                        // Array needed to store all measured values.
     float newFloatValue = 0;                                                                    // Conversion complete flag.
-    int i = 0, bccIndex, errnoNum, lineCounterVal = 0;
+    int i = 0, bccIndex, errnoNum;
     parameterKind_t parameter;
     int16_t lvTemp = 0;
     static float sumOfMovAvg = 0;
@@ -2249,7 +2250,7 @@ int bcc_monitoring_calibrateSoC(bool calibrateARem, bool currentCheck)
                 return lvRetValue;
             }
 
-            cli_printf("Calculated a-full is > a-factory\nSetting a-full at %fAh and a-rem at %fAh\n",
+            cli_printf("Calculated a-full is > a-factory\nSetting a-full at %.3fAh and a-rem at %.3fAh\n",
                 lowestCellVoltage, cellVoltageOrCapacity);
         }
         // if the full charge capacity is OK

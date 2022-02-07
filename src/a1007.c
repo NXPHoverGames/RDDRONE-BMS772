@@ -3,7 +3,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020-2021 NXP
+ * Copyright 2020-2022 NXP
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -67,7 +67,8 @@
 /****************************************************************************
  * Private Variables
  ****************************************************************************/
-static bool gA1007Initialized = false;  
+static bool gA1007Initialized = false;
+static bool gDoNotInitialzeA1007 = false;
 
 /****************************************************************************
  * Private Functions
@@ -95,12 +96,15 @@ int a1007_initialize(bool skipSelfTest)
     uint8_t regVal[2] = {0, 0};
 
     // check if not initialized 
-    if(!gA1007Initialized)
+    if(!gA1007Initialized && !gDoNotInitialzeA1007)
     {
         // Check if the self-test shouldn't be skipped
         if(!skipSelfTest)
         {
             cli_printf("SELF-TEST A1007: START\n");
+
+            // don't do the initialize again
+            gDoNotInitialzeA1007 = true;
 
             // wake up the A1007 with the wakeup pin
             // write the pin to high

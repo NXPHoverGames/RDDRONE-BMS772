@@ -24,7 +24,7 @@ NXP does not convey any license under its patent rights nor the rights of others
 NXP has battery emulators that may be used during testing:
 https://www.nxp.com/design/development-boards/analog-toolbox/6-cell-battery-pack-to-supply-mc33772-evbs:BATT-6EMULATOR.
 
-This readme files will explain how to get the right nuttx and nuttx-apps repository with the BMS4.0 patches and build the BMS software (create a binary file).
+This readme files will explain how to get the right nuttx and nuttx-apps repository with the BMS5.0 patches and build the BMS software (create a binary file).
 This will work best on a linux machine, you could use a virtual machine for it.
 
 See this webpage for the NuttX quickstart guide: https://nuttx.apache.org/docs/latest/quickstart/quickstart.html.
@@ -75,7 +75,7 @@ Checkout the public regulated data types.
 ## Apply the patches
 Apply the patch to the nuttx-apps.
 ```bash
-(cd apps; patch -p1 < nxp_bms/BMS_v1/Patchfiles/0001-apps-patch-BMS4.0.patch)
+(cd apps; patch -p1 < nxp_bms/BMS_v1/Patchfiles/0001-apps-patch-BMS5.0.patch)
 ```
 Go the nuttx folder and checkout the right NuttX commit.
 ```bash
@@ -86,7 +86,7 @@ git checkout 5c3ce49d8240a13899fb5a9d93b70c50140fcd41 -b bms772
 ```
 Add the nuttx patch.
 ```bash
-patch -p1 < ../apps/nxp_bms/BMS_v1/Patchfiles/0001-nuttx-patch-BMS4.0.patch
+patch -p1 < ../apps/nxp_bms/BMS_v1/Patchfiles/0001-nuttx-patch-BMS5.0.patch
 ```
 ## Install the Kconfig tools and the crosscompiler if needed
 When this is your first NuttX project, you need to install the Kconfig tools and the cross compiler. Otherwise you can skip this part and continue with "configure and make the binary".
@@ -174,9 +174,9 @@ Make sure the BMS is powered and everything is connected properly to the BMS.
 
 Use a UART terminal like minicom on a linux machine or PuTTY or teraTerm on a windows machine and connect to the right COM port.
 The settings are:
-*	115200 Baud
-*	8 data bits
-*	1 stop bit
+*   115200 Baud
+*   8 data bits
+*   1 stop bit
 
 ## Programming the BMS with the JLink debugger
 See the release notes of the BMS772 how to attach the debugger.

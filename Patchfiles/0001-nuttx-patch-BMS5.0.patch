@@ -1,7 +1,7 @@
-From 0b38bc0acccb81cc6dd533274b9e3b8f10c3d354 Mon Sep 17 00:00:00 2001
+From 1f0bb23e3a75a5d447281c607e2875b687c53e4c Mon Sep 17 00:00:00 2001
 From: Cis van Mierlo <cis.van.mierlo@nxp.com>
-Date: Fri, 3 Sep 2021 10:27:25 +0200
-Subject: [PATCH] nuttx patch BMS4.0
+Date: Fri, 10 Dec 2021 14:57:11 +0100
+Subject: [PATCH] nuttx patch BMS5.0
 
 ---
  Kconfig                                       |    1 +
@@ -13,7 +13,7 @@ Subject: [PATCH] nuttx patch BMS4.0
  arch/arm/src/s32k1xx/s32k1xx_clockconfig.c    |  818 ++++-
  arch/arm/src/s32k1xx/s32k1xx_clockconfig.h    |   26 +
  arch/arm/src/s32k1xx/s32k1xx_flexcan.c        |   96 +-
- arch/arm/src/s32k1xx/s32k1xx_lpi2c.c          |   65 +-
+ arch/arm/src/s32k1xx/s32k1xx_lpi2c.c          |   96 +-
  arch/arm/src/s32k1xx/s32k1xx_lpi2c_slave.c    |  929 ++++++
  arch/arm/src/s32k1xx/s32k1xx_lpi2c_slave.h    |   90 +
  arch/arm/src/s32k1xx/s32k1xx_lpspi.c          |  618 +++-
@@ -34,9 +34,9 @@ Subject: [PATCH] nuttx patch BMS4.0
  boards/arm/s32k1xx/rddrone-bms772/Kconfig     |  189 ++
  boards/arm/s32k1xx/rddrone-bms772/README.txt  |   15 +
  .../rddrone-bms772/configs/bms/.gitignore     |    2 +
- .../rddrone-bms772/configs/bms/defconfig      |  122 +
+ .../rddrone-bms772/configs/bms/defconfig      |  138 +
  .../configs/bmsdebug/.gitignore               |    2 +
- .../rddrone-bms772/configs/bmsdebug/defconfig |  123 +
+ .../rddrone-bms772/configs/bmsdebug/defconfig |  139 +
  .../s32k1xx/rddrone-bms772/include/board.h    |  167 +
  .../rddrone-bms772/include/nsh_romfsimg.h     |   89 +
  .../rddrone-bms772/include/rcS.template       |   20 +
@@ -45,12 +45,12 @@ Subject: [PATCH] nuttx patch BMS4.0
  .../rddrone-bms772/scripts/s32k144.cfg        |   58 +
  .../s32k1xx/rddrone-bms772/scripts/sram.ld    |  129 +
  .../arm/s32k1xx/rddrone-bms772/src/.gitignore |    2 +
- .../arm/s32k1xx/rddrone-bms772/src/Makefile   |   79 +
- .../rddrone-bms772/src/rddrone-bms772.h       |  217 ++
+ .../arm/s32k1xx/rddrone-bms772/src/Makefile   |   83 +
+ .../rddrone-bms772/src/rddrone-bms772.h       |  230 ++
  .../rddrone-bms772/src/s32k1xx_appinit.c      |   94 +
  .../rddrone-bms772/src/s32k1xx_autoleds.c     |  165 +
  .../s32k1xx/rddrone-bms772/src/s32k1xx_boot.c |   93 +
- .../rddrone-bms772/src/s32k1xx_bringup.c      |  216 ++
+ .../rddrone-bms772/src/s32k1xx_bringup.c      |  246 ++
  .../rddrone-bms772/src/s32k1xx_buttons.c      |  164 +
  .../rddrone-bms772/src/s32k1xx_clockconfig.c  |  217 ++
  .../s32k1xx/rddrone-bms772/src/s32k1xx_gpio.c |  549 +++
@@ -59,6 +59,7 @@ Subject: [PATCH] nuttx patch BMS4.0
  .../rddrone-bms772/src/s32k1xx_reset.c        |   77 +
  .../rddrone-bms772/src/s32k1xx_smartbattery.c |  229 ++
  .../s32k1xx/rddrone-bms772/src/s32k1xx_spi.c  |  168 +
+ .../rddrone-bms772/src/s32k1xx_ssd1306.c      |  473 +++
  .../rddrone-bms772/src/s32k1xx_userleds.c     |  138 +
  boards/boardctl.c                             |    8 +
  include/sys/boardctl.h                        |    4 +-
@@ -95,7 +96,7 @@ Subject: [PATCH] nuttx patch BMS4.0
  sched/systemview/SEGGER_SYSVIEW_NuttX.h       |  156 +
  sched/task/task_create.c                      |    2 +
  sched/task/task_start.c                       |    6 +
- 91 files changed, 17171 insertions(+), 255 deletions(-)
+ 92 files changed, 17745 insertions(+), 264 deletions(-)
  create mode 100644 arch/arm/src/s32k1xx/s32k1xx_lpi2c_slave.c
  create mode 100644 arch/arm/src/s32k1xx/s32k1xx_lpi2c_slave.h
  create mode 100644 arch/arm/src/s32k1xx/s32k1xx_pminitialize.c
@@ -135,6 +136,7 @@ Subject: [PATCH] nuttx patch BMS4.0
  create mode 100644 boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_reset.c
  create mode 100644 boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_smartbattery.c
  create mode 100644 boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_spi.c
+ create mode 100644 boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_ssd1306.c
  create mode 100644 boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_userleds.c
  create mode 100644 sched/systemview/Global.h
  create mode 100644 sched/systemview/Kconfig
@@ -1510,7 +1512,7 @@ index 8d28042d71..86312496c2 100644
  
    /* Register the device with the OS so that socket IOCTLs can be performed */
 diff --git a/arch/arm/src/s32k1xx/s32k1xx_lpi2c.c b/arch/arm/src/s32k1xx/s32k1xx_lpi2c.c
-index 2eb9f19aec..bee6eb3b2c 100644
+index 2eb9f19aec..9062d49596 100644
 --- a/arch/arm/src/s32k1xx/s32k1xx_lpi2c.c
 +++ b/arch/arm/src/s32k1xx/s32k1xx_lpi2c.c
 @@ -15,7 +15,7 @@
@@ -1522,7 +1524,15 @@ index 2eb9f19aec..bee6eb3b2c 100644
   *    without specific prior written permission.
   *
   * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-@@ -118,22 +118,11 @@
+@@ -61,6 +61,7 @@
+ #include "hardware/s32k1xx_pinmux.h"
+ #include "s32k1xx_lpi2c.h"
+ #include "s32k1xx_periphclocks.h"
++#include "s32k1xx_pin.h"
+ 
+ #include <arch/board/board.h>
+ 
+@@ -118,22 +119,11 @@
  #  define CONFIG_I2C_NTRACE 32
  #endif
  
@@ -1547,7 +1557,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
  
  /****************************************************************************
   * Private Types
-@@ -155,10 +144,10 @@ enum s32k1xx_trace_e
+@@ -155,10 +145,10 @@ enum s32k1xx_trace_e
    I2CEVENT_NONE = 0,      /* No events have occurred with this status */
    I2CEVENT_SENDADDR,      /* Start/Master bit set and address sent, param = msgc */
    I2CEVENT_SENDBYTE,      /* Send byte, param = dcnt */
@@ -1560,7 +1570,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
    I2CEVENT_ERROR          /* Error occurred, param = 0 */
  };
  
-@@ -173,7 +162,7 @@ struct s32k1xx_trace_s
+@@ -173,7 +163,7 @@ struct s32k1xx_trace_s
    clock_t time;                  /* First of event or first status */
  };
  
@@ -1569,7 +1579,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
  
  struct s32k1xx_lpi2c_config_s
  {
-@@ -283,7 +272,7 @@ static inline void
+@@ -283,7 +273,7 @@ static inline void
  static inline uint32_t
    s32k1xx_lpi2c_getstatus(FAR struct s32k1xx_lpi2c_priv_s *priv);
  
@@ -1578,7 +1588,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
  
  #ifndef CONFIG_I2C_POLLED
  static int s32k1xx_lpi2c_isr(int irq, void *context, FAR void *arg);
-@@ -321,9 +310,9 @@ static const char *g_trace_names[] =
+@@ -321,9 +311,9 @@ static const char *g_trace_names[] =
  
  static const struct i2c_ops_s s32k1xx_lpi2c_ops =
  {
@@ -1590,7 +1600,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
  #endif
  };
  
-@@ -338,11 +327,7 @@ static const struct s32k1xx_lpi2c_config_s s32k1xx_lpi2c0_config =
+@@ -338,11 +328,7 @@ static const struct s32k1xx_lpi2c_config_s s32k1xx_lpi2c0_config =
    .filtsda    = CONFIG_LPI2C0_FILTSDA,
    .scl_pin    = PIN_LPI2C0_SCL,
    .sda_pin    = PIN_LPI2C0_SDA,
@@ -1602,7 +1612,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
  #ifndef CONFIG_I2C_POLLED
    .irq        = S32K1XX_IRQ_LPI2C0M,
  #endif
-@@ -359,9 +344,9 @@ static struct s32k1xx_lpi2c_priv_s s32k1xx_lpi2c0_priv =
+@@ -359,9 +345,9 @@ static struct s32k1xx_lpi2c_priv_s s32k1xx_lpi2c0_priv =
    .ptr        = NULL,
    .dcnt       = 0,
    .flags      = 0,
@@ -1614,7 +1624,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
  
  #ifdef CONFIG_S32K1XX_LPI2C1
  static const struct s32k1xx_lpi2c_config_s s32k1xx_lpi2c1_config =
-@@ -372,11 +357,7 @@ static const struct s32k1xx_lpi2c_config_s s32k1xx_lpi2c1_config =
+@@ -372,11 +358,7 @@ static const struct s32k1xx_lpi2c_config_s s32k1xx_lpi2c1_config =
    .filtsda    = CONFIG_LPI2C1_FILTSDA,
    .scl_pin    = PIN_LPI2C1_SCL,
    .sda_pin    = PIN_LPI2C1_SDA,
@@ -1626,7 +1636,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
  #ifndef CONFIG_I2C_POLLED
    .irq        = S32K1XX_IRQ_LPI2C1M,
  #endif
-@@ -393,9 +374,9 @@ static struct s32k1xx_lpi2c_priv_s s32k1xx_lpi2c1_priv =
+@@ -393,9 +375,9 @@ static struct s32k1xx_lpi2c_priv_s s32k1xx_lpi2c1_priv =
    .ptr        = NULL,
    .dcnt       = 0,
    .flags      = 0,
@@ -1638,7 +1648,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
  
  /****************************************************************************
   * Private Functions
-@@ -605,12 +586,14 @@ static inline int
+@@ -605,12 +587,14 @@ static inline int
        s32k1xx_lpi2c_putreg(priv, S32K1XX_LPI2C_MIER_OFFSET, 0);
      }
  
@@ -1653,7 +1663,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
  
    leave_critical_section(flags);
    return ret;
-@@ -1212,7 +1195,7 @@ static int s32k1xx_lpi2c_isr_process(struct s32k1xx_lpi2c_priv_s *priv)
+@@ -1212,7 +1196,7 @@ static int s32k1xx_lpi2c_isr_process(struct s32k1xx_lpi2c_priv_s *priv)
  
    s32k1xx_lpi2c_tracenew(priv, status);
  
@@ -1662,7 +1672,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
  
    if (priv->intstate == INTSTATE_DONE && (status & LPI2C_MSR_SDF) != 0)
      {
-@@ -1285,9 +1268,9 @@ static int s32k1xx_lpi2c_isr_process(struct s32k1xx_lpi2c_priv_s *priv)
+@@ -1285,9 +1269,9 @@ static int s32k1xx_lpi2c_isr_process(struct s32k1xx_lpi2c_priv_s *priv)
      {
        if (priv->msgc > 0 && priv->msgv != NULL)
          {
@@ -1675,7 +1685,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
  
            if ((priv->msgv->flags & I2C_M_NOSTART) == 0)
              {
-@@ -1444,9 +1427,9 @@ static int s32k1xx_lpi2c_isr(int irq, void *context, FAR void *arg)
+@@ -1444,9 +1428,9 @@ static int s32k1xx_lpi2c_isr(int irq, void *context, FAR void *arg)
  
  static int s32k1xx_lpi2c_init(FAR struct s32k1xx_lpi2c_priv_s *priv)
  {
@@ -1687,7 +1697,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
     * board-specific logic as part of the clock configuration logic.
     */
  
-@@ -1460,7 +1443,7 @@ static int s32k1xx_lpi2c_init(FAR struct s32k1xx_lpi2c_priv_s *priv)
+@@ -1460,7 +1444,7 @@ static int s32k1xx_lpi2c_init(FAR struct s32k1xx_lpi2c_priv_s *priv)
    s32k1xx_lpi2c_putreg(priv, S32K1XX_LPI2C_MCR_OFFSET, LPI2C_MCR_RST);
    s32k1xx_lpi2c_putreg(priv, S32K1XX_LPI2C_MCR_OFFSET, 0);
  
@@ -1696,7 +1706,7 @@ index 2eb9f19aec..bee6eb3b2c 100644
  
    s32k1xx_lpi2c_putreg(priv, S32K1XX_LPI2C_MCR_OFFSET, LPI2C_MCR_DOZEN);
  
-@@ -1598,7 +1581,7 @@ static int s32k1xx_lpi2c_transfer(FAR struct i2c_master_s *dev,
+@@ -1598,7 +1582,7 @@ static int s32k1xx_lpi2c_transfer(FAR struct i2c_master_s *dev,
  
    priv->status = 0;
  
@@ -1705,7 +1715,83 @@ index 2eb9f19aec..bee6eb3b2c 100644
     * the BUSY flag.
     */
  
-@@ -1833,7 +1816,7 @@ FAR struct i2c_master_s *s32k1xx_i2cbus_initialize(int port)
+@@ -1636,6 +1620,18 @@ static int s32k1xx_lpi2c_transfer(FAR struct i2c_master_s *dev,
+           i2cerr("Transfer without start condition\n");
+           ret = -EINVAL;
+         }
++
++        /* TODO fix in a better way if stuck and I2C won't work anymore */
++
++        /* In case the I2C peripheral is stuck, reset it */
++
++        /* De-init the port */
++
++        s32k1xx_lpi2c_deinit(priv);
++
++        /* Re-init the port */
++
++        s32k1xx_lpi2c_init(priv);
+     }
+ 
+   /* Dump the trace result */
+@@ -1713,12 +1709,12 @@ static int s32k1xx_lpi2c_reset(FAR struct i2c_master_s *dev)
+ 
+   /* Let SDA go high */
+ 
+-  s32k1xx_gpio_write(sda_gpio, 1);
++  s32k1xx_gpiowrite(sda_gpio, 1);
+ 
+   /* Clock the bus until any slaves currently driving it let it go. */
+ 
+   clock_count = 0;
+-  while (!s32k1xx_gpio_read(sda_gpio))
++  while (!s32k1xx_gpioread(sda_gpio))
+     {
+       /* Give up if we have tried too hard */
+ 
+@@ -1733,7 +1729,7 @@ static int s32k1xx_lpi2c_reset(FAR struct i2c_master_s *dev)
+        */
+ 
+       stretch_count = 0;
+-      while (!s32k1xx_gpio_read(scl_gpio))
++      while (!s32k1xx_gpioread(scl_gpio))
+         {
+           /* Give up if we have tried too hard */
+ 
+@@ -1747,12 +1743,12 @@ static int s32k1xx_lpi2c_reset(FAR struct i2c_master_s *dev)
+ 
+       /* Drive SCL low */
+ 
+-      s32k1xx_gpio_write(scl_gpio, 0);
++      s32k1xx_gpiowrite(scl_gpio, 0);
+       up_udelay(10);
+ 
+       /* Drive SCL high again */
+ 
+-      s32k1xx_gpio_write(scl_gpio, 1);
++      s32k1xx_gpiowrite(scl_gpio, 1);
+       up_udelay(10);
+     }
+ 
+@@ -1760,13 +1756,13 @@ static int s32k1xx_lpi2c_reset(FAR struct i2c_master_s *dev)
+    * state machines.
+    */
+ 
+-  s32k1xx_gpio_write(sda_gpio, 0);
++  s32k1xx_gpiowrite(sda_gpio, 0);
+   up_udelay(10);
+-  s32k1xx_gpio_write(scl_gpio, 0);
++  s32k1xx_gpiowrite(scl_gpio, 0);
+   up_udelay(10);
+-  s32k1xx_gpio_write(scl_gpio, 1);
++  s32k1xx_gpiowrite(scl_gpio, 1);
+   up_udelay(10);
+-  s32k1xx_gpio_write(sda_gpio, 1);
++  s32k1xx_gpiowrite(sda_gpio, 1);
+   up_udelay(10);
+ 
+   /* Revert the GPIO configuration. */
+@@ -1833,7 +1829,7 @@ FAR struct i2c_master_s *s32k1xx_i2cbus_initialize(int port)
      }
  
    /* Initialize private data for the first time, increment reference count,
@@ -2746,7 +2832,7 @@ index 0000000000..d7839b1998
 +#endif /* __ASSEMBLY__ */
 +#endif /* __ARCH_ARM_SRC_S32K1XX_S32K1XX_LPI2C_SLAVE_H */
 diff --git a/arch/arm/src/s32k1xx/s32k1xx_lpspi.c b/arch/arm/src/s32k1xx/s32k1xx_lpspi.c
-index b0cb406a93..53d9a4277e 100644
+index b0cb406a93..27168ba77e 100644
 --- a/arch/arm/src/s32k1xx/s32k1xx_lpspi.c
 +++ b/arch/arm/src/s32k1xx/s32k1xx_lpspi.c
 @@ -114,6 +114,25 @@
@@ -3176,7 +3262,7 @@ index b0cb406a93..53d9a4277e 100644
 + * Name: up_pm_notify
 + *
 + * Description:
-+ *   Notify the driver of new power state. This callback is  called after
++ *   Notify the driver of new power state. This callback is called after
 + *   all drivers have had the opportunity to prepare for the new power state.
 + *
 + * Input Parameters:
@@ -6035,10 +6121,10 @@ index 0000000000..aff67cd1fb
 \ No newline at end of file
 diff --git a/boards/arm/s32k1xx/rddrone-bms772/configs/bms/defconfig b/boards/arm/s32k1xx/rddrone-bms772/configs/bms/defconfig
 new file mode 100644
-index 0000000000..869cbedab6
+index 0000000000..73d8837106
 --- /dev/null
 +++ b/boards/arm/s32k1xx/rddrone-bms772/configs/bms/defconfig
-@@ -0,0 +1,122 @@
+@@ -0,0 +1,138 @@
 +#
 +# This file is autogenerated: PLEASE DO NOT EDIT IT.
 +#
@@ -6069,17 +6155,22 @@ index 0000000000..869cbedab6
 +CONFIG_CANUTILS_LIBCANARDV1=y
 +CONFIG_CAN_CONNS=1
 +CONFIG_CLOCK_MONOTONIC=y
-+CONFIG_DEBUG_ERROR=y
 +CONFIG_DEBUG_FEATURES=y
 +CONFIG_DEBUG_SYMBOLS=y
 +CONFIG_DEV_GPIO=y
++CONFIG_DRIVERS_VIDEO=y
 +CONFIG_EXAMPLES_HELLO=y
 +CONFIG_FS_PROCFS=y
 +CONFIG_FS_ROMFS=y
-+CONFIG_I2C=y
 +CONFIG_I2C_DRIVER=y
++CONFIG_I2C_RESET=y
 +CONFIG_I2C_SLAVE=y
 +CONFIG_IOB_BUFSIZE=96
++CONFIG_LCD=y
++CONFIG_LCD_FRAMEBUFFER=y
++CONFIG_LCD_RLANDSCAPE=y
++CONFIG_LCD_SSD1306_I2C=y
++CONFIG_LCD_UG2832HSWEG04=y
 +CONFIG_LIBC_FLOATINGPOINT=y
 +CONFIG_LIBM=y
 +CONFIG_LPI2C0_SLAVE_BUS=y
@@ -6106,6 +6197,16 @@ index 0000000000..869cbedab6
 +CONFIG_NSH_FILEIOSIZE=512
 +CONFIG_NSH_READLINE=y
 +CONFIG_NSH_ROMFSETC=y
++CONFIG_NXFONTS=y
++CONFIG_NXFONTS_CHARBITS=8
++CONFIG_NXFONTS_DISABLE_16BPP=y
++CONFIG_NXFONTS_DISABLE_1BPP=y
++CONFIG_NXFONTS_DISABLE_24BPP=y
++CONFIG_NXFONTS_DISABLE_2BPP=y
++CONFIG_NXFONTS_DISABLE_32BPP=y
++CONFIG_NXFONTS_DISABLE_4BPP=y
++CONFIG_NXFONTS_DISABLE_8BPP=y
++CONFIG_NXFONT_X11_MISC_FIXED_5X8=y
 +CONFIG_NXP_BMS=y
 +CONFIG_PATH_MAX=128
 +CONFIG_PM=y
@@ -6161,6 +6262,7 @@ index 0000000000..869cbedab6
 +CONFIG_USERLED=y
 +CONFIG_USERLED_LOWER=y
 +CONFIG_USER_ENTRYPOINT="nsh_main"
++CONFIG_VIDEO_FB=y
 diff --git a/boards/arm/s32k1xx/rddrone-bms772/configs/bmsdebug/.gitignore b/boards/arm/s32k1xx/rddrone-bms772/configs/bmsdebug/.gitignore
 new file mode 100644
 index 0000000000..aff67cd1fb
@@ -6172,10 +6274,10 @@ index 0000000000..aff67cd1fb
 \ No newline at end of file
 diff --git a/boards/arm/s32k1xx/rddrone-bms772/configs/bmsdebug/defconfig b/boards/arm/s32k1xx/rddrone-bms772/configs/bmsdebug/defconfig
 new file mode 100644
-index 0000000000..47b38ed00d
+index 0000000000..5486d704c7
 --- /dev/null
 +++ b/boards/arm/s32k1xx/rddrone-bms772/configs/bmsdebug/defconfig
-@@ -0,0 +1,123 @@
+@@ -0,0 +1,139 @@
 +#
 +# This file is autogenerated: PLEASE DO NOT EDIT IT.
 +#
@@ -6207,17 +6309,22 @@ index 0000000000..47b38ed00d
 +CONFIG_CAN_CONNS=1
 +CONFIG_CLOCK_MONOTONIC=y
 +CONFIG_DEBUG_ASSERTIONS=y
-+CONFIG_DEBUG_ERROR=y
 +CONFIG_DEBUG_FEATURES=y
 +CONFIG_DEBUG_SYMBOLS=y
 +CONFIG_DEV_GPIO=y
++CONFIG_DRIVERS_VIDEO=y
 +CONFIG_EXAMPLES_HELLO=y
 +CONFIG_FS_PROCFS=y
 +CONFIG_FS_ROMFS=y
-+CONFIG_I2C=y
 +CONFIG_I2C_DRIVER=y
++CONFIG_I2C_RESET=y
 +CONFIG_I2C_SLAVE=y
 +CONFIG_IOB_BUFSIZE=96
++CONFIG_LCD=y
++CONFIG_LCD_FRAMEBUFFER=y
++CONFIG_LCD_RLANDSCAPE=y
++CONFIG_LCD_SSD1306_I2C=y
++CONFIG_LCD_UG2832HSWEG04=y
 +CONFIG_LIBC_FLOATINGPOINT=y
 +CONFIG_LIBM=y
 +CONFIG_LPI2C0_SLAVE_BUS=y
@@ -6244,6 +6351,16 @@ index 0000000000..47b38ed00d
 +CONFIG_NSH_FILEIOSIZE=512
 +CONFIG_NSH_READLINE=y
 +CONFIG_NSH_ROMFSETC=y
++CONFIG_NXFONTS=y
++CONFIG_NXFONTS_CHARBITS=8
++CONFIG_NXFONTS_DISABLE_16BPP=y
++CONFIG_NXFONTS_DISABLE_1BPP=y
++CONFIG_NXFONTS_DISABLE_24BPP=y
++CONFIG_NXFONTS_DISABLE_2BPP=y
++CONFIG_NXFONTS_DISABLE_32BPP=y
++CONFIG_NXFONTS_DISABLE_4BPP=y
++CONFIG_NXFONTS_DISABLE_8BPP=y
++CONFIG_NXFONT_X11_MISC_FIXED_5X8=y
 +CONFIG_NXP_BMS=y
 +CONFIG_PATH_MAX=128
 +CONFIG_PM=y
@@ -6299,6 +6416,7 @@ index 0000000000..47b38ed00d
 +CONFIG_USERLED=y
 +CONFIG_USERLED_LOWER=y
 +CONFIG_USER_ENTRYPOINT="nsh_main"
++CONFIG_VIDEO_FB=y
 diff --git a/boards/arm/s32k1xx/rddrone-bms772/include/board.h b/boards/arm/s32k1xx/rddrone-bms772/include/board.h
 new file mode 100644
 index 0000000000..39649329bd
@@ -7074,10 +7192,10 @@ index 0000000000..726d936e1e
 +/Make.dep
 diff --git a/boards/arm/s32k1xx/rddrone-bms772/src/Makefile b/boards/arm/s32k1xx/rddrone-bms772/src/Makefile
 new file mode 100644
-index 0000000000..af105c0242
+index 0000000000..ce40200712
 --- /dev/null
 +++ b/boards/arm/s32k1xx/rddrone-bms772/src/Makefile
-@@ -0,0 +1,79 @@
+@@ -0,0 +1,83 @@
 +############################################################################
 +# boards/arm/s32k1xx/rddrone-bms772/src/Makefile
 +#
@@ -7156,13 +7274,17 @@ index 0000000000..af105c0242
 +CSRCS += s32k1xx_nrstcheck.c
 +endif
 +
++ifeq ($(CONFIG_LCD_SSD1306_I2C),y)
++CSRCS += s32k1xx_ssd1306.c
++endif
++
 +include $(TOPDIR)/boards/Board.mk
 diff --git a/boards/arm/s32k1xx/rddrone-bms772/src/rddrone-bms772.h b/boards/arm/s32k1xx/rddrone-bms772/src/rddrone-bms772.h
 new file mode 100644
-index 0000000000..4af5b400eb
+index 0000000000..527c862532
 --- /dev/null
 +++ b/boards/arm/s32k1xx/rddrone-bms772/src/rddrone-bms772.h
-@@ -0,0 +1,217 @@
+@@ -0,0 +1,230 @@
 +/****************************************************************************
 + * boards/arm/s32k1xx/rddrone-bms772/src/rddrone-bms772.h
 + *
@@ -7213,6 +7335,8 @@ index 0000000000..4af5b400eb
 +#include "hardware/s32k1xx_pinmux.h"
 +#include "s32k1xx_periphclocks.h"
 +#include "s32k1xx_pin.h"
++
++#include <nuttx/i2c/i2c_master.h>
 +
 +/****************************************************************************
 + * Pre-processor Definitions
@@ -7376,6 +7500,17 @@ index 0000000000..4af5b400eb
 + ****************************************************************************/
 +#if defined(CONFIG_NRST_CHECK_PROC_FS) && defined(CONFIG_FS_PROCFS)
 +int s32k1xx_nrstcheck(void);
++#endif
++
++/****************************************************************************
++ * Name: board_lcd_initialize_I2C
++ *
++ * Description:
++ *   Initialize SSD1306 drivers for use with LCD
++ *
++ ****************************************************************************/
++#ifdef CONFIG_LCD
++int board_lcd_initialize_I2C(FAR struct i2c_master_s * i2cInit);
 +#endif
 +
 +#endif /* __ASSEMBLY__ */
@@ -7752,10 +7887,10 @@ index 0000000000..01fb4945bd
 +#endif
 diff --git a/boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_bringup.c b/boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_bringup.c
 new file mode 100644
-index 0000000000..8bd8268504
+index 0000000000..85185f094a
 --- /dev/null
 +++ b/boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_bringup.c
-@@ -0,0 +1,216 @@
+@@ -0,0 +1,246 @@
 +/****************************************************************************
 + * boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_bringup.c
 + *
@@ -7817,6 +7952,10 @@ index 0000000000..8bd8268504
 +
 +#ifdef CONFIG_S32K1XX_EEEPROM
 +#  include "s32k1xx_eeeprom.h"
++#endif
++
++#ifdef CONFIG_VIDEO_FB
++#   include <nuttx/video/fb.h>
 +#endif
 +
 +#include "rddrone-bms772.h"
@@ -7940,6 +8079,32 @@ index 0000000000..8bd8268504
 +        {
 +          serr("ERROR: Failed to register I2C%d driver: %d\n", bus, ret);
 +          s32k1xx_i2cbus_uninitialize(i2c);
++        }
++      else
++        {
++# ifdef CONFIG_LCD
++          /* Pass the I2C pointer to the LCD driver */
++          
++          ret = board_lcd_initialize_I2C(i2c);
++
++#   ifdef CONFIG_VIDEO_FB
++          /* Check if the LDC display is present */
++
++          if (!ret)
++            {
++              /* Register the framebuffer device */
++
++              ret = fb_register(0, 0);
++
++              /* Check for errors */
++
++              if (ret < 0)
++                {
++                  syslog(LOG_ERR, "ERROR: fb_register() failed: %d\n", ret);
++                }
++            }
++#   endif
++# endif
 +        }
 +    }
 +#endif
@@ -9973,6 +10138,485 @@ index 0000000000..cb3c0848e6
 +#endif
 +
 +#endif /* CONFIG_S32K1XX_LPSPI0 || CONFIG_S32K1XX_LPSPI01 */
+diff --git a/boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_ssd1306.c b/boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_ssd1306.c
+new file mode 100644
+index 0000000000..7801ceda9d
+--- /dev/null
++++ b/boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_ssd1306.c
+@@ -0,0 +1,473 @@
++/****************************************************************************
++ * boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_ssd1306.c
++ *
++ * Licensed to the Apache Software Foundation (ASF) under one or more
++ * contributor license agreements.  See the NOTICE file distributed with
++ * this work for additional information regarding copyright ownership.  The
++ * ASF licenses this file to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance with the
++ * License.  You may obtain a copy of the License at
++ *
++ *   http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
++ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
++ * License for the specific language governing permissions and limitations
++ * under the License.
++ *
++ ****************************************************************************/
++
++/****************************************************************************
++ * Included Files
++ ****************************************************************************/
++
++#include <nuttx/config.h>
++
++#include <debug.h>
++#include <stdint.h>
++#include <stdbool.h>
++#include <stdlib.h>
++#include <stdio.h>
++#include <string.h>
++#include <fcntl.h>
++#include <nuttx/board.h>
++#include <nuttx/lcd/lcd.h>
++#include <nuttx/lcd/ssd1306.h>
++#include <nuttx/i2c/i2c_master.h>
++#include <nuttx/power/pm.h>
++#include <sys/ioctl.h>
++
++/****************************************************************************
++ * Pre-processor Definitions
++ ****************************************************************************/
++
++/* Configuration ************************************************************/
++
++#ifndef CONFIG_LCD_MAXPOWER
++#  define CONFIG_LCD_MAXPOWER 1
++#endif
++
++#define I2C_PATH    "/dev/i2c0"
++
++#if defined(CONFIG_PM)
++#ifndef PM_IDLE_DOMAIN
++#  define PM_IDLE_DOMAIN      0 /* Revisit */
++#endif
++#endif
++
++/****************************************************************************
++ * Private Function Prototypes
++ ****************************************************************************/
++#ifdef CONFIG_PM
++static void up_pm_notify(struct pm_callback_s *cb, int dowmin,
++                         enum pm_state_e pmstate);
++static int  up_pm_prepare(struct pm_callback_s *cb, int domain,
++                          enum pm_state_e pmstate);
++
++static bool set_not_get_pm_enable(bool set_not_get, bool new_value);
++#endif
++
++/****************************************************************************
++ * Private Data
++ ****************************************************************************/
++
++FAR struct i2c_master_s *g_i2c;
++FAR struct lcd_dev_s    *g_lcddev;
++
++#ifdef CONFIG_PM
++static  struct pm_callback_s g_ssd1306_pmcb =
++{
++  .notify       = up_pm_notify,
++  .prepare      = up_pm_prepare,
++};
++#endif
++
++/****************************************************************************
++ * Public Functions
++ ****************************************************************************/
++
++/****************************************************************************
++ * Name: board_lcd_initialize
++ ****************************************************************************/
++
++int board_lcd_initialize(void)
++{
++  /* Initialize I2C */
++
++  // g_i2c = s32k1xx_i2cbus_initialize(0);
++  // if (!g_i2c)
++  //   {
++  //     lcderr("ERROR: Failed to initialize I2C port %d\n", 0);
++  //     return -ENODEV;
++  //   }
++
++  return OK;
++}
++
++int board_lcd_initialize_I2C(FAR struct i2c_master_s * i2cInit)
++{
++  int ret, fd;
++  uint8_t i2c_buffer[2] = {
++    0, 0
++  };
++
++  struct i2c_msg_s scan_message = {
++    .frequency  = CONFIG_SSD1306_I2CFREQ,
++    .addr       = CONFIG_SSD1306_I2CADDR,
++    .flags      = I2C_M_READ,
++    .buffer     = i2c_buffer,
++    .length     = 2
++  };
++
++  struct i2c_transfer_s i2c_transfer;
++
++  /* set the message count to 1 */
++
++  i2c_transfer.msgc = 1;
++
++  /* Make the i2C tranfer to test display presence */
++
++  i2c_transfer.msgv = (struct i2c_msg_s *)&scan_message;
++
++  /* Initialize I2C */
++
++  g_i2c = i2cInit;
++
++  /* Check for errors */
++
++  if (!g_i2c)
++    {
++      lcderr("ERROR: Failed to initialize I2C port %d\n", 0);
++      return -ENODEV;
++    }
++
++  /* Open the i2c device */
++
++  fd = open(I2C_PATH, O_RDONLY);
++
++  /* Check for errors */
++
++  if (fd < 0)
++    {
++      /* Output to the user */
++
++      lcderr("i2c ERROR: Can't open i2c device, error: %d\n", fd);
++
++      return -ENODEV;
++    }
++
++  /* Try to do the i2C transfer to check if display is available */
++
++  ret = ioctl(fd, I2CIOC_TRANSFER, (unsigned long)&i2c_transfer);
++
++  /* Check for errors */
++
++  if (ret)
++    {
++      lcderr("ERROR: Can't do I2C to display\n");
++    }
++#ifdef CONFIG_PM
++    /* Only register PM part if display is there */
++    else
++    {
++      /* Register to receive power management callbacks */
++  
++      ret = pm_register(&g_ssd1306_pmcb);
++      DEBUGASSERT(ret == OK);
++    }
++#endif
++
++  /* Close the I2C device */
++
++  close(fd);
++
++  /* Return 0 if succeeded, errror otherwise */
++
++  return ret;
++}
++
++/****************************************************************************
++ * Name: board_lcd_getdev
++ ****************************************************************************/
++
++FAR struct lcd_dev_s *board_lcd_getdev(int devno)
++{
++  
++  lcdinfo("Binding I2C port %d to OLED %d\n", 0, devno);
++
++  /* Bind the I2C port to the OLED */
++
++  g_lcddev = ssd1306_initialize(g_i2c, NULL, devno);
++  if (!g_lcddev)
++    {
++      lcderr("ERROR: Failed to bind I2C port 1 to OLED %d: %d\n", devno);
++    }
++  else
++    {
++      lcdinfo("Bound I2C port %d to OLED %d\n", 0, devno);
++
++      /* And turn the OLED on */
++
++      g_lcddev->setpower(g_lcddev, CONFIG_LCD_MAXPOWER);
++      return g_lcddev;
++    }
++
++  return NULL;
++}
++
++/****************************************************************************
++ * Name: board_lcd_setpower
++ ****************************************************************************/
++
++int board_lcd_setpower(bool power)
++{
++  int ret;
++
++  /* Check if the LCD needs to be enabled or not */
++
++  if (power)
++    {
++      ret = g_lcddev->setpower(g_lcddev, CONFIG_LCD_MAXPOWER);
++    }
++  else
++    {
++      ret = g_lcddev->setpower(g_lcddev, 0);
++    }
++
++    /* Return */
++
++    return ret;
++}
++
++/****************************************************************************
++ * Name: board_lcd_uninitialize
++ ****************************************************************************/
++
++void board_lcd_uninitialize(void)
++{
++  /* Turn off the power to uninitialize */
++
++  g_lcddev->setpower(g_lcddev, 0);
++}
++
++/****************************************************************************
++ * Name: up_pm_notify
++ *
++ * Description:
++ *   Notify the driver of new power state. This callback is called after
++ *   all drivers have had the opportunity to prepare for the new power state.
++ *
++ * Input Parameters:
++ *
++ *    cb - Returned to the driver. The driver version of the callback
++ *         structure may include additional, driver-specific state data at
++ *         the end of the structure.
++ *
++ *    pmstate - Identifies the new PM state
++ *
++ * Returned Value:
++ *   None - The driver already agreed to transition to the low power
++ *   consumption state when when it returned OK to the prepare() call.
++ *
++ ****************************************************************************/
++
++#ifdef CONFIG_PM
++static void up_pm_notify(struct pm_callback_s *cb, int domain,
++                         enum pm_state_e pmstate)
++{
++  /* check if the transition is from the IDLE domain to the NORMAL domain */
++
++  /* or the mode is already done */
++
++  /* Check if the pm should be done */
++
++  if (set_not_get_pm_enable(false, true))
++    {
++      if (((pm_querystate(PM_IDLE_DOMAIN) == PM_IDLE) &&
++        (pmstate == PM_NORMAL)) ||
++        (((pm_querystate(PM_IDLE_DOMAIN) == pmstate))))
++        {
++          /* return */
++
++          return;
++        }
++
++      /* Check which PM it is */
++
++      switch (pmstate)
++      {
++        /* In case it changed to the RUN mode */
++
++        case PM_NORMAL:
++        {
++          /* Enable the LCD again */
++
++          if (board_lcd_setpower(true))
++            {
++              /* If failed, unregister this PM */
++
++              lcderr("Failed to setpower(true)");
++
++              /* Make sure you disable the pm from now */
++
++              set_not_get_pm_enable(true, false);
++            }
++        }
++        break;
++
++        default:
++        {
++          /* don't do anything, just return OK */
++        }
++        break;
++      }
++    }
++
++    /* Return */
++
++    return;
++}
++#endif
++
++/****************************************************************************
++ * Name: up_pm_prepare
++ *
++ * Description:
++ *   Request the driver to prepare for a new power state. This is a warning
++ *   that the system is about to enter into a new power state. The driver
++ *   should begin whatever operations that may be required to enter power
++ *   state. The driver may abort the state change mode by returning a
++ *   non-zero value from the callback function.
++ *
++ * Input Parameters:
++ *
++ *    cb - Returned to the driver. The driver version of the callback
++ *         structure may include additional, driver-specific state data at
++ *         the end of the structure.
++ *
++ *    pmstate - Identifies the new PM state
++ *
++ * Returned Value:
++ *   Zero - (OK) means the event was successfully processed and that the
++ *          driver is prepared for the PM state change.
++ *
++ *   Non-zero - means that the driver is not prepared to perform the tasks
++ *              needed achieve this power setting and will cause the state
++ *              change to be aborted. NOTE: The prepare() method will also
++ *              be called when reverting from lower back to higher power
++ *              consumption modes (say because another driver refused a
++ *              lower power state change). Drivers are not permitted to
++ *              return non-zero values when reverting back to higher power
++ *              consumption modes!
++ *
++ *
++ ****************************************************************************/
++
++#ifdef CONFIG_PM
++static int up_pm_prepare(struct pm_callback_s *cb, int domain,
++                         enum pm_state_e pmstate)
++{
++  int ret = OK;
++
++  /* Logic to prepare for a reduced power state goes here. */
++
++  /* Check if the pm should be done */
++
++  if (set_not_get_pm_enable(false, true))
++    {
++      /* check if the transition to the mode is already done */
++
++      if (pm_querystate(PM_IDLE_DOMAIN) == pmstate)
++        {
++          /* return */
++
++          return ret;
++        }
++
++      /* check which PM it is */
++
++      switch (pmstate)
++      {
++        /* in case it needs to prepare for VLPR mode */
++
++        case PM_STANDBY:
++        {
++          /* Logic for PM_STANDBY goes here */
++
++          /* Disable the LCD */
++
++          ret = board_lcd_setpower(false);
++
++          /* Check for errors */
++
++          if (ret)
++            {
++              /* If failed, unregister this PM */
++
++              lcderr("Failed to setpower(true)");
++
++              /* Make sure you disable the pm from now */
++
++              ret = (int)set_not_get_pm_enable(true, false);
++            }
++        }
++        break;
++
++        /* in case it needs to prepare for VLPR mode */
++
++        case PM_SLEEP:
++        {
++          /* Logic for PM_STANDBY goes here */
++
++          /* Disable the LCD */
++
++          ret = board_lcd_setpower(false);
++
++          /* Check for errors */
++
++          if (ret)
++            {
++              /* If failed, unregister this PM */
++
++              lcderr("Failed to setpower(true)");
++
++              /* Make sure you disable the pm from now */
++
++              ret = (int)set_not_get_pm_enable(true, false);
++            }
++        }
++        break;
++
++        default:
++        {
++          /* don't do anything, just return OK */
++        }
++        break;
++      }
++    }
++
++  /* Return OK */
++
++  return ret;
++}
++
++static bool set_not_get_pm_enable(bool set_not_get, bool new_value)
++{
++  static bool pm_enable = true;
++
++  /* Check if the variable should be set */
++
++  if (set_not_get)
++    {
++      /* Set the static value */
++
++      pm_enable = new_value;
++    }
++
++  /* Return the current value */
++
++  return pm_enable;
++}
++
++#endif
 diff --git a/boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_userleds.c b/boards/arm/s32k1xx/rddrone-bms772/src/s32k1xx_userleds.c
 new file mode 100644
 index 0000000000..92607ccae9

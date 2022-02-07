@@ -3,7 +3,7 @@
 #
 # BSD 3-Clause License
 # 
-# Copyright 2020-2021 NXP
+# Copyright 2020-2022 NXP
 # 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -43,41 +43,42 @@ MODULE    = $(CONFIG_NXP_BMS)
 
 # BMS application
 
-CSRCS 	= src/data.c
-CSRCS 	+= src/cli.c
-CSRCS 	+= src/ledState.c
-CSRCS 	+= src/gpio.c
-CSRCS 	+= src/batManagement.c
-CSRCS 	+= src/spi.c
-CSRCS 	+= src/uavcan.c
+CSRCS   = src/data.c
+CSRCS   += src/cli.c
+CSRCS   += src/ledState.c
+CSRCS   += src/gpio.c
+CSRCS   += src/batManagement.c
+CSRCS   += src/spi.c
+CSRCS   += src/uavcan.c
 
-CSRCS 	+= src/BCC/bcc_wait.c
-CSRCS 	+= src/BCC/bcc_peripheries.c
-CSRCS 	+= src/BCC/bcc_monitoring.c
-# CSRCS 	+= src/BCC/bcc_diag.c
-CSRCS 	+= src/BCC/bcc_configuration.c
-CSRCS 	+= src/BCC/bcc_spiwrapper.c
-CSRCS 	+= src/BCC/Derivatives/bcc.c
-CSRCS 	+= src/BCC/Derivatives/bcc_communication.c
-# CSRCS 	+= src/BCC/Derivatives/bcc_diagnostics.c
-CSRCS 	+= src/BCC/Derivatives/bcc_spi.c
-CSRCS 	+= src/BCC/Derivatives/bcc_tpl.c
-CSRCS 	+= src/UAVCAN/o1heap.c
-CSRCS 	+= src/UAVCAN/socketcan.c
-CSRCS 	+= src/UAVCAN/pnp.c
-CSRCS 	+= src/UAVCAN/portid.c
-CSRCS 	+= src/sbc.c
-CSRCS 	+= src/nfc.c
-CSRCS 	+= src/a1007.c
-CSRCS 	+= src/SMBus.c
-CSRCS 	+= src/i2c.c
-CSRCS 	+= src/power.c
+CSRCS   += src/BCC/bcc_wait.c
+CSRCS   += src/BCC/bcc_peripheries.c
+CSRCS   += src/BCC/bcc_monitoring.c
+# CSRCS     += src/BCC/bcc_diag.c
+CSRCS   += src/BCC/bcc_configuration.c
+CSRCS   += src/BCC/bcc_spiwrapper.c
+CSRCS   += src/BCC/Derivatives/bcc.c
+CSRCS   += src/BCC/Derivatives/bcc_communication.c
+# CSRCS     += src/BCC/Derivatives/bcc_diagnostics.c
+CSRCS   += src/BCC/Derivatives/bcc_spi.c
+CSRCS   += src/BCC/Derivatives/bcc_tpl.c
+CSRCS   += src/UAVCAN/o1heap.c
+CSRCS   += src/UAVCAN/socketcan.c
+CSRCS   += src/UAVCAN/pnp.c
+CSRCS   += src/UAVCAN/portid.c
+CSRCS   += src/sbc.c
+CSRCS   += src/nfc.c
+CSRCS   += src/a1007.c
+CSRCS   += src/SMBus.c
+CSRCS   += src/i2c.c
+CSRCS   += src/power.c
+CSRCS   += src/display.c
 
 MAINSRC = src/main.c
-CFLAGS 	+= -I inc
-CFLAGS 	+= -I inc/BCC
-CFLAGS 	+= -I inc/BCC/Derivatives
-CFLAGS 	+= -I inc/UAVCAN
+CFLAGS  += -I inc
+CFLAGS  += -I inc/BCC
+CFLAGS  += -I inc/BCC/Derivatives
+CFLAGS  += -I inc/UAVCAN
 CFLAGS  += -std=c11 -I$(APPDIR)/include/canutils
 CFLAGS  += -I $(TOPDIR)/../nuttx/arch/arm/src/common
 CFLAGS  += -I $(TOPDIR)/../nuttx/boards/arm/s32k1xx/rddrone-bms772/src

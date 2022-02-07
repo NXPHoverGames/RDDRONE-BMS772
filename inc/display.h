@@ -1,9 +1,9 @@
 /****************************************************************************
- * nxp_bms/BMS_v1/inc/nfc.h
+ * nxp_bms/BMS_v1/inc/display.h
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020-2022 NXP
+ * Copyright 2021-2022 NXP
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -31,27 +31,27 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  ** ###################################################################
- **     Filename    : nfc.h
+ **     Filename    : display.h
  **     Project     : SmartBattery_RDDRONE_BMS772
  **     Processor   : S32K144
  **     Version     : 1.00
- **     Date        : 2020-08-25
+ **     Date        : 2021-05-19
  **     Abstract    :
- **        nfc module.
- **        This module contains all functions needed for using nfc
+ **        display module.
+ **        This module contains all functions needed for MCU display
  **
  ** ###################################################################*/
 /*!
- ** @file nfc.h
+ ** @file display.h
  **
  ** @version 01.00
  **
  ** @brief
- **        nfc module. this module contains the functions to control the NTAG5
+ **        display module. this module contains the functions for MCU display
  **
  */
-#ifndef NFC_H_
-#define NFC_H_
+#ifndef DISPLAY_H
+#define DISPLAY_H
 
 /*******************************************************************************
  * Includes
@@ -59,60 +59,40 @@
 #include <stdio.h>
 
 /*******************************************************************************
- * defines
+ * Defines
  ******************************************************************************/
 
 /*******************************************************************************
- * types
+ * Types
  ******************************************************************************/
 
 /*******************************************************************************
  * public functions
  ******************************************************************************/
 /*!
- * @brief   This function will initialze the NFC
- *          it will test the i2C connection with the chip and read the slave address
+ * @brief   This function is used to initialize the display part
  *
  * @param   skipSelfTest if this is true it will skip the self-test
- *    
- * @return  0 if ok, -1 if there is an error
- * @example 
- *          if(nfc_initialize(false))
- *          {
- *            // do something with the error
- *          }
- */
-int nfc_initialize(bool skipSelfTest);
-
-/*!
- * @brief   This function can be used to set the hard power-down (HPD) mode of the NFC 
- *      
- * @param   HPD if true, the microcontroller will set the NFC chip in hard power-down mode. 
- *          if false, it will disable this mode.
- * @return  0 if ok, -1 if there is an error
- * @example 
- *          if(nfc_setHPD())
- *          {
- *              // do something with the error
- *          }
- */
-int nfc_setHPD(bool HPD);
-
-/*!
- * @brief   This function can be used to update the BMS parameter to the NTAG
- * @note  Blocking
- *    
- * @param   setOutdatedText If true it will set the text "outdated, please tap again!",
- *              If false, it will update the NTAG with the latest BMS data.
- * @param   wakingUpMessage If true it will set the waking up text (for sleep mode)
- *              If false, it will set the charge-relaxation string. 
  *
  * @return  0 if ok, -1 if there is an error
  */
-int nfc_updateBMSStatus(bool setOutdatedText, bool wakingUpMessage);
+int display_initialize(bool skipSelfTest);
 
+/*!
+ * @brief   This function is used to uninitialize the display part  
+ *
+ * @return  0 if ok, -1 if there is an error
+ */
+int display_uninitialize(void);
+
+/*!
+ * @brief   This function is used to update the values of the display with the actual information  
+ *
+ * @return  0 if ok, -1 if there is an error
+ */
+int display_updateValues(void);
 /*******************************************************************************
  * EOF
  ******************************************************************************/
 
-#endif /* NFC_H_ */
+#endif /* DISPLAY_H */
