@@ -3,7 +3,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2020-2021 NXP
+ * Copyright 2020-2022 NXP
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -149,7 +149,7 @@
 #define A_FACTORY_DEFAULT                   A_FULL_DEFAULT  //!< [Ah] 
 #define T_BMS_TIMEOUT_DEFAULT               600         //!< [s]        
 #define T_FAULT_TIMEOUT_DEFAULT             60          //!< [s] 
-#define T_SLEEP_TIMEOUT_DEFAULT             24          //!< [h]
+#define T_SLEEP_TIMEOUT_DEFAULT             12          //!< [h]
 #define T_CHARGE_DETECT_DEFAULT             1           //!< [s] 
 #define T_CB_DELAY_DEFAULT                  120         //!< [s] 
 #define T_CHARGE_RELAX_DEFAULT              300         //!< [s] 

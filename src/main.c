@@ -63,7 +63,7 @@
 /****************************************************************************
  * Defines
  ****************************************************************************/
-#define BMS_VERSION_STRING "bms5.0-10.1"
+#define BMS_VERSION_STRING "bms5.1-10.1"
 //#define DONT_DO_UAVCAN
 
 #ifndef MCU_POWER_DOMAIN
@@ -1187,7 +1187,8 @@ static int mainTaskFunc(int argc, char *argv[])
                 }
 
                 // check if there was CSB wakeup in the OCV state
-                if((BMSFault & ~BMS_OTHER_FAULT) == BMS_CSB_WAKEUP && 
+                // while disregarding other faults and the CC overflow
+                if((BMSFault & ~(BMS_OTHER_FAULT + BMS_CC_OVERFLOW)) == BMS_CSB_WAKEUP && 
                     getMainState() == OCV)
                 {
                     cli_printf("clearing BCC pin pin due to CSB wakeup fault\n");
@@ -2719,7 +2720,7 @@ static int mainTaskFunc(int argc, char *argv[])
                 }
 
                 // limit the value
-                int32tVal &= UINT8_MAX; 
+                int32tVal &= UINT8_MAX;
 
                 // check if the sleep timeout shouldn't be skipped
                 if(int32tVal != 0)
@@ -2815,6 +2816,9 @@ static int mainTaskFunc(int argc, char *argv[])
                     {
                         cli_printfError("main ERROR: failed to enable I2C!\n");
                     }
+
+                    // read and reset the CC registers by calculating a new remaining charge
+                    lvRetValue = batManagement_calcRemaningCharge(NULL);
 
                     // do a blocking measurement 
                     batManagement_doMeasurement();
