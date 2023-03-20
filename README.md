@@ -29,6 +29,11 @@ This will work best on a linux machine, you could use a virtual machine for it.
 
 See this webpage for the NuttX quickstart guide: https://nuttx.apache.org/docs/latest/quickstart/quickstart.html.
 
+## Dependencies
+git
+unzip
+curl
+
 ## Make sure git is installed
 If git is not installed, open a terminal and type the following commands:
 ```bash
