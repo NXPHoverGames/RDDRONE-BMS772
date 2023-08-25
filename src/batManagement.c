@@ -605,71 +605,79 @@ int batManagement_initialize(swMeasuredFaultCallbackFunction p_swMeasuredFaultCa
         {
             cli_printf("SELF-TEST BCC: \e[32mPASS\e[39m\n");
 
-            // do the Gate check at least once 
-            do
-            {
-                cli_printf("SELF-TEST GATE: START\n");
+            #ifdef ENABLE_GATE_CHECK
+            
+                // do the Gate check at least once 
+                do
+                        {
+                    cli_printf("SELF-TEST GATE: START\n");
 
-                //turn off the gate
+                    //turn off the gate
+                    batManagement_setGatePower(GATE_OPEN);
+
+                    // check the gate output to verify if it works
+                    // do a measurement
+                    lvRetValue = bcc_monitoring_doBlockingMeasurement(&gBccDrvConfig);
+                    // check for errors
+                    if(lvRetValue != 0)
+                    {
+                        // inform user
+                        //errcode = errno;
+                        cli_printfError("batManagement ERROR: Failed to do measurement: %d\n", 
+                            lvRetValue);
+                        cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
+                        return lvRetValue;
+                    }
+
+                    // get the output voltage and check if it is off
+                    // read the output voltage 
+                    lvRetValue = bcc_monitoring_checkOutput(&gBccDrvConfig, &boolValue);
+
+                    // check for errors
+                    if(lvRetValue != 0)
+                    {
+                        // inform user
+                        //errcode = errno;
+                        cli_printfError("batManagement ERROR: Failed get output: %d\n", lvRetValue);
+                        cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
+                        return lvRetValue;
+                    }
+
+                    // check if the output is high
+                    if(boolValue == 1)
+                    {
+                        cli_printfError("batManagement ERROR: Failed to disable the gate!\n");
+                        cli_printf("Make sure there is no charger connected and press the button to try again\n");
+                        cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
+
+                        //lvRetValue = BCC_STATUS_DIAG_FAIL;
+
+                        // set the LED color to indicate the charger is connected and is wrong
+                        g_changeLedColorCallbackBatFuntionfp(RED, BLUE, LED_BLINK_ON);
+
+                        // loop until the button is not pushed 
+                        while(!gpio_readPin(SBC_WAKE))
+                        {
+                            // wait for a little while 
+                            usleep(1000*10);
+                        }
+
+                        // loop until the button is pushed 
+                        while(gpio_readPin(SBC_WAKE))
+                        {
+                            // wait for a little while 
+                            usleep(1000*10);
+                        }
+                    }
+            
+                // loop while the output is high
+                }while(boolValue == 1);
+
+            #else
+                // Code added to disable gate check so that a charger can be connected whilst rebooting
                 batManagement_setGatePower(GATE_OPEN);
-
-                // check the gate output to verify if it works
-                // do a measurement
-                lvRetValue = bcc_monitoring_doBlockingMeasurement(&gBccDrvConfig);
-                // check for errors
-                if(lvRetValue != 0)
-                {
-                    // inform user
-                    //errcode = errno;
-                    cli_printfError("batManagement ERROR: Failed to do measurement: %d\n", 
-                        lvRetValue);
-                    cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
-                    return lvRetValue;
-                }
-
-                // get the output voltage and check if it is off
-                // read the output voltage 
-                lvRetValue = bcc_monitoring_checkOutput(&gBccDrvConfig, &boolValue);
-
-                // check for errors
-                if(lvRetValue != 0)
-                {
-                    // inform user
-                    //errcode = errno;
-                    cli_printfError("batManagement ERROR: Failed get output: %d\n", lvRetValue);
-                    cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
-                    return lvRetValue;
-                }
-
-                // check if the output is high
-                if(boolValue == 1)
-                {
-                    cli_printfError("batManagement ERROR: Failed to disable the gate!\n");
-                    cli_printf("Make sure there is no charger connected and press the button to try again\n");
-                    cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
-
-                    //lvRetValue = BCC_STATUS_DIAG_FAIL;
-
-                    // set the LED color to indicate the charger is connected and is wrong
-                    g_changeLedColorCallbackBatFuntionfp(RED, BLUE, LED_BLINK_ON);
-
-                    // loop until the button is not pushed 
-                    while(!gpio_readPin(SBC_WAKE))
-                    {
-                        // wait for a little while 
-                        usleep(1000*10);
-                    }
-
-                    // loop until the button is pushed 
-                    while(gpio_readPin(SBC_WAKE))
-                    {
-                        // wait for a little while 
-                        usleep(1000*10);
-                    }
-                }
-
-            // loop while the output is high
-            }while(boolValue == 1);
+                cli_printfWarning("SELF-TEST GATE: TURNED OFF!\n");
+            #endif
 
             // change the LED color to RED again
             g_changeLedColorCallbackBatFuntionfp(RED, OFF, LED_BLINK_OFF);
