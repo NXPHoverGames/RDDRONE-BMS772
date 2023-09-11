@@ -2,15 +2,19 @@
 NuttX source code for RDDRONE-BMS772
 
 ## SOSUB Instructions
+To update the firmware you will need to reflasht the MCU using the Jlink Segger and the precompiled binary file. Once this is complete you will need to reprogram the BMS using the programming script [here](https://github.com/Southern-Ocean-Subsea/NXP-BMS)
+
 A raspberry pi has been setup with the below tool chain to compile and upload the latest firmware. To upload the latest firmware:
 * Flash a SD card with the latest BMS_compiler image.
 * Power on the PI and make a wired ethernet connection to a router.
 * Connect laptop to the same network. You should now be able to make an SSH session (using putty) by connecting to raspberrypi.local port:22
 * Once connected cd drones/nuttx
-* Once in the correct folder follow the below section [here](#programming-the-bms-with-the-jlink-debugger) of how to connect to the JTAG connector with JLINK segger.
-
+* Hook up the JLink Segger to the BMS as follow in the below diagram. Make sure the connectors are facing the correct direction. Then connect the Segger to the raspberry pi usb port.
+* Once in the correct folder follow the below section [here](#programming-the-bms-with-the-jlink-debugger) of how to program it with the JLink Segger.
 BMS -> JLink Segger connection looks like this.
 ![image](https://github.com/Southern-Ocean-Subsea/RDDRONE-BMS772/assets/112593920/619d2afa-ee26-45f7-beda-8b7b0ff727d9)
+
+#
 
 
 
