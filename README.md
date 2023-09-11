@@ -9,6 +9,10 @@ A raspberry pi has been setup with the below tool chain to compile and upload th
 * Once connected cd drones/nuttx
 * Once in the correct folder follow the below section [here](#programming-the-bms-with-the-jlink-debugger) of how to connect to the JTAG connector with JLINK segger.
 
+BMS -> JLink Segger connection looks like this.
+![image](https://github.com/Southern-Ocean-Subsea/RDDRONE-BMS772/assets/112593920/619d2afa-ee26-45f7-beda-8b7b0ff727d9)
+
+
 
 ## Disclaimer - CAUTION WARNING
 ### CAUTION - WARNING
