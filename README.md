@@ -190,6 +190,11 @@ To program the BMS using a JLink debugger you need to have JLink installed.
 Make sure the BMS is powered.
 
 Open a terminal where the nuttx.bin file is located (probably in the nuttx folder).
+cd innto the nuttx folder and check there is a nuttx.bin
+```bash
+cd drone/nuttx
+ls
+```
 Open JLink:
 ```bash
 JLinkExe
@@ -225,6 +230,7 @@ Load the nuttx binary at address 0
 ```bash
 loadbin nuttx.bin 0
 ```
+NOTE: if you get an error loading the binary file, exit jlink (exit) and unplug the jlink segger device from the USB port. Restart these commands but this time don't run the two above commands for erasing the flash (don't run the two w1 commands).
 Reset the device
 ```bash
 r
