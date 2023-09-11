@@ -2,7 +2,7 @@
 NuttX source code for RDDRONE-BMS772
 
 ## SOSUB Instructions
-To update the firmware you will need to reflasht the MCU using the Jlink Segger and the precompiled binary file. Once this is complete you will need to reprogram the BMS using the programming script [here](https://github.com/Southern-Ocean-Subsea/NXP-BMS)
+To update the BMS firmware you will need to flash the MCU using the Jlink Segger and the precompiled binary file. Once this is complete you will need to reprogram the BMS using the programming script [here](https://github.com/Southern-Ocean-Subsea/NXP-BMS)
 
 A raspberry pi has been setup with the below tool chain to compile and upload the latest firmware. To upload the latest firmware:
 * Flash a SD card with the latest BMS_compiler image.
