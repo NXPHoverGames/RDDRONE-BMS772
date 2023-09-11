@@ -3,11 +3,11 @@ NuttX source code for RDDRONE-BMS772
 
 ## SOSUB Instructions
 A raspberry pi has been setup with the below tool chain to compile and upload the latest firmware. To upload the latest firmware:
-*Flash a SD card with the latest BMS_compiler image.
-*Power on the PI and make a wired ethernet connection to a router.
-*Connect laptop to the same network. You should now be able to make an SSH session (using putty) by connecting to raspberrypi.local port:22
-*Once connected cd drones/nuttx
-*Once in the correct folder follow the below section [here](## Programming the BMS with the JLink debugger) of how to connect to the JTAG connector with JLINK segger.
+* Flash a SD card with the latest BMS_compiler image.
+* Power on the PI and make a wired ethernet connection to a router.
+* Connect laptop to the same network. You should now be able to make an SSH session (using putty) by connecting to raspberrypi.local port:22
+* Once connected cd drones/nuttx
+* Once in the correct folder follow the below section [here](## Programming the BMS with the JLink debugger) of how to connect to the JTAG connector with JLINK segger.
 
 
 ## Disclaimer - CAUTION WARNING
