@@ -811,6 +811,7 @@ static int mainTaskFunc(int argc, char *argv[])
     struct timespec selfDischargeTime;
     struct timespec currentTime;
     struct timespec cellUnderVoltageTime;
+    struct timespec cellOverVoltageTime;
     struct timespec lastMessageTime = {0, 0};
     struct timespec sampleTime2;
     int32_t int32tVal;
@@ -828,6 +829,8 @@ static int mainTaskFunc(int argc, char *argv[])
     bool buttonState = false;
     bool oldButtonState = true;
     bool didNotDisconnectPower = false;
+    const long OV_FAULT_THRESHOLD_NS = 1000000000; // e.g., 1 second expressed in nanoseconds.
+    static bool ovFaultFirstDetected = false;  // flag to check if this is the first detection
 
     // get the variables if the fault happend
     gBCCRisingFlank = gpio_readPin(BCC_FAULT);
@@ -1113,20 +1116,72 @@ static int mainTaskFunc(int argc, char *argv[])
                     }
                     else
                     {
-                        // Check for a software cell overvoltage
-                        if(BMSFault & BMS_SW_CELL_OV)
+                        // Check for a cell overvoltage
+                        if((BMSFault & BMS_SW_CELL_OV)||(BMSFault & BMS_CELL_OV))
                         {
-                            // indicate that a cell overvoltage measurement has been detected
-                            cli_printfError("Cell overvoltage measurement detected!\n");
-                        }
-                        if(BMSFault & BMS_CELL_OV)
-                        {
-                            // indicate that an cell overvoltage has been detected by the BCC
-                            cli_printfError("Cell overvoltage detected!\n");
-                        }
+                            cli_printf("A overvoltage error has been detected\n");
+                            // Check for a SW cell overvolatge
+                            if(BMSFault & BMS_SW_CELL_OV)
+                            {
+                                // indicate that a cell overvoltage measurement has been detected
+                                cli_printfError("Cell overvoltage measurement detected!\n");
+                            }
+                            // Check for a Cell overvoltage
+                            if(BMSFault & BMS_CELL_OV)
+                            {
+                                // indicate that an cell overvoltage has been detected by the BCC
+                                cli_printfError("Cell overvoltage detected!\n");
+                            }
+                            // get the current time of fault
+                            if(clock_gettime(CLOCK_REALTIME, &currentTime) == -1) {
+                                cli_printfError("main ERROR: failed to get currentTime!\n");
+                                return;  // Can't proceed if we don't know the current time.
+                            }
+                             // Check the timer and flag for Over voltage detection
+                            if (!ovFaultFirstDetected) {
+                                // If this is the first detection, record the start time.
+                                ovFaultStartTime = currentTime;
+                                ovFaultFirstDetected = true;  // set the flag
+                            } else {
+                                // Calculate how long the fault has been present.
+                                long durationNs = (currentTime.tv_sec - ovFaultStartTime.tv_sec) * 1000000000 + 
+                                                (currentTime.tv_nsec - ovFaultStartTime.tv_nsec);
 
-                        // go to the FAULT state
-                        setMainState(FAULT);
+                                if (durationNs > OV_FAULT_THRESHOLD_NS) {
+                                    // The OV fault has been present for longer than the threshold duration.
+                                    // go to the FAULT state
+                                    setMainState(FAULT);
+                                    // Reset the detection flag and start time if you want to re-detect it later.
+                                    ovFaultFirstDetected = false;
+                                    ovFaultStartTime = (struct timespec){0, 0};
+                                }
+                                else
+                                {
+                                    //if the threshold time of the OV fault has not been reached reset the BCC fault
+                                    cli_printf("Overvoltage detected and resetting the BCC fault. Threshold not reached \n")
+                                    batManagement_checkFault(&BMSFault, true);
+                                }
+                            }
+                        }
+                        else 
+                        {
+                            //if no cell over voltage is detected then zero the flag and counter
+                            cli_printf("No over voltage detected");
+                            //if no over voltage detected but the flag is still high from a detection and the threshold time has passed set to false
+                            if (!ovFaultFirstDetected)
+                            {
+                                cli_printf("Over voltage flag is up but BCC shows no error \n");
+                                long durationNs = (currentTime.tv_sec - ovFaultStartTime.tv_sec) * 1000000000 + 
+                                                (currentTime.tv_nsec - ovFaultStartTime.tv_nsec);
+                                if (durationNs > OV_FAULT_THRESHOLD_NS) {
+                                    // Reset the detection flag and start time if you want to re-detect it later.
+                                    cli_printf("Flag is old and no fault setting to 0 and false \n");
+                                    ovFaultFirstDetected = false;
+                                    ovFaultStartTime = (struct timespec){0, 0};
+                                }
+                            }
+
+                        }                  
 
                         // check if the old state is the fault state
                         if(lvOldState == FAULT)
