@@ -1,4 +1,4 @@
-send_command(ser,'bms set v-cell-ov 3',getResponse = False)#!/bin/bash
+#!/bin/bash
 
 #build firmware
 # Run your build command and capture the last line of its output
