@@ -811,7 +811,7 @@ static int mainTaskFunc(int argc, char *argv[])
     struct timespec selfDischargeTime;
     struct timespec currentTime;
     struct timespec cellUnderVoltageTime;
-    struct timespec cellOverVoltageTime;
+    struct timespec ovFaultStartTime;
     struct timespec lastMessageTime = {0, 0};
     struct timespec sampleTime2;
     int32_t int32tVal;
@@ -829,8 +829,9 @@ static int mainTaskFunc(int argc, char *argv[])
     bool buttonState = false;
     bool oldButtonState = true;
     bool didNotDisconnectPower = false;
-    const long OV_FAULT_THRESHOLD_NS = 1000000000; // e.g., 1 second expressed in nanoseconds.
+    const long long OV_FAULT_THRESHOLD_NS = 3000000000; // e.g., 1 second expressed in nanoseconds.
     static bool ovFaultFirstDetected = false;  // flag to check if this is the first detection
+    char buffer[20]; //buffer for storing time value
 
     // get the variables if the fault happend
     gBCCRisingFlank = gpio_readPin(BCC_FAULT);
@@ -1144,12 +1145,17 @@ static int mainTaskFunc(int argc, char *argv[])
                                 ovFaultFirstDetected = true;  // set the flag
                             } else {
                                 // Calculate how long the fault has been present.
-                                long durationNs = (currentTime.tv_sec - ovFaultStartTime.tv_sec) * 1000000000 + 
+                                long long durationNs = (currentTime.tv_sec - ovFaultStartTime.tv_sec) * 1000000000 + 
                                                 (currentTime.tv_nsec - ovFaultStartTime.tv_nsec);
 
+                                
+                                //convert time to string
+                                sprintf(buffer, "%ld", durationNs / 100000000);
+                                cli_printf("The number as a string: %s\n", buffer);
                                 if (durationNs > OV_FAULT_THRESHOLD_NS) {
                                     // The OV fault has been present for longer than the threshold duration.
                                     // go to the FAULT state
+                                    cli_printf("OV Threshold reached\n");
                                     setMainState(FAULT);
                                     // Reset the detection flag and start time if you want to re-detect it later.
                                     ovFaultFirstDetected = false;
@@ -1158,7 +1164,7 @@ static int mainTaskFunc(int argc, char *argv[])
                                 else
                                 {
                                     //if the threshold time of the OV fault has not been reached reset the BCC fault
-                                    cli_printf("Overvoltage detected and resetting the BCC fault. Threshold not reached \n")
+                                    cli_printf("ov Threshold not reached \n");
                                     batManagement_checkFault(&BMSFault, true);
                                 }
                             }
@@ -1168,7 +1174,7 @@ static int mainTaskFunc(int argc, char *argv[])
                             //if no cell over voltage is detected then zero the flag and counter
                             cli_printf("No over voltage detected");
                             //if no over voltage detected but the flag is still high from a detection and the threshold time has passed set to false
-                            if (!ovFaultFirstDetected)
+                            if (ovFaultFirstDetected)
                             {
                                 cli_printf("Over voltage flag is up but BCC shows no error \n");
                                 long durationNs = (currentTime.tv_sec - ovFaultStartTime.tv_sec) * 1000000000 + 
@@ -1181,20 +1187,21 @@ static int mainTaskFunc(int argc, char *argv[])
                                 }
                             }
 
-                        }                  
+                            setMainState(FAULT);
 
-                        // check if the old state is the fault state
-                        if(lvOldState == FAULT)
-                        {
-                            // check if the fault is a peak overcurrent fault
-                            // this could happen with flight mode, but there should still
-                            // be a check on the peak overcurrent
-                            if(BMSFault & BMS_PEAK_OVER_CURRENT)
+                            // check if the old state is the fault state
+                            if(lvOldState == FAULT)
                             {
-                                // set the old state to the self-test state to re-do the fault state
-                                lvOldState = SELF_TEST;
+                                // check if the fault is a peak overcurrent fault
+                                // this could happen with flight mode, but there should still
+                                // be a check on the peak overcurrent
+                                if(BMSFault & BMS_PEAK_OVER_CURRENT)
+                                {
+                                    // set the old state to the self-test state to re-do the fault state
+                                    lvOldState = SELF_TEST;
+                                }
                             }
-                        }
+                        }                  
                     }
                 }
 
