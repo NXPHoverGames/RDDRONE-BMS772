@@ -815,6 +815,7 @@ static int mainTaskFunc(int argc, char *argv[])
     struct timespec lastMessageTime = {0, 0};
     struct timespec sampleTime2;
     int32_t int32tVal;
+    float cellVoltage;
     float floatVal;
     uint8_t amountOfCBChargeCycles = 0;
     uint16_t amountOfMissedMessages = 0;
@@ -1042,6 +1043,12 @@ static int mainTaskFunc(int argc, char *argv[])
             // // check if a fault occured
             if(BMSFault && !firstTimeStartup)
             {
+                //Write the BMS fault code to the data struct so it can be accessed by the CLI
+                if(data_setParameter(FAULTCODE, &BMSFault))
+                {
+                    cli_printfError("main ERROR: couldn't set FaultCode!\n");
+                }
+                
                 // change the status flags if needed 
                 // check for temperature errors
                 if(BMSFault & (BMS_UT | BMS_OT))
@@ -1086,6 +1093,25 @@ static int mainTaskFunc(int argc, char *argv[])
                     if(BMSFault & BMS_CELL_UV)
                     {
                         cli_printfError("Cell undervoltage detected!\n");
+
+                        sprintf(buffer, "%ld", BMSFault);
+                        cli_printf("BMS Fault Code: %s\n", buffer);
+
+                        data_getParameter(V_CELL1, &cellVoltage, NULL);
+                        sprintf(buffer, "%.3f", cellVoltage);
+                        cli_printf("Under Voltage Cell 1: %s\n", buffer);
+
+                        data_getParameter(V_CELL2, &cellVoltage, NULL);
+                        sprintf(buffer, "%.3f", cellVoltage);
+                        cli_printf("Under Voltage Cell 2: %s\n", buffer);
+
+                        data_getParameter(V_CELL3, &cellVoltage, NULL);
+                        sprintf(buffer, "%.3f", cellVoltage);
+                        cli_printf("Under Voltage Cell 3: %s\n", buffer);
+
+                        data_getParameter(V_CELL4, &cellVoltage, NULL);
+                        sprintf(buffer, "%.3f", cellVoltage);
+                        cli_printf("Under Voltage Cell 4: %s\n", buffer);
 
                         // set the variable
                         cellUnderVoltageDetected = true;

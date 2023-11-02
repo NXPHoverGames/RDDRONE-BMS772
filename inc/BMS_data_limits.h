@@ -97,6 +97,9 @@
 #ifndef INT32_MAX
 #define INT32_MAX                           2147483647
 #endif
+//#ifndef UINT32_MAX
+//#define UINT32_MAX                          4294967295
+//#endif
 #ifndef UNT64_MAX
 #define UNT64_MAX                           18446744073709551615 
 #endif
@@ -171,6 +174,8 @@
 #define N_CHARGES_MIN                       0                   //!< [-] 
 #define N_CHARGES_FULL_MAX                  UINT16_MAX          //!< [-]
 #define N_CHARGES_FULL_MIN                  0                   //!< [-] 
+#define FAULTCODE_MAX                       INT32_MAX
+#define FAULTCODE_MIN                       0
 
 #define N_CELLS_MAX                         6                   //!< [-]
 #define N_CELLS_MIN                         3                   //!< [-]

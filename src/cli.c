@@ -186,6 +186,7 @@ const parameterKind_t nonWritableParameters[] =
     C_AFE,
     C_T,
     C_R,
+    FAULTCODE,
     NONE
 };
 
