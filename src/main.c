@@ -1043,6 +1043,9 @@ static int mainTaskFunc(int argc, char *argv[])
             // // check if a fault occured
             if(BMSFault && !firstTimeStartup)
             {
+                //A flag to control if the BMS should go into Fault state
+                bool goIntoFaultFlag = true;
+
                 //Write the BMS fault code to the data struct so it can be accessed by the CLI
                 if(data_setParameter(FAULTCODE, &BMSFault))
                 {
@@ -1112,6 +1115,37 @@ static int mainTaskFunc(int argc, char *argv[])
                         data_getParameter(V_CELL4, &cellVoltage, NULL);
                         sprintf(buffer, "%.3f", cellVoltage);
                         cli_printf("Under Voltage Cell 4: %s\n", buffer);
+
+                        //To prevent not being able to recover and under charged battery
+                        //Check if the charger is connected and the State is fault
+                        if (batManagement_checkOutputVoltageActive() && getMainState() == INIT)
+                        {
+                            cli_printf("setting the go into fault state to False\n");
+                            // Set the flag so the under voltage fault won't cause BMS to go into fault
+                            goIntoFaultFlag = false;   
+                        }
+
+                        if (batManagement_checkOutputVoltageActive())
+                        {
+                            cli_printf("Output is active\n");
+                        }
+                        else
+                        {
+                            cli_printf("Output is inactive\n");
+                        }
+
+                        if (getMainState() == FAULT)
+                        {
+                            cli_printf("Mode is FAULT\n");
+                        }
+                        else
+                        {
+                            cli_printf("Mode is not Fault\n");
+                            sprintf(buffer, "%d", getMainState());
+                            cli_printf(buffer);
+                        }
+
+                        //
 
                         // set the variable
                         cellUnderVoltageDetected = true;
@@ -1197,9 +1231,12 @@ static int mainTaskFunc(int argc, char *argv[])
                         }
                         else 
                         {
-
-                            setMainState(FAULT);
-
+                            // If the flage has not been set to false send BMS into Fault state
+                            if (goIntoFaultFlag)
+                            {
+                                setMainState(FAULT);
+                            }
+                                
                             // check if the old state is the fault state
                             if(lvOldState == FAULT)
                             {
