@@ -1212,7 +1212,7 @@ static int mainTaskFunc(int argc, char *argv[])
                     {
                         cli_printfError("BMS overtemperature detected!\n");
                     }
-
+                    
                     // check for a cell overvoltage in the charge with CB or relaxation 
                     if((((BMSFault & (BMS_SW_CELL_OV)) == BMS_SW_CELL_OV) ||
                         ((BMSFault & (BMS_CELL_OV)) == BMS_CELL_OV)) &&
@@ -1376,8 +1376,8 @@ static int mainTaskFunc(int argc, char *argv[])
             {
                 long long durationNs = (currentTime.tv_sec - ovFaultStartTime.tv_sec) * 1000000000 + 
                                 (currentTime.tv_nsec - ovFaultStartTime.tv_nsec);
-                if (durationNs > OV_FAULT_THRESHOLD_NS) {
-                    // Reset the detection flag and start time if you want to re-detect it later.
+                if (true) { 
+                    // Reset the detection flag and start time if you want to re-detect it later. //durationNs > OV_FAULT_THRESHOLD_NS
                     cli_printf("Flag is old and no fault setting to 0 and false \n");
                     ovFaultFirstDetected = false;
                     ovFaultStartTime = (struct timespec){0, 0};
@@ -3873,11 +3873,17 @@ static int handleParamChangeFunc(int argc, char *argv[])
                             if((batManagement_SetNReadEndOfCBCharge(false, 0) == 0) || 
                                 (getChargeState() != CHARGE_CB))
                             {
-                                // set the sleep variable to go to the sleep state if the charger 
-                                /// is disconnected 
-                                setTransitionVariable(SLEEP_VAR, true);
-                                timeOutTimeStarted = true;
-                                cli_printf("No charge current: %.3fA <= 0A\n", currentmA/1000);
+                                #ifdef SLEEP_AFTER_CHARGE
+                                    // set the sleep variable to go to the sleep state if the charger 
+                                    /// is disconnected 
+                                    setTransitionVariable(SLEEP_VAR, true);
+                                    timeOutTimeStarted = true;
+                                    cli_printf("No charge current: %.3fA <= 0A\n", currentmA/1000);
+                                #else
+                                    //Transition to normal mode after charge is finished
+                                    setTransitionVariable(DISCHAR_VAR,true);
+                                    cli_printf("No charge current - Going to Normal mode");
+                                #endif
 
                                 // increase the main loop semaphore
                                 if(escapeMainLoopWait())
