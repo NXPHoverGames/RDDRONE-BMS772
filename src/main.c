@@ -2444,9 +2444,28 @@ static int mainTaskFunc(int argc, char *argv[])
                     // in case the charging is complete
                     case CHARGE_COMPLETE:
 
+                        // Check output volatge write to outputVoltage buffer
+                        if(data_getParameter(V_OUT, &outputVoltage, NULL) == NULL)
+                            {
+                               cli_printfError("main ERROR: getting I-BATT went wrong!\n");
+                               floatVal = 0;
+                            }
+
                         // check if the charger is removed
-                        if(!batManagement_checkOutputVoltageActive())
+                        if(!batManagement_checkOutputVoltageActive() || outputVoltage < 14)
                         {
+                            // turn on the gate 
+                            if(batManagement_setGatePower(GATE_CLOSE) != 0)
+                            {
+                                cli_printfError("main ERROR: Failed to open gate\n");
+                            }
+                            
+                            if(outputVoltage < 14)
+                            {
+                                cli_printf("Output voltage was less than 14 V\n");
+                            }
+
+                            
                             // go to the sleep state by setting the transion variable true
                             setTransitionVariable(SLEEP_VAR, true);
                         }
