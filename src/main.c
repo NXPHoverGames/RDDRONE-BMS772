@@ -63,7 +63,7 @@
 /****************************************************************************
  * Defines
  ****************************************************************************/
-#define BMS_VERSION_STRING "bms5.1-10.1"
+#define BMS_VERSION_STRING "bms5.1-10.1 SOSUB V1.2"
 //#define DONT_DO_UAVCAN
 
 #ifndef MCU_POWER_DOMAIN
