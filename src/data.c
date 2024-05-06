@@ -176,7 +176,8 @@ BMSParameterValues_t s_parameters =
     .additionalVariables.C_T                        = C_T_DEFAULT, 
     .additionalVariables.C_R                        = C_R_DEFAULT, 
     .additionalVariables.N_charges                  = N_CHARGES_DEFAULT, 
-    .additionalVariables.N_charges_full             = N_CHARGES_FULL_DEFAULT, 
+    .additionalVariables.N_charges_full             = N_CHARGES_FULL_DEFAULT,
+    .additionalVariables.FaultCode                  = FAULT_CODE_DEFAULT,  
 
     .configurationVariables.N_cells                 = N_CELLS_DEFAULT, 
     .configurationVariables.t_meas                  = T_MEAS_DEFAULT, 
@@ -276,6 +277,7 @@ const BMSparametersInfo_t s_parametersInfo[NONE] =
     { SET_DEFAULT_FLT(FLOATVAL,  true,  true,  "C",  "float",  C_R, additionalVariables.C_R) },
     { SET_DEFAULT_INT(UINT16VAL, false, false, "-",  "uint16", N_CHARGES, additionalVariables.N_charges) },
     { SET_DEFAULT_INT(UINT16VAL, false, false, "-",  "uint16", N_CHARGES_FULL, additionalVariables.N_charges_full) },
+    { SET_DEFAULT_INT(INT32VAL, false, false, "code",  "int32", FAULTCODE, additionalVariables.FaultCode) },
 
     { SET_DEFAULT_INT(UINT8VAL,  true,  true,  "-",  "uint8",  N_CELLS, configurationVariables.N_cells) },
     { SET_DEFAULT_INT(UINT16VAL, false, true,  "ms", "uint16", T_MEAS, configurationVariables.t_meas) },

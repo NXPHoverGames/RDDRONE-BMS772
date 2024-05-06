@@ -63,7 +63,7 @@
 /****************************************************************************
  * Defines
  ****************************************************************************/
-#define BMS_VERSION_STRING "bms5.1-10.1"
+#define BMS_VERSION_STRING "bms5.1-10.1 SOSUB V1.2"
 //#define DONT_DO_UAVCAN
 
 #ifndef MCU_POWER_DOMAIN
@@ -811,9 +811,12 @@ static int mainTaskFunc(int argc, char *argv[])
     struct timespec selfDischargeTime;
     struct timespec currentTime;
     struct timespec cellUnderVoltageTime;
+    struct timespec ovFaultStartTime;
     struct timespec lastMessageTime = {0, 0};
     struct timespec sampleTime2;
     int32_t int32tVal;
+    float cellVoltage;
+    float outputVoltage;
     float floatVal;
     uint8_t amountOfCBChargeCycles = 0;
     uint16_t amountOfMissedMessages = 0;
@@ -828,6 +831,9 @@ static int mainTaskFunc(int argc, char *argv[])
     bool buttonState = false;
     bool oldButtonState = true;
     bool didNotDisconnectPower = false;
+    const long long OV_FAULT_THRESHOLD_NS = 1000000000; // e.g., 100 MILLI secondS expressed in nanoseconds.
+    static bool ovFaultFirstDetected = false;  // flag to check if this is the first detection
+    char buffer[20]; //buffer for storing time value
 
     // get the variables if the fault happend
     gBCCRisingFlank = gpio_readPin(BCC_FAULT);
@@ -1038,6 +1044,15 @@ static int mainTaskFunc(int argc, char *argv[])
             // // check if a fault occured
             if(BMSFault && !firstTimeStartup)
             {
+                //A flag to control if the BMS should go into Fault state
+                bool goIntoFaultFlag = true;
+
+                //Write the BMS fault code to the data struct so it can be accessed by the CLI
+                if(data_setParameter(FAULTCODE, &BMSFault))
+                {
+                    cli_printfError("main ERROR: couldn't set FaultCode!\n");
+                }
+                
                 // change the status flags if needed 
                 // check for temperature errors
                 if(BMSFault & (BMS_UT | BMS_OT))
@@ -1081,10 +1096,113 @@ static int mainTaskFunc(int argc, char *argv[])
                     }
                     if(BMSFault & BMS_CELL_UV)
                     {
+                        /*
                         cli_printfError("Cell undervoltage detected!\n");
 
-                        // set the variable
-                        cellUnderVoltageDetected = true;
+                        sprintf(buffer, "%ld", BMSFault);
+                        cli_printf("BMS Fault Code: %s\n", buffer);
+                        
+                        data_getParameter(V_CELL1, &cellVoltage, NULL);
+                        sprintf(buffer, "%.3f", cellVoltage);
+                        cli_printf("Under Voltage Cell 1: %s\n", buffer);
+
+                        data_getParameter(V_CELL2, &cellVoltage, NULL);
+                        sprintf(buffer, "%.3f", cellVoltage);
+                        cli_printf("Under Voltage Cell 2: %s\n", buffer);
+
+                        data_getParameter(V_CELL3, &cellVoltage, NULL);
+                        sprintf(buffer, "%.3f", cellVoltage);
+                        cli_printf("Under Voltage Cell 3: %s\n", buffer);
+
+                        data_getParameter(V_CELL4, &cellVoltage, NULL);
+                        sprintf(buffer, "%.3f", cellVoltage);
+                        cli_printf("Under Voltage Cell 4: %s\n", buffer);
+                        */
+
+                        //To prevent not being able to recover an under charged battery
+                        //We check if the charger is connected and able to charge
+                        //If so don't go into fault go into charge state
+                        
+                        //Check if the output gate is open, write it to int32Val buffer
+                        if(data_getParameter(S_OUT, &int32tVal, NULL) == NULL)
+                            {
+                               cli_printfError("main ERROR: getting S-OUT went wrong!\n");
+                               int32tVal = S_OUT_DEFAULT;
+                            } 
+
+                        //Check Current write to floatVal buffer
+                        if(data_getParameter(I_BATT, &floatVal, NULL) == NULL)
+                            {
+                               cli_printfError("main ERROR: getting I-BATT went wrong!\n");
+                               floatVal = 0;
+                            }
+
+                        // Check output volatge write to outputVoltage buffer
+                        if(data_getParameter(V_OUT, &outputVoltage, NULL) == NULL)
+                            {
+                               cli_printfError("main ERROR: getting I-BATT went wrong!\n");
+                               floatVal = 0;
+                            }
+                        
+                        
+                        //Print read values for debugging
+                        if (batManagement_checkOutputVoltageActive())
+                        {
+                            cli_printf("Charger on\n");
+                        }
+                        else
+                        {
+                            cli_printf("Charger off\n");
+                        }
+
+                        if (!int32tVal)
+                        {
+                            cli_printf("Output off\n");
+                        }
+                        else
+                        {
+                            cli_printf("Output on\n");
+                        }
+
+                        if (floatVal > 0)
+                        {
+                            cli_printf("charging\n");
+                        }
+                        else
+                        {
+                            cli_printf("not charging\n");
+                        }
+
+                        sprintf(buffer, "%f", floatVal);
+                        cli_printf("ChargeCurrent ma: %s\n", buffer);
+
+                        sprintf(buffer,"%f",outputVoltage);
+                        cli_printf("Output Volatage: %s\n", buffer);
+                        
+
+                        //If the charger is connected and the output is off or there is a charge current and not in self test mode
+                        if ((batManagement_checkOutputVoltageActive() && !int32tVal || floatVal > 0.1) && getMainState() != SELF_TEST  )
+                        {
+                            
+                            cli_printf("setting the go into fault state to False\n");
+                            // Set the flag so the under voltage fault won't cause BMS to go into fault
+                            goIntoFaultFlag = false;
+                            
+                            //rest the fault
+                            batManagement_checkFault(&BMSFault, true); 
+
+                            //Close the gate to start charging
+                            batManagement_setGatePower(GATE_CLOSE);
+
+                            setMainState(CHARGE);
+                            
+                        }
+                        else
+                        {
+                            cli_printf("Under voltage and charger off Going into fault state \n");
+                            // set the variable
+                            cellUnderVoltageDetected = true;
+                        } 
                     }
                     if(BMSFault & BMS_UT)
                     {
@@ -1094,7 +1212,7 @@ static int mainTaskFunc(int argc, char *argv[])
                     {
                         cli_printfError("BMS overtemperature detected!\n");
                     }
-
+                    
                     // check for a cell overvoltage in the charge with CB or relaxation 
                     if((((BMSFault & (BMS_SW_CELL_OV)) == BMS_SW_CELL_OV) ||
                         ((BMSFault & (BMS_CELL_OV)) == BMS_CELL_OV)) &&
@@ -1113,33 +1231,79 @@ static int mainTaskFunc(int argc, char *argv[])
                     }
                     else
                     {
-                        // Check for a software cell overvoltage
-                        if(BMSFault & BMS_SW_CELL_OV)
+                        // Check for a cell overvoltage
+                        if((BMSFault & BMS_SW_CELL_OV)||(BMSFault & BMS_CELL_OV))
                         {
-                            // indicate that a cell overvoltage measurement has been detected
-                            cli_printfError("Cell overvoltage measurement detected!\n");
-                        }
-                        if(BMSFault & BMS_CELL_OV)
-                        {
-                            // indicate that an cell overvoltage has been detected by the BCC
-                            cli_printfError("Cell overvoltage detected!\n");
-                        }
-
-                        // go to the FAULT state
-                        setMainState(FAULT);
-
-                        // check if the old state is the fault state
-                        if(lvOldState == FAULT)
-                        {
-                            // check if the fault is a peak overcurrent fault
-                            // this could happen with flight mode, but there should still
-                            // be a check on the peak overcurrent
-                            if(BMSFault & BMS_PEAK_OVER_CURRENT)
+                            cli_printfError("A overvoltage error has been detected\n");
+                            // Check for a SW cell overvolatge
+                            if(BMSFault & BMS_SW_CELL_OV)
                             {
-                                // set the old state to the self-test state to re-do the fault state
-                                lvOldState = SELF_TEST;
+                                // indicate that a cell overvoltage measurement has been detected
+                                //cli_printfError("Cell overvoltage measurement detected!\n");
+                            }
+                            // Check for a Cell overvoltage
+                            if(BMSFault & BMS_CELL_OV)
+                            {
+                                // indicate that an cell overvoltage has been detected by the BCC
+                                //cli_printfError("Cell overvoltage detected!\n");
+                            }
+                            // get the current time of fault
+                            if(clock_gettime(CLOCK_REALTIME, &currentTime) == -1) {
+                                cli_printfError("main ERROR: failed to get currentTime!\n");
+                                return;  // Can't proceed if we don't know the current time.
+                            }
+                             // Check the timer and flag for Over voltage detection
+                            if (!ovFaultFirstDetected) {
+                                // If this is the first detection, record the start time.
+                                ovFaultStartTime = currentTime;
+                                ovFaultFirstDetected = true;  // set the flag
+                            } else {
+                                // Calculate how long the fault has been present.
+                                long long durationNs = (currentTime.tv_sec - ovFaultStartTime.tv_sec) * 1000000000 + 
+                                                (currentTime.tv_nsec - ovFaultStartTime.tv_nsec);
+
+                                
+                                //convert time to string
+                                sprintf(buffer, "%ld", durationNs / 1000000);
+                                cli_printf("Over Voltage Duration (ms): %s\n", buffer);
+                                if (durationNs > OV_FAULT_THRESHOLD_NS) {
+                                    // The OV fault has been present for longer than the threshold duration.
+                                    // go to the FAULT state
+                                    cli_printf("Over Voltage Threshold time reached\n");
+                                    setMainState(FAULT);
+                                    // Reset the detection flag and start time if you want to re-detect it later.
+                                    ovFaultFirstDetected = false;
+                                    ovFaultStartTime = (struct timespec){0, 0};
+                                }
+                                else
+                                {
+                                    //if the threshold time of the OV fault has not been reached reset the BCC fault
+                                    cli_printf("Over voltage threshold threshold not reached \n");
+                                    batManagement_checkFault(&BMSFault, true);
+                                }
                             }
                         }
+                        else 
+                        {
+                            // If the flage has not been set to false send BMS into Fault state
+                            if (goIntoFaultFlag)
+                            {
+                                setMainState(FAULT);
+                            }
+                                
+                            // check if the old state is the fault state
+                            if(lvOldState == FAULT)
+                            {
+                                // check if the fault is a peak overcurrent fault
+                                // this could happen with flight mode, but there should still
+                                // be a check on the peak overcurrent
+                                if(BMSFault & BMS_PEAK_OVER_CURRENT)
+                                {
+                                    // set the old state to the self-test state to re-do the fault state
+                                    lvOldState = SELF_TEST;
+                                }
+                            }
+                        }                  
                     }
                 }
 
@@ -1202,6 +1366,23 @@ static int mainTaskFunc(int argc, char *argv[])
             gBCCRisingFlank = false;
 
         // end of if(gBCCRisingFlank)    
+        } 
+        else // if there are not faults
+        { 
+            //if no cell over voltage is detected then zero the flag and counter
+            //cli_printf("No fault detected\n");
+            //if no fault but a ov fault has been detected check if the threshold time has past since it was seen and zero the reading
+            if (ovFaultFirstDetected)
+            {
+                long long durationNs = (currentTime.tv_sec - ovFaultStartTime.tv_sec) * 1000000000 + 
+                                (currentTime.tv_nsec - ovFaultStartTime.tv_nsec);
+                if (true) { 
+                    // Reset the detection flag and start time if you want to re-detect it later. //durationNs > OV_FAULT_THRESHOLD_NS
+                    cli_printf("Flag is old and no fault setting to 0 and false \n");
+                    ovFaultFirstDetected = false;
+                    ovFaultStartTime = (struct timespec){0, 0};
+                }
+            }
         }
 
         // check for a buttonpress
@@ -2263,9 +2444,28 @@ static int mainTaskFunc(int argc, char *argv[])
                     // in case the charging is complete
                     case CHARGE_COMPLETE:
 
+                        // Check output volatge write to outputVoltage buffer
+                        if(data_getParameter(V_OUT, &outputVoltage, NULL) == NULL)
+                            {
+                               cli_printfError("main ERROR: getting I-BATT went wrong!\n");
+                               floatVal = 0;
+                            }
+
                         // check if the charger is removed
-                        if(!batManagement_checkOutputVoltageActive())
+                        if(!batManagement_checkOutputVoltageActive() || outputVoltage < 14)
                         {
+                            // turn on the gate 
+                            if(batManagement_setGatePower(GATE_CLOSE) != 0)
+                            {
+                                cli_printfError("main ERROR: Failed to open gate\n");
+                            }
+                            
+                            if(outputVoltage < 14)
+                            {
+                                cli_printf("Output voltage was less than 14 V\n");
+                            }
+
+                            
                             // go to the sleep state by setting the transion variable true
                             setTransitionVariable(SLEEP_VAR, true);
                         }
@@ -3692,11 +3892,17 @@ static int handleParamChangeFunc(int argc, char *argv[])
                             if((batManagement_SetNReadEndOfCBCharge(false, 0) == 0) || 
                                 (getChargeState() != CHARGE_CB))
                             {
-                                // set the sleep variable to go to the sleep state if the charger 
-                                /// is disconnected 
-                                setTransitionVariable(SLEEP_VAR, true);
-                                timeOutTimeStarted = true;
-                                cli_printf("No charge current: %.3fA <= 0A\n", currentmA/1000);
+                                #ifdef SLEEP_AFTER_CHARGE
+                                    // set the sleep variable to go to the sleep state if the charger 
+                                    /// is disconnected 
+                                    setTransitionVariable(SLEEP_VAR, true);
+                                    timeOutTimeStarted = true;
+                                    cli_printf("No charge current: %.3fA <= 0A\n", currentmA/1000);
+                                #else
+                                    //Transition to normal mode after charge is finished
+                                    setTransitionVariable(DISCHAR_VAR,true);
+                                    cli_printf("No charge current - Going to Normal mode");
+                                #endif
 
                                 // increase the main loop semaphore
                                 if(escapeMainLoopWait())

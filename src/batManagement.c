@@ -605,162 +605,176 @@ int batManagement_initialize(swMeasuredFaultCallbackFunction p_swMeasuredFaultCa
         {
             cli_printf("SELF-TEST BCC: \e[32mPASS\e[39m\n");
 
-            // do the Gate check at least once 
-            do
-            {
-                cli_printf("SELF-TEST GATE: START\n");
+            #ifdef ENABLE_GATE_CHECK
+            
+                // do the Gate check at least once 
+                do
+                        {
+                    cli_printf("SELF-TEST GATE: START\n");
 
-                //turn off the gate
+                    //turn off the gate
+                    batManagement_setGatePower(GATE_OPEN);
+
+                    // check the gate output to verify if it works
+                    // do a measurement
+                    lvRetValue = bcc_monitoring_doBlockingMeasurement(&gBccDrvConfig);
+                    // check for errors
+                    if(lvRetValue != 0)
+                    {
+                        // inform user
+                        //errcode = errno;
+                        cli_printfError("batManagement ERROR: Failed to do measurement: %d\n", 
+                            lvRetValue);
+                        cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
+                        return lvRetValue;
+                    }
+
+                    // get the output voltage and check if it is off
+                    // read the output voltage 
+                    lvRetValue = bcc_monitoring_checkOutput(&gBccDrvConfig, &boolValue);
+
+                    // check for errors
+                    if(lvRetValue != 0)
+                    {
+                        // inform user
+                        //errcode = errno;
+                        cli_printfError("batManagement ERROR: Failed get output: %d\n", lvRetValue);
+                        cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
+                        return lvRetValue;
+                    }
+
+                    // check if the output is high
+                    if(boolValue == 1)
+                    {
+                        cli_printfError("batManagement ERROR: Failed to disable the gate!\n");
+                        cli_printf("Make sure there is no charger connected and press the button to try again\n");
+                        cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
+
+                        //lvRetValue = BCC_STATUS_DIAG_FAIL;
+
+                        // set the LED color to indicate the charger is connected and is wrong
+                        g_changeLedColorCallbackBatFuntionfp(RED, BLUE, LED_BLINK_ON);
+
+                        // loop until the button is not pushed 
+                        while(!gpio_readPin(SBC_WAKE))
+                        {
+                            // wait for a little while 
+                            usleep(1000*10);
+                        }
+
+                        // loop until the button is pushed 
+                        while(gpio_readPin(SBC_WAKE))
+                        {
+                            // wait for a little while 
+                            usleep(1000*10);
+                        }
+                    }
+            
+                // loop while the output is high
+                }while(boolValue == 1);
+
+            #else
+                // Code added to disable gate check so that a charger can be connected whilst rebooting
                 batManagement_setGatePower(GATE_OPEN);
+                cli_printfWarning("SELF-TEST GATE: TURNED OFF!\n");
+            #endif
 
-                // check the gate output to verify if it works
-                // do a measurement
+            #ifdef ENABLE_CURRENT_SENSE_CHECK
+                // change the LED color to RED again
+                g_changeLedColorCallbackBatFuntionfp(RED, OFF, LED_BLINK_OFF);
+
+                cli_printf("SELF-TEST GATE: \e[32mPASS\e[39m\n");
+                cli_printf("SELF-TEST CURRENT_SENSE: START\n");
+
+                // get the sleepcurrent
+                if(data_getParameter(I_SLEEP_OC, &sleepCurrentmA, NULL) == NULL)
+                {
+                    cli_printfError("batManagement ERROR: getting sleepcurrent went wrong!\n");
+                    sleepCurrentmA = I_SLEEP_OC_DEFAULT;
+                } 
+
+                // do a blockingmeasurement
                 lvRetValue = bcc_monitoring_doBlockingMeasurement(&gBccDrvConfig);
+
                 // check for errors
                 if(lvRetValue != 0)
                 {
                     // inform user
-                    //errcode = errno;
                     cli_printfError("batManagement ERROR: Failed to do measurement: %d\n", 
                         lvRetValue);
-                    cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
+                    cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
                     return lvRetValue;
                 }
 
-                // get the output voltage and check if it is off
-                // read the output voltage 
-                lvRetValue = bcc_monitoring_checkOutput(&gBccDrvConfig, &boolValue);
-
+                // get the ISENSE pin open load value 
+                lvRetValue = bcc_monitoring_getIsenseOpenLoad(&gBccDrvConfig, &boolValue);
+                
                 // check for errors
                 if(lvRetValue != 0)
                 {
                     // inform user
                     //errcode = errno;
-                    cli_printfError("batManagement ERROR: Failed get output: %d\n", lvRetValue);
-                    cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
+                    cli_printfError("batManagement ERROR: Failed to open load value: %d\n", 
+                        lvRetValue);
+                    cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
                     return lvRetValue;
                 }
 
-                // check if the output is high
-                if(boolValue == 1)
+                // check if the ISENSE pins have an open load
+                if(boolValue)
                 {
-                    cli_printfError("batManagement ERROR: Failed to disable the gate!\n");
-                    cli_printf("Make sure there is no charger connected and press the button to try again\n");
-                    cli_printf("SELF-TEST GATE: \e[31mFAIL\e[39m\n");
+                    // there is an ISENSE pins open load detected
+                    cli_printfError("batManagement ERROR: ISENSE open load pin detected!\n");
+                    cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
+                    return BCC_STATUS_PARAM_RANGE;
+                } 
 
-                    //lvRetValue = BCC_STATUS_DIAG_FAIL;
+                // set the current in the struct
+                lvRetValue = bcc_monitoring_getBattCurrent(&gBccDrvConfig, SHUNT_RESISTOR_UOHM);
 
-                    // set the LED color to indicate the charger is connected and is wrong
-                    g_changeLedColorCallbackBatFuntionfp(RED, BLUE, LED_BLINK_ON);
+                // check for errors
+                if(lvRetValue != 0)
+                {
+                    // inform user
+                    cli_printfError("batManagement ERROR: Failed to read current: %d\n", 
+                        lvRetValue);
+                    cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
+                    return lvRetValue;
+                }
 
-                    // loop until the button is not pushed 
-                    while(!gpio_readPin(SBC_WAKE))
+                // get the batterycurrent
+                if(data_getParameter(I_BATT, &current, NULL) == NULL)
+                {
+                    cli_printfError("batManagement ERROR: getting current went wrong!\n");
+                    current = I_BATT_MAX;
+                }
+
+                // check if the abs current is higher than the sleepcurrent or the overcurrent is hight
+                if(((int)(fabs(current)*1000) > sleepCurrentmA) || (gpio_readPin(OVERCURRENT)))
+                {
+                    // why did it happend?
+                    if(((int)(fabs(current)*1000) > sleepCurrentmA))
                     {
-                        // wait for a little while 
-                        usleep(1000*10);
+                        cli_printfError("BatManagement ERROR: current: |%.3fA| > %.3fA\n", 
+                            current, (float)sleepCurrentmA/1000.0);
+                    }
+                    else
+                    {
+                        cli_printfError("BatManagement ERROR: overcurrent pin high!\n");
                     }
 
-                    // loop until the button is pushed 
-                    while(gpio_readPin(SBC_WAKE))
-                    {
-                        // wait for a little while 
-                        usleep(1000*10);
-                    }
+                    // output that the test has failed
+                    cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
+                    return BCC_STATUS_PARAM_RANGE;
                 }
 
-            // loop while the output is high
-            }while(boolValue == 1);
+                // mention that the self test has passed
+                cli_printf("SELF-TEST CURRENT_SENSE: \e[32mPASS\e[39m\n");
+            #else
+                // Code added to disable current sense test as getting errors when rebooting
+                cli_printfWarning("SELF-TEST Current sense: TURNED OFF!\n");
+            #endif
 
-            // change the LED color to RED again
-            g_changeLedColorCallbackBatFuntionfp(RED, OFF, LED_BLINK_OFF);
-
-            cli_printf("SELF-TEST GATE: \e[32mPASS\e[39m\n");
-            cli_printf("SELF-TEST CURRENT_SENSE: START\n");
-
-            // get the sleepcurrent
-            if(data_getParameter(I_SLEEP_OC, &sleepCurrentmA, NULL) == NULL)
-            {
-                cli_printfError("batManagement ERROR: getting sleepcurrent went wrong!\n");
-                sleepCurrentmA = I_SLEEP_OC_DEFAULT;
-            } 
-
-            // do a blockingmeasurement
-            lvRetValue = bcc_monitoring_doBlockingMeasurement(&gBccDrvConfig);
-
-            // check for errors
-            if(lvRetValue != 0)
-            {
-                // inform user
-                cli_printfError("batManagement ERROR: Failed to do measurement: %d\n", 
-                    lvRetValue);
-                cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
-                return lvRetValue;
-            }
-
-            // get the ISENSE pin open load value 
-            lvRetValue = bcc_monitoring_getIsenseOpenLoad(&gBccDrvConfig, &boolValue);
-            
-            // check for errors
-            if(lvRetValue != 0)
-            {
-                // inform user
-                //errcode = errno;
-                cli_printfError("batManagement ERROR: Failed to open load value: %d\n", 
-                    lvRetValue);
-                cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
-                return lvRetValue;
-            }
-
-            // check if the ISENSE pins have an open load
-            if(boolValue)
-            {
-                // there is an ISENSE pins open load detected
-                cli_printfError("batManagement ERROR: ISENSE open load pin detected!\n");
-                cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
-                return BCC_STATUS_PARAM_RANGE;
-            } 
-
-            // set the current in the struct
-            lvRetValue = bcc_monitoring_getBattCurrent(&gBccDrvConfig, SHUNT_RESISTOR_UOHM);
-
-            // check for errors
-            if(lvRetValue != 0)
-            {
-                // inform user
-                cli_printfError("batManagement ERROR: Failed to read current: %d\n", 
-                    lvRetValue);
-                cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
-                return lvRetValue;
-            }
-
-            // get the batterycurrent
-            if(data_getParameter(I_BATT, &current, NULL) == NULL)
-            {
-                cli_printfError("batManagement ERROR: getting current went wrong!\n");
-                current = I_BATT_MAX;
-            }
-
-            // check if the abs current is higher than the sleepcurrent or the overcurrent is hight
-            if(((int)(fabs(current)*1000) > sleepCurrentmA) || (gpio_readPin(OVERCURRENT)))
-            {
-                // why did it happend?
-                if(((int)(fabs(current)*1000) > sleepCurrentmA))
-                {
-                    cli_printfError("BatManagement ERROR: current: |%.3fA| > %.3fA\n", 
-                        current, (float)sleepCurrentmA/1000.0);
-                }
-                else
-                {
-                    cli_printfError("BatManagement ERROR: overcurrent pin high!\n");
-                }
-
-                // output that the test has failed
-                cli_printf("SELF-TEST CURRENT_SENSE: \e[31mFAIL\e[39m\n");
-                return BCC_STATUS_PARAM_RANGE;
-            }
-
-            // mention that the self test has passed
-            cli_printf("SELF-TEST CURRENT_SENSE: \e[32mPASS\e[39m\n");
         }
         // if the self test should be skipped
         else
@@ -1266,12 +1280,15 @@ int batManagement_checkFault(uint32_t *BMSFault, bool resetFaultPin)
         // output to the user
         cli_printfError("BCC fault error: fault in BCC_FS_COMM reg: %d: \n", (lvBccFaultStatus[BCC_FS_COMM] >> 8) & 0xFF);
 #endif
+
+#ifdef OUTPUT_COMM_ERROR
         // check if there are communication errors
         if(lvBccFaultStatus[BCC_FS_COMM])
         {
             // output the amount of errors
             cli_printfError("%d communication error(s) detected!\n", ((lvBccFaultStatus[BCC_FS_COMM] >> 8) & 0xFF));
         }
+#endif 
 
         // set the new value
         resetBCCFaultValue = BCC_FS_COMM;

@@ -1,5 +1,24 @@
 # RDDRONE-BMS772
 NuttX source code for RDDRONE-BMS772
+
+## SOSUB Instructions
+To update the BMS firmware you will need to flash the MCU using the Jlink Segger and the precompiled binary file. Once this is complete you will need to reprogram the BMS using the programming script [here](https://github.com/Southern-Ocean-Subsea/NXP-BMS)
+
+### Flash MCU
+A raspberry pi has been setup with the below tool chain to compile and upload the latest firmware. To upload the latest firmware:
+* Flash a SD card with the latest BMS_compiler image.
+* Power on the PI and make a wired ethernet connection to a router.
+* Connect laptop to the same network. You should now be able to make an SSH session (using putty) by connecting to raspberrypi.local port:22
+* Once connected cd drones/nuttx
+* Hook up the JLink Segger to the BMS as follow in the below diagram. Make sure the connectors are facing the correct direction. Then connect the Segger to the raspberry pi usb port.
+* Once in the correct folder follow the below section [here](#programming-the-bms-with-the-jlink-debugger) of how to program it with the JLink Segger.
+BMS -> JLink Segger connection looks like this.
+![image](https://github.com/Southern-Ocean-Subsea/RDDRONE-BMS772/assets/112593920/619d2afa-ee26-45f7-beda-8b7b0ff727d9)
+
+### Reprogam the BMS
+Reprogram the BMS using the programming script [here](https://github.com/Southern-Ocean-Subsea/NXP-BMS)
+
+
 ## Disclaimer - CAUTION WARNING
 ### CAUTION - WARNING
 Lithium and other batteries are dangerous and must be treated with care. 
@@ -190,6 +209,7 @@ To program the BMS using a JLink debugger you need to have JLink installed.
 Make sure the BMS is powered.
 
 Open a terminal where the nuttx.bin file is located (probably in the nuttx folder).
+
 Open JLink:
 ```bash
 JLinkExe
@@ -225,6 +245,7 @@ Load the nuttx binary at address 0
 ```bash
 loadbin nuttx.bin 0
 ```
+NOTE: if you get an error loading the binary file, exit jlink (exit) and unplug the jlink segger device from the USB port. Restart these commands but this time don't run the two above commands for erasing the flash (don't run the two w1 commands).
 Reset the device
 ```bash
 r

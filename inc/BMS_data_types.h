@@ -132,7 +132,8 @@
 #define C_T_DEFAULT                         0           //!< [C] 
 #define C_R_DEFAULT                         0           //!< [C] 
 #define N_CHARGES_DEFAULT                   0           //!< [-]  
-#define N_CHARGES_FULL_DEFAULT              0           //!< [-] 
+#define N_CHARGES_FULL_DEFAULT              0           //!< [-]
+#define FAULT_CODE_DEFAULT                  0
 
 #define N_CELLS_DEFAULT                     3           //!< [-]
 #define T_MEAS_DEFAULT                      1000        //!< [ms]
@@ -277,6 +278,7 @@ typedef enum{
         PARAMETER(C_R)                      \
         PARAMETER(N_CHARGES)                \
         PARAMETER(N_CHARGES_FULL)           \
+        PARAMETER(FAULTCODE)                \
                                             \
         PARAMETER(N_CELLS)                  /*30*/\
         PARAMETER(T_MEAS)                   \
@@ -400,6 +402,7 @@ typedef struct
     float               C_R;                                //!< [C] the temperature of the sense resistor
     uint16_t            N_charges;                          //!< [-] the number of charges done 
     uint16_t            N_charges_full;                     //!< [-] the number of complete charges
+    int32_t             FaultCode;
 }BMSAdditionalVariables_t;
 
 /*! @brief  this struct consists of the configuration parameters
@@ -509,6 +512,7 @@ typedef enum
     FLOATVAL,                                               //!< it is a float value
     STRINGVAL/*,*/                                          //!< it is a string value (character pointer)
     //BOOLVAL                                               //!< it is a bool
+    //UINT32VAL                                              //!< it is a uint32
 }valueType_t;
 
 /*! @brief  enum to define what data type it is
