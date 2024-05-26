@@ -58,14 +58,18 @@
 #define NUNAVUT_ASSERT
 #include "uavcan/node/GetInfo_1_0.h"
 #include "uavcan/_register/Value_1_0.h"
+#include "uavcan/node/ExecuteCommand_1_1.h"
 
 //No of pre allocated register entries
 #ifndef UAVCAN_REGISTER_COUNT
-# define UAVCAN_REGISTER_COUNT 5
+# define UAVCAN_REGISTER_COUNT 6
 #endif
 
 #define UAVCAN_REGISTER_ERROR_SERIALIZATION 1
 #define UAVCAN_REGISTER_ERROR_OUT_OF_MEMORY 2
+
+#define EXECUTE_COMMAND_ID_RESET_FAULT (100)
+#define EXECUTE_COMMAND_ID_REBOOT (200)
 
 typedef int32_t (*register_access_set_callback)(uavcan_register_Value_1_0* value);
 typedef uavcan_register_Value_1_0 (*register_access_get_callback)(void);
@@ -94,5 +98,9 @@ int32_t uavcan_register_interface_access_response(CanardInstance* ins, CanardTra
 
 // Handler for register list interface
 int32_t uavcan_register_interface_list_response(CanardInstance* ins, CanardTransfer* request);
+
+int32_t uavcan_services_init(CanardInstance* ins);
+int32_t uavcan_service_process(CanardInstance* ins, CanardTransfer* transfer);
+int32_t uavcan_service_handle_execute_command(CanardInstance* ins, CanardTransfer* request);
 
 #endif //UAVCAN_REGISTER_INTERFACE_H_

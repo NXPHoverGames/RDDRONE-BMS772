@@ -42,6 +42,7 @@
 #include <sched.h>
 #include <semaphore.h>
 #include <math.h>
+#include <inttypes.h>
 
 #include "data.h"
 #include "cli.h"
@@ -84,15 +85,15 @@
 #endif
 
 //! this define is used with macro BYTE_TO_BINARYto print a byte value to binary
-// #ifndef BYTE_TO_BINARY_PATTERN
-// #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
-// #endif
+#ifndef BYTE_TO_BINARY_PATTERN
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
+#endif
 
 #define DEFAULT_PRIORITY                100
 #define MAIN_LOOP_PRIORITY              140
 #define DATA_CHANGED_HANDLER_PRIORITY   130
 #define UPDATER_PRIORITY                50
-#define MAIN_LOOP_STACK_SIZE            2048
+#define MAIN_LOOP_STACK_SIZE            2400
 #define DATA_HANDLER_STACK_SIZE         1024 + 512  
 #define DEFAULT_UPDATER_STACK_SIZE      1024 + 512 + 256
 
@@ -508,22 +509,22 @@ int bms_main(int argc, char *argv[])
 
     // initialize the functions
 
-    // initialize the LED and make it RED
-    lvRetValue = ledState_initialize(RED, resetCauseExWatchdog);
-    if(lvRetValue)
-    {
-        // output to the user
-        cli_printfError("main ERROR: failed to initialize leds! code %d\n", 
-            lvRetValue);
+    // // initialize the LED and make it RED
+    // lvRetValue = ledState_initialize(RED, resetCauseExWatchdog);
+    // if(lvRetValue)
+    // {
+    //     // output to the user
+    //     cli_printfError("main ERROR: failed to initialize leds! code %d\n", 
+    //         lvRetValue);
 
-        // Check if the reset cause is not the watchdog
-        if(!resetCauseExWatchdog)
-        {
-            cli_printf("SELF-TEST LEDs: \e[31mFAIL\e[39m\n");
-            return lvRetValue;
-        } 
+    //     // Check if the reset cause is not the watchdog
+    //     if(!resetCauseExWatchdog)
+    //     {
+    //         cli_printf("SELF-TEST LEDs: \e[31mFAIL\e[39m\n");
+    //         return lvRetValue;
+    //     } 
         
-    }
+    // }
 
     // initialize data structure
     // create the changed parameter task if not started
@@ -803,7 +804,7 @@ int bms_main(int argc, char *argv[])
 static int mainTaskFunc(int argc, char *argv[])
 {   
     gMainLoopStarted = true;
-    uint32_t BMSFault;
+    uint32_t BMSFault = 0;
     int lvRetValue;
     charge_states_t oldChargeState = CHARGE_COMPLETE;
     struct timespec sampleTime;
@@ -1042,6 +1043,7 @@ static int mainTaskFunc(int argc, char *argv[])
             }
 
             // // check if a fault occured
+            cli_printf("Faultcode: %" PRIu32 "\n", BMSFault );
             if(BMSFault && !firstTimeStartup)
             {
                 //A flag to control if the BMS should go into Fault state
@@ -1486,7 +1488,7 @@ static int mainTaskFunc(int argc, char *argv[])
                     lvOldState = getMainState();
 
                     // set the LED to green 
-                    ledState_setLedColor(GREEN, OFF, LED_BLINK_OFF);
+                    // ledState_setLedColor(GREEN, OFF, LED_BLINK_OFF);
 
                     // change the MCU to run mode
                     if(power_setNGetMcuPowerMode(true, RUN_MODE) == ERROR_VALUE)
@@ -1735,10 +1737,10 @@ static int mainTaskFunc(int argc, char *argv[])
                     } 
 
                     // set the value to calculate the state indication
-                    ledState_calcStateIndication((uint8_t)int32tVal);
+                    // ledState_calcStateIndication((uint8_t)int32tVal);
 
                     // set the LED to green blinking
-                    ledState_setLedColor(GREEN, OFF, LED_BLINK_ON);
+                    // ledState_setLedColor(GREEN, OFF, LED_BLINK_ON);
 
                     // disable cell balancing
                     batManagement_setBalancing(false);
@@ -1819,7 +1821,7 @@ static int mainTaskFunc(int argc, char *argv[])
                     batManagement_startCharging(true);
 
                     // set the LED to blue
-                    ledState_setLedColor(BLUE, OFF, LED_BLINK_OFF);
+                    // ledState_setLedColor(BLUE, OFF, LED_BLINK_OFF);
 
                     cli_printf("CHARGE mode\n");
 
@@ -2028,7 +2030,7 @@ static int mainTaskFunc(int argc, char *argv[])
                             }
 
                             // set the LED to green 
-                            ledState_setLedColor(GREEN, OFF, LED_BLINK_OFF);
+                            // ledState_setLedColor(GREEN, OFF, LED_BLINK_OFF);
 
                             // turn off cell balancing function
                             batManagement_setBalancing(false);
@@ -2151,7 +2153,7 @@ static int mainTaskFunc(int argc, char *argv[])
                         if(!batManagement_checkBalancing())
                         {
                             // set the LED to blue
-                            ledState_setLedColor(BLUE, OFF, LED_BLINK_OFF);
+                            // ledState_setLedColor(BLUE, OFF, LED_BLINK_OFF);
 
                             // check if the output has been done
                             if(boolValue)
@@ -2183,7 +2185,7 @@ static int mainTaskFunc(int argc, char *argv[])
                         if(!batManagement_checkBalancing())
                         {
                             // set the LED to blue
-                            ledState_setLedColor(BLUE, OFF, LED_BLINK_OFF);
+                            // ledState_setLedColor(BLUE, OFF, LED_BLINK_OFF);
 
                             // check if the output has been done
                             if(boolValue)
@@ -2734,7 +2736,7 @@ static int mainTaskFunc(int argc, char *argv[])
                     }
 
                     // turn the LED off
-                    ledState_setLedColor(OFF, OFF, LED_BLINK_OFF);
+                    // ledState_setLedColor(OFF, OFF, LED_BLINK_OFF);
 
                     // disable cell balancing
                     batManagement_setBalancing(false);
@@ -2994,7 +2996,7 @@ static int mainTaskFunc(int argc, char *argv[])
                     lvOldState = getMainState();
 
                     // set the leds to be green blinking, wake up 
-                    ledState_setLedColor(GREEN, OFF, LED_BLINK_OFF);
+                    // ledState_setLedColor(GREEN, OFF, LED_BLINK_OFF);
 
                     cli_printf("OCV mode\n");
 
@@ -3077,7 +3079,7 @@ static int mainTaskFunc(int argc, char *argv[])
                                 cli_printfError("main ERROR: Failed to close gate\n");
 
                                 // set the LED to red
-                                ledState_setLedColor(RED, OFF, LED_BLINK_OFF);
+                                // ledState_setLedColor(RED, OFF, LED_BLINK_OFF);
 
                                 // state that the power is not disconnected
                                 didNotDisconnectPower = true;
@@ -3085,7 +3087,7 @@ static int mainTaskFunc(int argc, char *argv[])
                             else
                             {
                                 // set the LED to red blinking
-                                ledState_setLedColor(RED, OFF, LED_BLINK_ON);
+                                // ledState_setLedColor(RED, OFF, LED_BLINK_ON);
 
                                 cli_printf("Disconnecting power: flight mode enabled but peak overcurrent\n");
                             }
@@ -3113,7 +3115,7 @@ static int mainTaskFunc(int argc, char *argv[])
                                 cli_printfWarning("WARNING: Couldn't disconnect power: flight mode enabled and in flight\n");
 
                                 // set the LED to red
-                                ledState_setLedColor(RED, OFF, LED_BLINK_OFF);
+                                // ledState_setLedColor(RED, OFF, LED_BLINK_OFF);
                             }
                         }
                     }
@@ -3126,7 +3128,7 @@ static int mainTaskFunc(int argc, char *argv[])
                             cli_printfError("main ERROR: Failed to close gate\n");
 
                             // set the LED to red
-                            ledState_setLedColor(RED, OFF, LED_BLINK_OFF);
+                            // ledState_setLedColor(RED, OFF, LED_BLINK_OFF);
 
                             // state that the power is not disconnected
                             didNotDisconnectPower = true;
@@ -3134,7 +3136,7 @@ static int mainTaskFunc(int argc, char *argv[])
                         else
                         {
                             // set the LED to red blinking
-                            ledState_setLedColor(RED, OFF, LED_BLINK_ON);
+                            // ledState_setLedColor(RED, OFF, LED_BLINK_ON);
                         }
                     }
 
@@ -3237,7 +3239,7 @@ static int mainTaskFunc(int argc, char *argv[])
                         cli_printfError("main ERROR: Failed to close gate\n");
 
                         // set the LED to red
-                        ledState_setLedColor(RED, OFF, LED_BLINK_OFF);
+                        // ledState_setLedColor(RED, OFF, LED_BLINK_OFF);
 
                         // state that the power is not disconnected
                         didNotDisconnectPower = true;
@@ -3245,7 +3247,7 @@ static int mainTaskFunc(int argc, char *argv[])
                     else
                     {
                         // set the LED to red blinking
-                        ledState_setLedColor(RED, OFF, LED_BLINK_ON);
+                        // ledState_setLedColor(RED, OFF, LED_BLINK_ON);
 
                         cli_printf("Disconnecting power: not in flight any more!\n");
                     }
@@ -3400,7 +3402,7 @@ static int mainTaskFunc(int argc, char *argv[])
                     }
 
                     // set the LED to magenta(purple) blinking
-                    ledState_setLedColor(BLUE, OFF, LED_BLINK_ON);
+                    // ledState_setLedColor(BLUE, OFF, LED_BLINK_ON);
 
                     // turn on the NFC update 
                     if(setNGetEnableNFCUpdates(true, true) < 0)
@@ -3513,7 +3515,7 @@ static int mainTaskFunc(int argc, char *argv[])
                     lvOldState = getMainState();
 
                     // set the LED to white
-                    ledState_setLedColor(WHITE, OFF, LED_BLINK_OFF);
+                    // ledState_setLedColor(WHITE, OFF, LED_BLINK_OFF);
 
                     // turn off the gate 
                     if(batManagement_setGatePower(GATE_OPEN) != 0)
@@ -3608,7 +3610,7 @@ static int mainTaskFunc(int argc, char *argv[])
                 lvRetValue = data_saveParameters();
 
                 // turn the LED off
-                ledState_setLedColor(OFF, OFF, LED_BLINK_OFF);
+                // ledState_setLedColor(OFF, OFF, LED_BLINK_OFF);
 
                 //cli_printf("setting SBC to standby!\n");
                 cli_printf("setting SBC to sleep!\n");
@@ -3969,7 +3971,7 @@ static int handleParamChangeFunc(int argc, char *argv[])
                 uintValue &= UINT8_MAX;
 
                 // call the funtion set the led blink pattern
-                ledState_calcStateIndication((uint8_t)uintValue);
+                // ledState_calcStateIndication((uint8_t)uintValue);
 
             break;
             case A_FACTORY:
@@ -4358,7 +4360,7 @@ void swMeasuredFaultFunction(bool triggerFault)
 void changeLedColor(LEDColor_t newColor, LEDColor_t newAltColor, uint16_t blinkPeriodms)
 {
     // set the new LED color
-    ledState_setLedColor(newColor, newAltColor, blinkPeriodms);
+    // ledState_setLedColor(newColor, newAltColor, blinkPeriodms);
 }
 
 /*!
@@ -4489,6 +4491,8 @@ void processCLICommand(commands_t command, uint8_t value)
         // check for state
         if(currentState == FAULT)
         {
+            cli_printf( "Resetting fault\n" );
+
             // set the rest variable
             setNGetStateCommandVariable(true, CMD_RESET);
 
@@ -4496,6 +4500,10 @@ void processCLICommand(commands_t command, uint8_t value)
             if(escapeMainLoopWait())
             {
                 cli_printfError("swMeasuredFaultFunction ERROR: Couldn't up mainloop sem!\n");
+            }
+            else
+            {
+                cli_printf( "Escaping main loop\n" );
             }
         }
         else

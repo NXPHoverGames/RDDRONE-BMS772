@@ -181,7 +181,7 @@
 #define UAVCAN_ES_SUB_ID_DEFAULT            4096        //!< [-] 
 #define UAVCAN_BS_SUB_ID_DEFAULT            4097        //!< [-] 
 #define UAVCAN_BP_SUB_ID_DEFAULT            4098        //!< [-] 
-#define UAVCAN_LEGACY_BI_SUB_ID_DEFAULT     UINT16_MAX  //!< [-]
+#define UAVCAN_LEGACY_BI_SUB_ID_DEFAULT     4099        //!< [-]
 #define UAVCAN_FD_MODE_DEFAULT              0           //!< [-] 
 #define UAVCAN_BITRATE_DEFAULT              1000000     //!< [bit/s]
 #define UAVCAN_FD_BITRATE_DEFAULT           4000000     //!< [bit/s]

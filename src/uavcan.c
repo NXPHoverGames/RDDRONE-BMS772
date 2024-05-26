@@ -108,8 +108,8 @@
 
 #define UNIQUE_ID_LENGTH_BYTES                   16
 
-#define LIBCANARDV1_DAEMON_PRIORITY             110
-#define LIBCANARDV1_DAEMON_STACK_SIZE           2500//4000
+#define LIBCANARDV1_DAEMON_PRIORITY             141
+#define LIBCANARDV1_DAEMON_STACK_SIZE           4000
 #define CAN_DEVICE                              "can0"
 
 #define CELSIUS_TO_KELVIN                       272.15
@@ -130,6 +130,7 @@ static sem_t gUavcanSem;
 
 static bool gUavcanInitialized = false; 
 
+static uavcan_node_GetInfo_Response_1_0 node_information = {0};
 
 CanardRxSubscription heartbeat_subscription;
 CanardRxSubscription my_subscription;
@@ -151,6 +152,8 @@ static bool g_canard_daemon_started;
 static uint8_t my_message_transfer_id;  // Must be static or heap-allocated to retain state between calls.
 
 struct pollfd gFd;
+
+static uint8_t unique_id[16];
 
 /****************************************************************************
  * private Functions declerations 
@@ -189,8 +192,6 @@ static void BatteryStatusToTransmitBuffer(CanardInstance *ins);//, uint64_t time
 static void BatteryParametersToTransmitBuffer(CanardInstance *ins);
 
 static void BatteryInfoToTransmitBuffer(CanardInstance *ins);
-
-//static void processReceivedTransfer(CanardTransfer *receive);
 
 static void processTxRxOnce(CanardInstance *ins, CanardSocketInstance *sock_ins, int timeout_msec);
 
@@ -423,6 +424,27 @@ uavcan_register_Value_1_0 get_battery_info_port_id(void)
     return value;
 }
 
+int32_t set_bms_fault_code(uavcan_register_Value_1_0* value)
+{
+    // NOTE(Charles): We don't allow setting this - read-only
+    return 0;
+}
+
+uavcan_register_Value_1_0 get_bms_fault_code(void)
+{
+    void* dataReturn;
+    uavcan_register_Value_1_0 value;
+    
+    dataReturn = (int32_t*)data_getParameter(FAULTCODE, &value.natural32.value.elements[0], NULL);
+    if(dataReturn == NULL)
+    {
+        value._tag_ = 0; // Empty
+    }
+    value.natural32.value.count = 1;
+    value._tag_ = 9; // TODO does nunavut generate ENUM/defines for this??
+    return value;
+}
+
 static int32_t uavcan_task_initialize(CanardInstance* ins, CanardSocketInstance* sock_ins) 
 {
     uint8_t can_fd = 0;
@@ -465,17 +487,17 @@ static int32_t uavcan_task_initialize(CanardInstance* ins, CanardSocketInstance*
         ins->mtu_bytes = CANARD_MTU_CAN_CLASSIC;
     }
 
-    // get the node ID
+    // Get the node ID
     dataReturn = (int32_t*)data_getParameter(UAVCAN_NODE_STATIC_ID, &nodeID, NULL);
-
-    // check for error 
     if(dataReturn == NULL)
     {
-        // set the default value
-        nodeID = UAVCAN_NODE_STATIC_ID_DEFAULT;
+        // Set the default value to two below the max.
+        // NOTE(Charles): The spec says the top two IDs are reserved for debugging tools
+        nodeID = CANARD_NODE_ID_MAX - 2;
 
         cli_printfError("UAVCANTask ERROR: couldn't get node id! setting default\n");
     }
+    ins->node_id = nodeID;
 
     /* Open the CAN device for reading */
     socketcanOpen(sock_ins, CAN_DEVICE, can_fd);
@@ -518,63 +540,41 @@ static int32_t uavcan_task_initialize(CanardInstance* ins, CanardSocketInstance*
             CAN_DEVICE, errno);
         return -2;
     }
+
+    // Set unique ID
+    // TODO: get unique id from S32K HW
+    unique_id[0] = 0x19;
+    unique_id[1] = 0xaf;
+    unique_id[3] = 0x58;
+    unique_id[4] = 0xe4;
+    unique_id[5] = 0xcb;
+    unique_id[6] = 0x38;
+    unique_id[7] = 0x11;
+    unique_id[8] = 0xea;
+    unique_id[9] = 0x87;
+    unique_id[10] = 0xd0;
+    unique_id[11] = 0x02;
+    unique_id[12] = 0x42;
+    unique_id[13] = 0xac;
+    unique_id[14] = 0x13;
+    unique_id[15] = 0x00;
+
+    cli_printf("start node (ID: %d Name: %s MTU: %d)\n", ins->node_id, APP_NODE_NAME, ins->mtu_bytes);
     
-    if(nodeID == CANARD_NODE_ID_UNSET) { // PNP is enabled
-    
-        //TODO get unique id from S32K HW
-        uint8_t unique_id[16];
-        unique_id[0] = 0x19;
-        unique_id[1] = 0xaf;
-        unique_id[3] = 0x58;
-        unique_id[4] = 0xe4;
-        unique_id[5] = 0xcb;
-        unique_id[6] = 0x38;
-        unique_id[7] = 0x11;
-        unique_id[8] = 0xea;
-        unique_id[9] = 0x87;
-        unique_id[10] = 0xd0;
-        unique_id[11] = 0x02;
-        unique_id[12] = 0x42;
-        unique_id[13] = 0xac;
-        unique_id[14] = 0x13;
-        unique_id[15] = 0x00;
+    // Initialize node information
+    node_information.protocol_version.major           = CANARD_UAVCAN_SPECIFICATION_VERSION_MAJOR;
+    node_information.protocol_version.minor           = CANARD_UAVCAN_SPECIFICATION_VERSION_MINOR;
+    node_information.software_version.major           = 0;
+    node_information.software_version.minor           = 1;
+    node_information.software_vcs_revision_id         = 0xdeadbeef;
+    (void) memcpy(&node_information.unique_id[0], &unique_id[0], sizeof(node_information.unique_id));
+    node_information.name.count = strlen(APP_NODE_NAME);
+    (void) memcpy(&node_information.name.elements[0], APP_NODE_NAME, node_information.name.count);
 
-        initPNPAllocatee(ins, unique_id);
+    // Init services
+    uavcan_services_init(ins);
 
-        uint32_t random_no;
-        random_no = ((float)rand() / RAND_MAX) * (1000000);   
-
-        uint64_t next_alloc_req = getMonotonicTimestampUSec() + random_no;  
-    
-        while(ins->node_id == CANARD_NODE_ID_UNSET) 
-        {
-            // process the TX and RX buffer
-            processTxRxOnce(ins, sock_ins, 10); //10Ms
-            
-            const uint64_t ts = getMonotonicTimestampUSec();
-
-            if(ts >= next_alloc_req)
-            {
-                next_alloc_req += ((float)rand() / RAND_MAX) * (1000000);
-                int32_t result = PNPAllocRequest(ins);
-                if(result) 
-                {
-                    ins->node_id = PNPGetNodeID();
-                }
-            }
-        }
-    } 
-    else 
-    {
-        ins->node_id = nodeID; // Static preconfigured nodeID
-    }
-
-    //cli_printf("canard_daemon: canard initialized\n");
-    cli_printf("start node (ID: %d Name: %s MTU: %d)\n", ins->node_id,
-        APP_NODE_NAME, ins->mtu_bytes);
-    
     // Init UAVCAN register interfaces
-    uavcan_node_GetInfo_Response_1_0 node_information; // TODO ADD INFO
     uavcan_register_interface_init(ins, &node_information);
     
     // tell the UAVCAN register interface that this register is usable
@@ -583,20 +583,23 @@ static int32_t uavcan_task_initialize(CanardInstance* ins, CanardSocketInstance*
     uavcan_register_interface_add_entry("battery_status",set_battery_status_port_id, get_battery_status_port_id);
     uavcan_register_interface_add_entry("battery_parameters",set_battery_parameter_port_id, get_battery_parameter_port_id);
     uavcan_register_interface_add_entry("battery_info",set_battery_info_port_id, get_battery_info_port_id);
+    uavcan_register_interface_add_entry("bms_fault_code",set_bms_fault_code, get_bms_fault_code);
 
-    (void) canardRxSubscribe(ins,   // Subscribe to messages uavcan.node.Heartbeat.
-        CanardTransferKindMessage,
-        32085,  // The fixed Subject-ID of the Heartbeat message type (see DSDL definition).
-        7,      // The maximum payload size (max DSDL object size) from the DSDL definition.
-        CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC,
-        &heartbeat_subscription);
 
-    (void) canardRxSubscribe(ins,
-        CanardTransferKindMessage,
-        PORT_ID,                     // The Service-ID to subscribe to.
-        TOPIC_SIZE,                  // The maximum payload size (max DSDL object size).
-        CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC,
-        &my_subscription);
+
+    // (void) canardRxSubscribe(ins,   // Subscribe to messages uavcan.node.Heartbeat.
+    //     CanardTransferKindMessage,
+    //     32085,  // The fixed Subject-ID of the Heartbeat message type (see DSDL definition).
+    //     7,      // The maximum payload size (max DSDL object size) from the DSDL definition.
+    //     CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC,
+    //     &heartbeat_subscription);
+
+    // (void) canardRxSubscribe(ins,
+    //     CanardTransferKindMessage,
+    //     PORT_ID,                     // The Service-ID to subscribe to.
+    //     TOPIC_SIZE,                  // The maximum payload size (max DSDL object size).
+    //     CANARD_DEFAULT_TRANSFER_ID_TIMEOUT_USEC,
+    //     &my_subscription);
     
     return 0;
 }
@@ -674,7 +677,7 @@ static int UAVCANTask(int argc, char *argv[])
             }
             
             // process the TX and RX buffer
-            processTxRxOnce(&ins, &sock_ins, 4000);
+            processTxRxOnce(&ins, &sock_ins, 50);
         }
     }
 
@@ -2102,12 +2105,6 @@ void BatteryInfoToTransmitBuffer(CanardInstance *ins)
     }
 }
 
-// static void processReceivedTransfer(CanardTransfer *receive)
-// {
-//  cli_printf("Received transfer remote_node_id %d transfer_id: %d payload size: %d\n",
-//         receive->remote_node_id, receive->transfer_id, receive->payload_size);
-
-// }
 
 /****************************************************************************
  * Name: processTxRxOnce
@@ -2129,6 +2126,10 @@ void processTxRxOnce(CanardInstance *ins, CanardSocketInstance *sock_ins, int ti
                 break;                             // If the driver is busy, break and retry later.
             }
         }
+        else
+        {
+            break;
+        }
 
         canardTxPop(ins);                         // Remove the frame from the queue after it's transmitted.
         ins->memory_free(ins, (CanardFrame *)txf); // Deallocate the dynamic memory afterwards.
@@ -2147,7 +2148,7 @@ void processTxRxOnce(CanardInstance *ins, CanardSocketInstance *sock_ins, int ti
     CanardFrame received_frame;
 
     socketcanReceive(sock_ins, &received_frame);
-
+    
     CanardTransfer receive;
     result = canardRxAccept(ins,
         &received_frame, // The CAN frame received from the bus.
@@ -2165,11 +2166,16 @@ void processTxRxOnce(CanardInstance *ins, CanardSocketInstance *sock_ins, int ti
     else if (result == 1) 
     {
         // A transfer has been received, process it. !!!!
-
         if(receive.port_id == PNPGetPortID(ins)) 
         {
             PNPProcess(ins,&receive);
-        } 
+        }
+        // Handle specific port IDs
+        else if( receive.port_id == uavcan_node_ExecuteCommand_1_1_FIXED_PORT_ID_ )
+        {
+            uavcan_service_process(ins, &receive);
+        }
+        // Expect remaining messages to potentially be register service requests
         else 
         {
             uavcan_register_interface_process(ins, &receive);
@@ -2184,7 +2190,11 @@ void processTxRxOnce(CanardInstance *ins, CanardSocketInstance *sock_ins, int ti
                     break;                             // If the driver is busy, break and retry later.
                 }
             }
-
+            else
+            {
+                break;
+            }
+        
             canardTxPop(ins);                         // Remove the frame from the queue after it's transmitted.
             ins->memory_free(ins, (CanardFrame *)txf); // Deallocate the dynamic memory afterwards.
         }
