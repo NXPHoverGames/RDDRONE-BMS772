@@ -185,13 +185,13 @@ static void memFree(CanardInstance *const ins, void *const pointer);
 
 uint64_t getMonotonicTimestampUSec(void);
 
-static void EnergySourceToTransmitBuffer(CanardInstance *ins);
+static int EnergySourceToTransmitBuffer(CanardInstance *ins);
 
-static void BatteryStatusToTransmitBuffer(CanardInstance *ins);//, uint64_t timestamp_usec);
+static int BatteryStatusToTransmitBuffer(CanardInstance *ins);//, uint64_t timestamp_usec);
 
-static void BatteryParametersToTransmitBuffer(CanardInstance *ins);
+static int BatteryParametersToTransmitBuffer(CanardInstance *ins);
 
-static void BatteryInfoToTransmitBuffer(CanardInstance *ins);
+static int BatteryInfoToTransmitBuffer(CanardInstance *ins);
 
 static void processTxRxOnce(CanardInstance *ins, CanardSocketInstance *sock_ins, int timeout_msec);
 
@@ -741,7 +741,7 @@ uint64_t getMonotonicTimestampUSec(void)
  *
  ****************************************************************************/
 
-void EnergySourceToTransmitBuffer(CanardInstance *ins)
+int EnergySourceToTransmitBuffer(CanardInstance *ins)
 {
     void* dataReturn;
     uint8_t statusFlagBits = 0, nCells;
@@ -770,7 +770,7 @@ void EnergySourceToTransmitBuffer(CanardInstance *ins)
     if(subjectID == 65535)
     {
         // return
-        return;
+        return -1;
     }
     
     // make the payload buffer
@@ -924,7 +924,10 @@ void EnergySourceToTransmitBuffer(CanardInstance *ins)
         // It is possible to statically prove that an out-of-memory will never occur for a given application if the
         // heap is sized correctly; for background, refer to the Robson's Proof and the documentation for O1Heap.
         cli_printfError("UAVCAN ERROR: Transmit error %d\n", result);
+        return -2;
     }
+
+    return 0;
 }
 
 /****************************************************************************
@@ -935,7 +938,7 @@ void EnergySourceToTransmitBuffer(CanardInstance *ins)
  *
  ****************************************************************************/
 
-void BatteryStatusToTransmitBuffer(CanardInstance *ins)
+int BatteryStatusToTransmitBuffer(CanardInstance *ins)
 {
     void* dataReturn;
     uint8_t statusFlagBits = 0;
@@ -967,7 +970,7 @@ void BatteryStatusToTransmitBuffer(CanardInstance *ins)
     if(subjectID == 65535)
     {
         // return
-        return;
+        return -1;
     }
     
     // make the payload buffer
@@ -1172,7 +1175,10 @@ void BatteryStatusToTransmitBuffer(CanardInstance *ins)
         // It is possible to statically prove that an out-of-memory will never occur for a given application if the
         // heap is sized correctly; for background, refer to the Robson's Proof and the documentation for O1Heap.
         cli_printfError("UAVCAN ERROR: Transmit error %d\n", result);
+        return -2;
     }
+
+    return 0;
 }
 
 /****************************************************************************
@@ -1183,7 +1189,7 @@ void BatteryStatusToTransmitBuffer(CanardInstance *ins)
  *
  ****************************************************************************/
 
-void BatteryParametersToTransmitBuffer(CanardInstance *ins)
+int BatteryParametersToTransmitBuffer(CanardInstance *ins)
 {
     void* dataReturn;
     uint8_t statusFlagBits = 0;
@@ -1213,7 +1219,7 @@ void BatteryParametersToTransmitBuffer(CanardInstance *ins)
     if(subjectID == 65535)
     {
         // return
-        return;
+        return -1;
     }
 
     // make the payload buffer
@@ -1555,7 +1561,10 @@ void BatteryParametersToTransmitBuffer(CanardInstance *ins)
         // It is possible to statically prove that an out-of-memory will never occur for a given application if the
         // heap is sized correctly; for background, refer to the Robson's Proof and the documentation for O1Heap.
         cli_printfError("UAVCAN ERROR: Transmit error %d\n", result);
+        return -2;
     }
+
+    return 0;
 }
 
 /****************************************************************************
@@ -1567,7 +1576,7 @@ void BatteryParametersToTransmitBuffer(CanardInstance *ins)
  *
  ****************************************************************************/
 
-void BatteryInfoToTransmitBuffer(CanardInstance *ins)
+int BatteryInfoToTransmitBuffer(CanardInstance *ins)
 {
     void* dataReturn;
     uint8_t uint8Val, statusFlagBits = 0, nCells, i;
@@ -1599,7 +1608,7 @@ void BatteryInfoToTransmitBuffer(CanardInstance *ins)
         //cli_printfError("UAVCAN ERROR: uavcan-es-sub-id is 65535, not outputing message!\n");
 
         // return
-        return;
+        return -1;
     }
     
     // make the payload buffer
@@ -2102,7 +2111,10 @@ void BatteryInfoToTransmitBuffer(CanardInstance *ins)
         // It is possible to statically prove that an out-of-memory will never occur for a given application if the
         // heap is sized correctly; for background, refer to the Robson's Proof and the documentation for O1Heap.
         cli_printfError("UAVCAN ERROR: Transmit error %d\n", result);
+        return -2;
     }
+
+    return 0;
 }
 
 
@@ -2120,19 +2132,24 @@ void processTxRxOnce(CanardInstance *ins, CanardSocketInstance *sock_ins, int ti
     int ret;
     
     /* Transmitting */
-    for (const CanardFrame *txf = NULL; (txf = canardTxPeek(ins)) != NULL;) { // Look at the top of the TX queue.
-        if (txf->timestamp_usec > getMonotonicTimestampUSec()) { // Check if the frame has timed out.
-            if (socketcanTransmit(sock_ins, txf) == 0) {           // Send the frame. Redundant interfaces may be used here.
-                break;                             // If the driver is busy, break and retry later.
+    for (const CanardFrame *txf = NULL; (txf = canardTxPeek(ins)) != NULL;) 
+    {
+        uint64_t now = getMonotonicTimestampUSec();
+        if (txf->timestamp_usec > now) { 
+            // Deadline hasn't yet arrived good to send
+            int scret = socketcanTransmit(sock_ins, txf);
+            if( scret > 0 )
+            {
+                canardTxPop(ins);                         // Remove the frame from the queue after it's transmitted.
+                ins->memory_free(ins, (CanardFrame *)txf); // Deallocate the dynamic memory afterwards.
             }
         }
         else
         {
-            break;
+            // Passed the deadline, evict from queue without transmitting
+            canardTxPop(ins);                         // Remove the frame from the queue after it's transmitted.
+            ins->memory_free(ins, (CanardFrame *)txf); // Deallocate the dynamic memory afterwards.
         }
-
-        canardTxPop(ins);                         // Remove the frame from the queue after it's transmitted.
-        ins->memory_free(ins, (CanardFrame *)txf); // Deallocate the dynamic memory afterwards.
     }
 
     // check for incomming data or timeout 
@@ -2186,19 +2203,24 @@ void processTxRxOnce(CanardInstance *ins, CanardSocketInstance *sock_ins, int ti
         ins->memory_free(ins, (void *)receive.payload); // Deallocate the dynamic memory afterwards.
 
         /* Transmitting */
-        for (const CanardFrame *txf = NULL; (txf = canardTxPeek(ins)) != NULL;) { // Look at the top of the TX queue.
-            if (txf->timestamp_usec > getMonotonicTimestampUSec()) { // Check if the frame has timed out.
-                if (socketcanTransmit(sock_ins, txf) == 0) {           // Send the frame. Redundant interfaces may be used here.
-                    break;                             // If the driver is busy, break and retry later.
+        for (const CanardFrame *txf = NULL; (txf = canardTxPeek(ins)) != NULL;) 
+        {
+            uint64_t now = getMonotonicTimestampUSec();
+            if (txf->timestamp_usec > now) { 
+                // Deadline hasn't yet arrived good to send
+                int scret = socketcanTransmit(sock_ins, txf);
+                if( scret > 0 )
+                {
+                    canardTxPop(ins);                         // Remove the frame from the queue after it's transmitted.
+                    ins->memory_free(ins, (CanardFrame *)txf); // Deallocate the dynamic memory afterwards.
                 }
             }
             else
             {
-                break;
+                // Passed the deadline, evict from queue without transmitting
+                canardTxPop(ins);                         // Remove the frame from the queue after it's transmitted.
+                ins->memory_free(ins, (CanardFrame *)txf); // Deallocate the dynamic memory afterwards.
             }
-        
-            canardTxPop(ins);                         // Remove the frame from the queue after it's transmitted.
-            ins->memory_free(ins, (CanardFrame *)txf); // Deallocate the dynamic memory afterwards.
         }
 
     } 
