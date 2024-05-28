@@ -68,7 +68,8 @@
 /*! @brief Maximal number of Battery Cell Controller devices in TPL mode. */
 #define BCC_DEVICE_CNT_MAX_TPL    15U
 /*! @brief Maximal number of Battery Cell Controller devices. */
-#define BCC_DEVICE_CNT_MAX        BCC_DEVICE_CNT_MAX_TPL
+// #define BCC_DEVICE_CNT_MAX        BCC_DEVICE_CNT_MAX_TPL
+#define BCC_DEVICE_CNT_MAX        BCC_DEVICE_CNT_MAX_SPI
 
 /*! @brief Minimal battery cell count connected to MC33771. */
 #define BCC_MIN_CELLS_MC33771     7U
@@ -357,7 +358,7 @@ typedef struct
     uint16_t cellMap[BCC_DEVICE_CNT_MAX]; /*!< Bit map of used cells of each BCC device. */
     uint8_t rcTbl[BCC_DEVICE_CNT_MAX];    /*!< Rolling counter index (0-4). */
     uint8_t tagId[BCC_DEVICE_CNT_MAX];    /*!< TAG IDs of BCC devices. */
-    uint8_t rxBuf[BCC_RX_BUF_SIZE_TPL];   /*!< Buffer for receiving data in TPL mode. */
+    // uint8_t rxBuf[BCC_RX_BUF_SIZE_TPL];   /*!< Buffer for receiving data in TPL mode. */
 } bcc_drv_data_t;
 
 /*!

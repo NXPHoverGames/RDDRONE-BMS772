@@ -541,10 +541,13 @@ bcc_status_t BCC_VerifyCom(bcc_drv_config_t* const drvConfig, bcc_cid_t cid)
     {
         return BCC_VerifyComSpi(drvConfig, cid);
     }
-    else
-    {
-        return BCC_VerifyComTpl(drvConfig, cid);
-    }
+    
+    // TODO(Charles): We don't use TPL, so we save some memory by not using anything relating to it
+    return BCC_STATUS_COM_TIMEOUT;
+    // else
+    // {
+    //     return BCC_VerifyComTpl(drvConfig, cid);
+    // }
 }
 
 /*FUNCTION**********************************************************************
@@ -563,11 +566,15 @@ bcc_status_t BCC_Sleep(bcc_drv_config_t* const drvConfig)
         return BCC_Reg_Write(drvConfig, BCC_CID_DEV1, BCC_REG_SYS_CFG_GLOBAL_ADDR,
                              BCC_GO2SLEEP_ENABLED, NULL);
     }
-    else
-    {
-        return BCC_Reg_WriteGlobal(drvConfig, BCC_REG_SYS_CFG_GLOBAL_ADDR,
-                                    BCC_GO2SLEEP_ENABLED);
-    }
+
+    // TODO(Charles): We don't use TPL, so we save some memory by not using anything relating to it
+    return BCC_STATUS_COM_TIMEOUT;
+
+    // else
+    // {
+    //     return BCC_Reg_WriteGlobal(drvConfig, BCC_REG_SYS_CFG_GLOBAL_ADDR,
+    //                                 BCC_GO2SLEEP_ENABLED);
+    // }
 }
 
 /*FUNCTION**********************************************************************
@@ -611,11 +618,11 @@ bcc_status_t BCC_SoftwareReset(bcc_drv_config_t* const drvConfig, bcc_cid_t cid)
     {
         return BCC_STATUS_PARAM_RANGE;
     }
-    else if (cid == BCC_CID_UNASSIG)
-    {
-        /* TPL Global reset command. */
-        error = BCC_Reg_WriteGlobal(drvConfig, BCC_REG_SYS_CFG1_ADDR, BCC_W_SOFT_RST_MASK);
-    }
+    // else if (cid == BCC_CID_UNASSIG)
+    // {
+    //     /* TPL Global reset command. */
+    //     error = BCC_Reg_WriteGlobal(drvConfig, BCC_REG_SYS_CFG1_ADDR, BCC_W_SOFT_RST_MASK);
+    // }
     else
     {
         error = BCC_Reg_Write(drvConfig, cid, BCC_REG_SYS_CFG1_ADDR, BCC_W_SOFT_RST_MASK, NULL);
@@ -729,10 +736,14 @@ bcc_status_t BCC_Reg_Read(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
     {
         return BCC_Reg_ReadSpi(drvConfig, cid, regAddr, regCnt, regVal);
     }
-    else
-    {
-        return BCC_Reg_ReadTpl(drvConfig, cid, regAddr, regCnt, regVal);
-    }
+
+    // TODO(Charles): We don't use TPL, so we save some memory by not using anything relating to it
+    return BCC_STATUS_COM_TIMEOUT;
+
+    // else
+    // {
+    //     return BCC_Reg_ReadTpl(drvConfig, cid, regAddr, regCnt, regVal);
+    // }
 }
 
 /*FUNCTION**********************************************************************
@@ -751,10 +762,14 @@ bcc_status_t BCC_Reg_Write(bcc_drv_config_t* const drvConfig, bcc_cid_t cid,
     {
         return BCC_Reg_WriteSpi(drvConfig, cid, regAddr, regVal, retReg);
     }
-    else
-    {
-        return BCC_Reg_WriteTpl(drvConfig, cid, regAddr, regVal, retReg);
-    }
+
+    // TODO(Charles): We don't use TPL, so we save some memory by not using anything relating to it
+    return BCC_STATUS_COM_TIMEOUT;
+
+    // else
+    // {
+    //     return BCC_Reg_WriteTpl(drvConfig, cid, regAddr, regVal, retReg);
+    // }
 }
 
 /*FUNCTION**********************************************************************
@@ -770,7 +785,10 @@ bcc_status_t BCC_Reg_WriteGlobal(bcc_drv_config_t* const drvConfig,
     BCC_MCU_Assert(drvConfig != NULL);
     BCC_MCU_Assert(drvConfig->commMode == BCC_MODE_TPL);
 
-    return BCC_Reg_WriteGlobalTpl(drvConfig, regAddr, regVal);
+    // TODO(Charles): We don't use TPL, so we save some memory by not using anything relating to it
+    return BCC_STATUS_COM_TIMEOUT;
+
+    // return BCC_Reg_WriteGlobalTpl(drvConfig, regAddr, regVal);
 }
 
 /*FUNCTION**********************************************************************
