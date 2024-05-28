@@ -64,7 +64,7 @@ CSRCS   += src/BCC/Derivatives/bcc_spi.c
 CSRCS   += src/BCC/Derivatives/bcc_tpl.c
 CSRCS   += src/UAVCAN/o1heap.c
 CSRCS   += src/UAVCAN/socketcan.c
-CSRCS   += src/UAVCAN/pnp.c
+# CSRCS   += src/UAVCAN/pnp.c
 CSRCS   += src/UAVCAN/portid.c
 CSRCS   += src/sbc.c
 CSRCS   += src/nfc.c
@@ -85,6 +85,7 @@ CFLAGS  += -I $(TOPDIR)/../nuttx/boards/arm/s32k1xx/rddrone-bms772/src
 CFLAGS  += -I $(TOPDIR)/../nuttx/include/arch/chip
 CFLAGS  += -I $(TOPDIR)/../nuttx/include/arch/board
 CFLAGS  += -I $(TOPDIR)/../nuttx/arch/arm/src/s32k1xx
+CFLAGS  += -fstack-usage
 
 
 include $(APPDIR)/Application.mk

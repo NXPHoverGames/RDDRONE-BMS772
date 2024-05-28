@@ -69,7 +69,7 @@
 
 #include "data.h"
 
-#include "pnp.h"
+// #include "pnp.h"
 #include "portid.h"
 
 #define NUNAVUT_ASSERT
@@ -132,8 +132,8 @@ static bool gUavcanInitialized = false;
 
 static uavcan_node_GetInfo_Response_1_0 node_information = {0};
 
-CanardRxSubscription heartbeat_subscription;
-CanardRxSubscription my_subscription;
+// CanardRxSubscription heartbeat_subscription;
+// CanardRxSubscription my_subscription;
 
 /* Arena for memory allocation, used by the library */
 
@@ -2165,13 +2165,15 @@ void processTxRxOnce(CanardInstance *ins, CanardSocketInstance *sock_ins, int ti
     } 
     else if (result == 1) 
     {
-        // A transfer has been received, process it. !!!!
-        if(receive.port_id == PNPGetPortID(ins)) 
-        {
-            PNPProcess(ins,&receive);
-        }
-        // Handle specific port IDs
-        else if( receive.port_id == uavcan_node_ExecuteCommand_1_1_FIXED_PORT_ID_ )
+        // // A transfer has been received, process it. !!!!
+        // if(receive.port_id == PNPGetPortID(ins)) 
+        // {
+        //     PNPProcess(ins,&receive);
+        // }
+        // // Handle specific port IDs
+        // else 
+        
+        if( receive.port_id == uavcan_node_ExecuteCommand_1_1_FIXED_PORT_ID_ )
         {
             uavcan_service_process(ins, &receive);
         }
