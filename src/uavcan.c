@@ -109,7 +109,7 @@
 #define UNIQUE_ID_LENGTH_BYTES                   16
 
 #define LIBCANARDV1_DAEMON_PRIORITY             141
-#define LIBCANARDV1_DAEMON_STACK_SIZE           4000
+#define LIBCANARDV1_DAEMON_STACK_SIZE           5000
 #define CAN_DEVICE                              "can0"
 
 #define CELSIUS_TO_KELVIN                       272.15
