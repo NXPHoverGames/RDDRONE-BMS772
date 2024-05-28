@@ -793,7 +793,7 @@ int EnergySourceToTransmitBuffer(CanardInstance *ins)
 
     // make the timestamp 
     // leave it empty for now
-    energySource.timestamp.microsecond = 0;
+    energySource.timestamp.microsecond = getMonotonicTimestampUSec();
 
     // make the value
 
