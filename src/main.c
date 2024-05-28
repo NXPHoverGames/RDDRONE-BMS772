@@ -51,7 +51,6 @@
 #include "batManagement.h"
 #include "uavcan.h"
 #include "sbc.h"
-#include "nfc.h"
 #include "a1007.h"
 #include "spi.h"
 #include "SMBus.h"
@@ -156,17 +155,13 @@ bool gStateCommandInitialized = false;
 pthread_mutex_t gSetUavcanMessagesLock;
 bool gSetUavcanMessagesInitialized = false;
 
-//! mutex for enabling or disabling the NFC Update
-pthread_mutex_t gSetNfcUpdateLock;
-bool gSetNfcUpdateLockInitialized = false;
-
 /*! @brief  semaphore to do the main loop*/
 static sem_t gMainLoopSem;
 
 static sem_t gDataChangedSem;
 static bool gChangedParameterTaskStarted = false;
 
-/*! @brief  semaphore to update the NFC information*/
+/*! @brief  semaphore to update the information*/
 static sem_t gUpdaterSem;
 /*! @brief  to indicate the semaphore and the task are initialized*/
 static bool gUpdaterInitialized = false;
@@ -208,7 +203,7 @@ static int mainTaskFunc(int argc, char *argv[]);
 static int handleParamChangeFunc(int argc, char *argv[]);
 
 /*!
- * @brief function for a task to handle the update of the NFC, SMBus
+ * @brief function for a task to handle the update of the SMBus
  * 
  * @param argc the amount of arguments there are in argv (if the last argument is NULL!)
  * @param argv a character pointer array with the arguments, first is the taskname than the arguments
@@ -348,20 +343,6 @@ static int getOcvPeriodTime(int32_t *newTime, states_t oldState);
 static int setNGetEnableUavcanMessages(bool setNGet, bool enable);
 
 /*!
- * @brief   function that is used to enable or disable the NFC update 
- *          or get the value if it should update the NFC.
- * 
- * @param   setNGet if true it will set the value if the NFC should be updated.
- *          if false it will return 1 if it should be updated, 0 otherwise.
- * @param   enable if setNGet is true, if enable is true the NFC update is enabled 
- *          to update after the new measurements, if enable is false otherwise.
- * @note    this function can be safely called from multiple threads.
- *
- * @return  < 0 if not OK, >= 0 if OK.
- */
-static int setNGetEnableNFCUpdates(bool setNGet, bool enable);
-
-/*!
  * @brief   Function that is used to call a usleep (task switch as well)
  *          but it will kick the watchdog first. 
  * 
@@ -470,14 +451,6 @@ int bms_main(int argc, char *argv[])
         // initialize the state command lock
         pthread_mutex_init(&gSetUavcanMessagesLock, NULL);
         gSetUavcanMessagesInitialized = true;
-    }
-
-    // check if not initialized 
-    if(!gSetNfcUpdateLockInitialized)
-    {
-        // initialize the state command lock
-        pthread_mutex_init(&gSetNfcUpdateLock, NULL);
-        gSetNfcUpdateLockInitialized = true;
     }
 
     // initialize the functions
@@ -670,20 +643,6 @@ int bms_main(int argc, char *argv[])
         if(!resetCauseExWatchdog)
         {
             //return lvRetValue;
-        }
-    }
-
-    // initialze the NFC
-    lvRetValue = nfc_initialize(resetCauseExWatchdog);
-    if(lvRetValue)
-    {
-        // output to the user
-        cli_printfError("main ERROR: failed to initialize nfc! code %d\n", lvRetValue);
-
-        // Check if the reset cause is not the watchdog
-        if(!resetCauseExWatchdog)
-        {
-            cli_printf("SELF-TEST NFC: \e[31mFAIL\e[39m\n");
         }
     }
 
@@ -1617,14 +1576,6 @@ static int mainTaskFunc(int argc, char *argv[])
                         cli_printfError("main ERROR: Could not enable UAVCAN messages!\n");
                     }
 
-                    // turn on the NFC update 
-                    if(setNGetEnableNFCUpdates(true, true) < 0)
-                    {
-                        // output error
-                        cli_printfError("main ERROR: Could not enable NFC update!\n");
-                    }
-
-
                     // enable CC overflow on the fault pin
                     batManagement_setCCOvrFltEnable(true);
 
@@ -1704,7 +1655,7 @@ static int mainTaskFunc(int argc, char *argv[])
 
                     cli_printf("NORMAL mode\n");
 
-                    // TODO CLI and NFC is allowed
+                    // TODO CLI is allowed
 
                     // TODO enable diagnostics
                 }
@@ -1797,7 +1748,7 @@ static int mainTaskFunc(int argc, char *argv[])
                     // set the variable to false
                     chargeToStorage = false;
 
-                    // TODO CLI and NFC is allowed
+                    // TODO CLI is allowed
 
                     // TODO enable diagnostics
                 }
@@ -1908,13 +1859,6 @@ static int mainTaskFunc(int argc, char *argv[])
 
                             // make sure it will output the end time once
                             onlyOnce = true;
-
-                            // turn off the NFC update and enter outdated message
-                            if(setNGetEnableNFCUpdates(true, false) < 0)
-                            {
-                                // output error
-                                cli_printfError("main ERROR: Could not disable NFC update!\n");
-                            }
 
                             // set the SMBus current to 0
                             SMBus_updateInformation(true);
@@ -2268,13 +2212,6 @@ static int mainTaskFunc(int argc, char *argv[])
                                     // set the AFE mode back to normal (since gate will be closed)
                                     batManagement_setAFEMode(AFE_NORMAL);
 
-                                    // turn on the NFC update 
-                                    if(setNGetEnableNFCUpdates(true, true) < 0)
-                                    {
-                                        // output error
-                                        cli_printfError("main ERROR: Could not enable NFC update!\n");
-                                    }
-
                                     // go back to charge with CB
                                     setChargeState(CHARGE_CB);
                                 } 
@@ -2338,13 +2275,6 @@ static int mainTaskFunc(int argc, char *argv[])
 
                                     // set the AFE mode back to normal (since gate will be closed)
                                     batManagement_setAFEMode(AFE_NORMAL);
-
-                                    // turn on the NFC update again
-                                    if(setNGetEnableNFCUpdates(true, true) < 0)
-                                    {
-                                        // output error
-                                        cli_printfError("main ERROR: Could not enable NFC update!\n");
-                                    }
 
                                     // go to charging complete
                                     setChargeState(CHARGE_COMPLETE);
@@ -2608,13 +2538,6 @@ static int mainTaskFunc(int argc, char *argv[])
 
                         // set the AFE mode back to normal (since gate will be closed)
                         batManagement_setAFEMode(AFE_NORMAL);
-
-                        // turn on the NFC update 
-                        if(setNGetEnableNFCUpdates(true, true) < 0)
-                        {
-                            // output error
-                            cli_printfError("main ERROR: Could not enable NFC update!\n");
-                        }
                     }
                 }
 
@@ -2681,13 +2604,6 @@ static int mainTaskFunc(int argc, char *argv[])
                     {
                         // output error
                         cli_printfError("main ERROR: Could not disable UAVCAN messages!\n");
-                    }
-
-                    // turn off the NFC update and enter outdated message
-                    if(setNGetEnableNFCUpdates(true, false) < 0)
-                    {
-                        // output error
-                        cli_printfError("main ERROR: Could not disable NFC update!\n");
                     }
 
                     // set the SMBus current to 0
@@ -2853,16 +2769,6 @@ static int mainTaskFunc(int argc, char *argv[])
                         // go to the self discharge state
                         setMainState(SELF_DISCHARGE);
                     }
-                }
-
-                // check if the NFC is active
-                if(gpio_readPin(NFC_ED) == NFC_ED_PIN_ACTIVE)
-                {
-                    // print to the user
-                    cli_printf("NFC activity detected!\n");
-
-                    // wake up to update the measurements
-                    setMainState(INIT);
                 }
 
                 // check for current
@@ -3112,13 +3018,6 @@ static int mainTaskFunc(int argc, char *argv[])
                         cli_printfError("main ERROR: Could not enable UAVCAN messages!\n");
                     }
 
-                    // turn on the NFC update 
-                    if(setNGetEnableNFCUpdates(true, true) < 0)
-                    {
-                        // output error
-                        cli_printfError("main ERROR: Could not enable NFC update!\n");
-                    }
-
                     cli_printf("FAULT mode\n");
 
                     // set the bool value to output the message only once
@@ -3313,13 +3212,6 @@ static int mainTaskFunc(int argc, char *argv[])
                     // set the LED to magenta(purple) blinking
                     ledState_setLedColor(BLUE, OFF, LED_BLINK_ON);
 
-                    // turn on the NFC update 
-                    if(setNGetEnableNFCUpdates(true, true) < 0)
-                    {
-                        // output error
-                        cli_printfError("main ERROR: Could not enable NFC update!\n");
-                    }
-
                     // turn on the measurements if not on
                     batManagement_updateMeasurementsOn(true);
 
@@ -3449,13 +3341,6 @@ static int mainTaskFunc(int argc, char *argv[])
                     if(i2c_enableTransmission(true))
                     {
                         cli_printfError("main ERROR: failed to enable I2C!\n");
-                    }
-
-                    // turn off the NFC update and enter outdated message
-                    if(setNGetEnableNFCUpdates(true, false) < 0)
-                    {
-                        // output error
-                        cli_printfError("main ERROR: Could not disable NFC update!\n");
                     }
 
                     // set the SMBus current to 0
@@ -4026,7 +3911,7 @@ static int handleParamChangeFunc(int argc, char *argv[])
 }
 
 /*!
- * @brief function for a task to handle the update of the NFC, SMBus
+ * @brief function for a task to handle the update of the SMBus
  * 
  * @param argc the amount of arguments there are in argv (if the last argument is NULL!)
  * @param argv a character pointer array with the arguments, first is the taskname than the arguments
@@ -4087,17 +3972,6 @@ static int updaterTaskFunc(int argc, char *argv[])
 
             // sleep for a little while
             usleep(1);
-        }
-
-        // check if the NFC needs to be updated
-        if(setNGetEnableNFCUpdates(false, 0))
-        {
-            // update the NFC and check for errors
-            if(nfc_updateBMSStatus(false, false))
-            {
-                // output to the user
-                cli_printfError("updater ERROR: Can't update NFC!\n");
-            }
         }
 
         // TODO make CLI lower prio
@@ -4931,70 +4805,6 @@ static int setNGetEnableUavcanMessages(bool setNGet, bool enable)
 
     // unlock the mutex
     pthread_mutex_unlock(&gSetUavcanMessagesLock);
-
-    // return
-    return lvRetValue;
-}
-
-/*!
- * @brief   function that is used to enable or disable the NFC update 
- *          or get the value if it should update the NFC.
- * 
- * @param   setNGet if true it will set the value if the NFC should be updated.
- *          if false it will return 1 if it should be updated, 0 otherwise.
- * @param   enable if setNGet is true, if enable is true the NFC update is enabled 
- *          to update after the new measurements, if enable is false otherwise.
- * @note    this function can be safely called from multiple threads.
- *
- * @return  < 0 if not OK, >= 0 if OK.
- */
-static int setNGetEnableNFCUpdates(bool setNGet, bool enable)
-{
-    int lvRetValue = -1;
-    static bool enableNfcUpdate = false;
-
-    // check if mutex is not initialized
-    if(!gSetNfcUpdateLockInitialized)
-    {
-        // output error
-        cli_printfError("setNGetEnableNFCUpdates ERROR: Mutex not initialized!\n");
-
-        // return
-        return lvRetValue;
-    }
-
-    // lock the mutex
-    pthread_mutex_lock(&gSetNfcUpdateLock);
-
-    // check if it needs to set the value
-    if(setNGet)
-    {
-        // set the message
-        enableNfcUpdate = enable;
-
-        // check if the NFC is turned off 
-        if(!enable)
-        {
-            // check which state it is in
-            if(getMainState() == SLEEP)
-            {
-                // put the wakeup data notice in the NTAG
-                nfc_updateBMSStatus(true, true);
-            }
-            else
-            {
-                // put the charge relaxation data notice in the NTAG
-                nfc_updateBMSStatus(true, false);
-            }
-           
-        }
-    }
-
-    // make the return value
-    lvRetValue = enableNfcUpdate;
-
-    // unlock the mutex
-    pthread_mutex_unlock(&gSetNfcUpdateLock);
 
     // return
     return lvRetValue;
