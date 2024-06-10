@@ -3,7 +3,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2021 NXP
+ * Copyright 2021-2023 NXP
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -63,7 +63,6 @@
  ****************************************************************************/
 //! mutex for setting or getting the MCU power mode
 pthread_mutex_t gPowerModeLock;
-bool gPowerModeLockInitialized = false;
 
 /****************************************************************************
  * private Functions declerations 
@@ -79,23 +78,15 @@ bool gPowerModeLockInitialized = false;
  */
 int power_initialize(void)
 {
-    int lvRetValue;
+    // initialize the mutex
+    pthread_mutex_init(&gPowerModeLock, NULL);
 
-    // check if already initialzed 
-    if(!gPowerModeLockInitialized)
-    {
-        // initialize the mutex
-        pthread_mutex_init(&gPowerModeLock, NULL);
-
-        // state it is initialized
-        gPowerModeLockInitialized = true;
-    }
-
-    // set the return value
-    lvRetValue = !gPowerModeLockInitialized;
+#ifdef DISABLE_PM
+    cli_printfWarning("PM Functionality is disabled! BMS will not be low power at all!\r\n");
+#endif
 
     // return
-    return lvRetValue;
+    return OK;
 }
 
 /*!
@@ -110,7 +101,9 @@ int power_initialize(void)
 mcuPowerModes_t power_setNGetMcuPowerMode(bool setNotGet, mcuPowerModes_t newValue)
 {
     mcuPowerModes_t lvRetValue = ERROR_VALUE;
-    int error; 
+    int error;
+
+#ifndef DISABLE_PM
 
     // variable to check the PM state
     struct boardioc_pm_ctrl_s pmVariable = {
@@ -120,15 +113,6 @@ mcuPowerModes_t power_setNGetMcuPowerMode(bool setNotGet, mcuPowerModes_t newVal
         .count =    0,
         .priority = 0,
     };
-
-    // check if the mutex is not initialized
-    if(!gPowerModeLockInitialized)
-    {
-        // output error and return
-        cli_printfError("setNGetMcuPowerMode ERROR: not initialized!\n");
-
-        return lvRetValue;
-    }
 
     // lock the mutex
     pthread_mutex_lock(&gPowerModeLock);
@@ -245,6 +229,9 @@ mcuPowerModes_t power_setNGetMcuPowerMode(bool setNotGet, mcuPowerModes_t newVal
 
     // unlock the mutex
     pthread_mutex_unlock(&gPowerModeLock);
+#else
+    lvRetValue = RUN_MODE;
+#endif
 
     // return the value
     return lvRetValue;

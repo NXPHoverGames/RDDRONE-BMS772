@@ -3,7 +3,7 @@
 #
 # BSD 3-Clause License
 # 
-# Copyright 2020-2022 NXP
+# Copyright 2020-2023 NXP
 # 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -49,7 +49,8 @@ CSRCS   += src/ledState.c
 CSRCS   += src/gpio.c
 CSRCS   += src/batManagement.c
 CSRCS   += src/spi.c
-CSRCS   += src/uavcan.c
+CSRCS   += src/cyphalcan.c
+CSRCS   += src/dronecan.c
 
 CSRCS   += src/BCC/bcc_wait.c
 CSRCS   += src/BCC/bcc_peripheries.c
@@ -62,10 +63,11 @@ CSRCS   += src/BCC/Derivatives/bcc_communication.c
 # CSRCS     += src/BCC/Derivatives/bcc_diagnostics.c
 CSRCS   += src/BCC/Derivatives/bcc_spi.c
 CSRCS   += src/BCC/Derivatives/bcc_tpl.c
-CSRCS   += src/UAVCAN/o1heap.c
-CSRCS   += src/UAVCAN/socketcan.c
-CSRCS   += src/UAVCAN/pnp.c
-CSRCS   += src/UAVCAN/portid.c
+CSRCS   += src/CAN/o1heap.c
+CSRCS   += src/CAN/socketcan.c
+CSRCS   += src/CAN/pnp.c
+CSRCS   += src/CAN/portid.c
+CSRCS   += src/CAN/timestamp.c
 CSRCS   += src/sbc.c
 CSRCS   += src/nfc.c
 CSRCS   += src/a1007.c
@@ -73,18 +75,21 @@ CSRCS   += src/SMBus.c
 CSRCS   += src/i2c.c
 CSRCS   += src/power.c
 CSRCS   += src/display.c
+CSRCS   += src/balancing.c
 
 MAINSRC = src/main.c
 CFLAGS  += -I inc
 CFLAGS  += -I inc/BCC
 CFLAGS  += -I inc/BCC/Derivatives
-CFLAGS  += -I inc/UAVCAN
+CFLAGS  += -I inc/CAN
+CFLAGS  += -I inc/dronecan
 CFLAGS  += -std=c11 -I$(APPDIR)/include/canutils
-CFLAGS  += -I $(TOPDIR)/../nuttx/arch/arm/src/common
-CFLAGS  += -I $(TOPDIR)/../nuttx/boards/arm/s32k1xx/rddrone-bms772/src
-CFLAGS  += -I $(TOPDIR)/../nuttx/include/arch/chip
-CFLAGS  += -I $(TOPDIR)/../nuttx/include/arch/board
-CFLAGS  += -I $(TOPDIR)/../nuttx/arch/arm/src/s32k1xx
+CFLAGS  += -I $(TOPDIR)/arch/arm/src/common
+CFLAGS  += -I $(TOPDIR)/boards/arm/s32k1xx/rddrone-bms772/src
+CFLAGS  += -I $(TOPDIR)/include/arch/chip
+CFLAGS  += -I $(TOPDIR)/include/arch/board
+CFLAGS  += -I $(TOPDIR)/arch/arm/src/s32k1xx
+CFLAGS  += -I $(TOPDIR)/boards/arm/s32k1xx/drivers
 
 
 include $(APPDIR)/Application.mk

@@ -67,8 +67,6 @@
 /****************************************************************************
  * Private Variables
  ****************************************************************************/
-static bool gA1007Initialized = false;
-static bool gDoNotInitialzeA1007 = false;
 
 /****************************************************************************
  * Private Functions
@@ -95,81 +93,71 @@ int a1007_initialize(bool skipSelfTest)
     int lvRetValue = 0;
     uint8_t regVal[2] = {0, 0};
 
-    // check if not initialized 
-    if(!gA1007Initialized && !gDoNotInitialzeA1007)
+    // Check if the self-test shouldn't be skipped
+    if(!skipSelfTest)
     {
-        // Check if the self-test shouldn't be skipped
-        if(!skipSelfTest)
+        cli_printf("SELF-TEST A1007: START\n");
+
+        // wake up the A1007 with the wakeup pin
+        // write the pin to high
+        lvRetValue = gpio_writePin(AUTH_WAKE, 1);
+
+        // check if it went wrong
+        if(lvRetValue)
         {
-            cli_printf("SELF-TEST A1007: START\n");
-
-            // don't do the initialize again
-            gDoNotInitialzeA1007 = true;
-
-            // wake up the A1007 with the wakeup pin
-            // write the pin to high
-            lvRetValue = gpio_writePin(AUTH_WAKE, 1);
-
-            // check if it went wrong
-            if(lvRetValue)
-            {
-                cli_printfError("A1007 ERROR: writing AUTH_WAKE high went wrong!\n");
-                    
-                cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
-                return lvRetValue;
-            }
-
-            // sleep for 50us for the wakeup pulse
-            usleep(50);
-
-            // write the pin to low
-            lvRetValue = gpio_writePin(AUTH_WAKE, 0);
-
-            // check if it went wrong
-            if(lvRetValue)
-            {
-                cli_printfError("A1007 ERROR: writing AUTH_WAKE low went wrong!\n");
-
-                cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
-                return lvRetValue;
-            }
-
-            // get the status command reg val and check for errors
-            lvRetValue = i2c_readData(A1007_SLAVE_ADR, 
-                STATUS_COMMAND_REG_ADR, regVal, 2, true);
-
-            // check for errors
-            if(lvRetValue)
-            {
-                //output to the user
-                cli_printfError("A1007 ERROR: Can't do i2c tranfer, error: %d\n", lvRetValue);
-
-                // return to the user
-                return lvRetValue;    
-            }
-
-            // check if there are no wrong status bits
-            if((regVal[1] & STATUS_COMMAND_REG_VAL_MASK) != 0)
-            {
-                // output to the user
-                cli_printfError("A1007 ERROR: status command has wrong bits!\n");
-
-                cli_printf("is: %d, should be 0!\n", regVal[1] & STATUS_COMMAND_REG_VAL_MASK);
-
-                cli_printf("Can't verify A1007 chip!\n");
-
-                // set the returnvalue 
-                lvRetValue = -1;
-
-                return lvRetValue;
-            }
-
-            //cli_printf("A1007 I2C communication verified!\n");
-            cli_printf("SELF-TEST A1007: \e[32mPASS\e[39m\n");
+            cli_printfError("A1007 ERROR: writing AUTH_WAKE high went wrong!\n");
+                
+            cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
+            return lvRetValue;
         }
 
-        // set that it is initialzed
-        gA1007Initialized = true;
+        // sleep for 50us for the wakeup pulse
+        usleep(50);
+
+        // write the pin to low
+        lvRetValue = gpio_writePin(AUTH_WAKE, 0);
+
+        // check if it went wrong
+        if(lvRetValue)
+        {
+            cli_printfError("A1007 ERROR: writing AUTH_WAKE low went wrong!\n");
+
+            cli_printf("SELF-TEST GPIO: \e[31mFAIL\e[39m\n");
+            return lvRetValue;
+        }
+
+        // get the status command reg val and check for errors
+        lvRetValue = i2c_readData(A1007_SLAVE_ADR, 
+            STATUS_COMMAND_REG_ADR, regVal, 2, true);
+
+        // check for errors
+        if(lvRetValue)
+        {
+            //output to the user
+            cli_printfError("A1007 ERROR: Can't do i2c tranfer, error: %d\n", lvRetValue);
+
+            // return to the user
+            return lvRetValue;    
+        }
+
+        // check if there are no wrong status bits
+        if((regVal[1] & STATUS_COMMAND_REG_VAL_MASK) != 0)
+        {
+            // output to the user
+            cli_printfError("A1007 ERROR: status command has wrong bits!\n");
+
+            cli_printf("is: %d, should be 0!\n", regVal[1] & STATUS_COMMAND_REG_VAL_MASK);
+
+            cli_printf("Can't verify A1007 chip!\n");
+
+            // set the returnvalue 
+            lvRetValue = -1;
+
+            return lvRetValue;
+        }
+
+        //cli_printf("A1007 I2C communication verified!\n");
+        cli_printf("SELF-TEST A1007: \e[32mPASS\e[39m\n");
     }
 
     // return to the user

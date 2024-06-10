@@ -1,14 +1,15 @@
-This is the software content register
-List of used libraries:
-    - Libcanard
-        MIT license
-        https://github.com/UAVCAN/libcanard/blob/master 
-    - Public_regulated_data_types
-        MIT license
-        https://github.com/UAVCAN/public_regulated_data_types/blob/master 
-    - Apache nuttx
-        Apache license 2.0
-        https://github.com/apache/incubator-nuttx/blob/master
-    - o1heap
-        MIT license
-        https://github.com/pavel-kirienko/o1heap
+NXP Software Content Register
+
+Package:                    RDDRONE-BMS772 source code release 6.0 and binary
+Version:                    6.0
+Outgoing License:           BSD-3-Clause
+License File:               LICENSE
+Description:                This example provides insight in how you could use the BMS772 board as a battery management system.
+Release location:           https://github.com/NXPHoverGames/RDDRONE-BMS772
+Origin:                     NXP (BSD-3-Clause)
+                            OpenCyphal / Libcanard (MIT) - https://github.com/OpenCyphal/libcanard/blob/master/LICENSE
+                            Public_regulated_data_types (MIT) - https://github.com/OpenCyphal/public_regulated_data_types/blob/master/LICENSE
+                            Apache nuttx (Apache-2.0) - https://github.com/apache/nuttx/blob/master/LICENSE
+                            DroneCAN / DSDL (MIT) - https://github.com/dronecan/DSDL/blob/master/LICENSE
+                            DroneCAN / libcanard (MIT) - https://github.com/dronecan/libcanard/blob/master/LICENSE
+                            o1heap (MIT) - https://github.com/pavel-kirienko/o1heap/blob/master/LICENSE
