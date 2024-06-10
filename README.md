@@ -24,15 +24,10 @@ NXP does not convey any license under its patent rights nor the rights of others
 NXP has battery emulators that may be used during testing:
 https://www.nxp.com/design/development-boards/analog-toolbox/6-cell-battery-pack-to-supply-mc33772-evbs:BATT-6EMULATOR.
 
-This readme files will explain how to get the right nuttx and nuttx-apps repository with the BMS5.0 patches and build the BMS software (create a binary file).
+This readme files will explain how to get the right nuttx and nuttx-apps repository with the BMS4.0 patches and build the BMS software (create a binary file).
 This will work best on a linux machine, you could use a virtual machine for it.
 
 See this webpage for the NuttX quickstart guide: https://nuttx.apache.org/docs/latest/quickstart/quickstart.html.
-
-## Dependencies
-git
-unzip
-curl
 
 ## Make sure git is installed
 If git is not installed, open a terminal and type the following commands:
@@ -54,18 +49,18 @@ cd drones
 
 Clone the nuttx and nuttx apps git repositories.
 ```bash
-git clone https://github.com/apache/incubator-nuttx.git nuttx
+git clone https://github.com/apache/nuttx.git nuttx
 ```
 ```bash
-git clone https://github.com/apache/incubator-nuttx-apps.git apps
+git clone https://github.com/apache/nuttx-apps.git apps
 ```
 ## Checkout the right commit
 In the apps directory, checkout the right commit and branch.
 ```bash
-(cd apps; git checkout nuttx-10.0.0 -b bms772)
+(cd apps; git checkout nuttx-11.0.0 -b bms772)
 ```
 ## Get the BMS in the nuttx-apps
-Make a nxp_bms folder in the apps and the BMS_v1 folder in that folder
+Make a nxp_bms folder in the apps directory and clone the BMS_v1 repository in that folder
 ```bash
 mkdir -p apps/nxp_bms
 ```
@@ -80,18 +75,18 @@ Checkout the public regulated data types.
 ## Apply the patches
 Apply the patch to the nuttx-apps.
 ```bash
-(cd apps; patch -p1 < nxp_bms/BMS_v1/Patchfiles/0001-apps-patch-BMS5.0.patch)
+(cd apps; patch -p1 < nxp_bms/BMS_v1/Patchfiles/0001-apps-patch-BMS6.0.patch)
 ```
 Go the nuttx folder and checkout the right NuttX commit.
 ```bash
 cd nuttx
 ```
 ```bash
-git checkout 5c3ce49d8240a13899fb5a9d93b70c50140fcd41 -b bms772
+git checkout nuttx-11.0.0 -b bms772
 ```
 Add the nuttx patch.
 ```bash
-patch -p1 < ../apps/nxp_bms/BMS_v1/Patchfiles/0001-nuttx-patch-BMS5.0.patch
+patch -p1 < ../apps/nxp_bms/BMS_v1/Patchfiles/0001-nuttx-patch-BMS6.0.patch
 ```
 ## Install the Kconfig tools and the crosscompiler if needed
 When this is your first NuttX project, you need to install the Kconfig tools and the cross compiler. Otherwise you can skip this part and continue with "configure and make the binary".
@@ -112,48 +107,16 @@ sudo apt-get install gperf
 ```bash
 sudo apt-get install libncurses5-dev
 ```
-Go back from the nuttx directory and make a tools directory next to it.
+Install the kconfig-frontends. If this doesn't work, see below 'If the installation of kconfig-frontends did not work:'
 ```bash
-cd ..
-```
-```bash
-mkdir -p tools
-```
-```bash
-cd tools
-```
-Clone the nuttx tools master.
-```bash
-git clone https://bitbucket.org/nuttx/tools/src/master
-```
-```bash
-cd master
-```
-Apply the patch.
-```bash
-patch -p1 < ../../apps/nxp_bms/BMS_v1/Patchfiles/0001-aclocal-fix.patch
-```
-Configure and install it.
-```bash
-cd kconfig-frontends
-```
-```bash
-./configure --enable-mconf --disable-nconf --disable-gconf --disable-qconf
-```
-```bash
-make
-```
-```bash
-sudo make install
-```
-```bash
-sudo ldconfig
+sudo apt-get install kconfig-frontends
 ```
 Go back to the nuttx directory
 ```bash
 cd ../../../nuttx
 ```
-### Install the cross compiler if needed 
+### Install the cross compiler if needed
+Tested with version 9.3.1.
 If not already installed, install the cross compiler with the following command:
 ```bash
 sudo apt install gcc-arm-none-eabi
@@ -179,9 +142,9 @@ Make sure the BMS is powered and everything is connected properly to the BMS.
 
 Use a UART terminal like minicom on a linux machine or PuTTY or teraTerm on a windows machine and connect to the right COM port.
 The settings are:
-*   115200 Baud
-*   8 data bits
-*   1 stop bit
+*	115200 Baud
+*	8 data bits
+*	1 stop bit
 
 ## Programming the BMS with the JLink debugger
 See the release notes of the BMS772 how to attach the debugger.
@@ -236,4 +199,42 @@ g
 Quit the JLinkExe 
 ```bash
 q
+```
+If the installation of kconfig-frontends did not work:
+Go back from the nuttx directory and make a tools directory next to it.
+```bash
+cd ..
+```
+```bash
+mkdir -p tools
+```
+```bash
+cd tools
+```
+Clone the nuttx tools master.
+```bash
+git clone https://bitbucket.org/nuttx/tools/src/master
+```
+```bash
+cd master
+```
+Apply the patch.
+```bash
+patch -p1 < ../../apps/nxp_bms/BMS_v1/Patchfiles/0001-aclocal-fix.patch
+```
+Configure and install it.
+```bash
+cd kconfig-frontends
+```
+```bash
+./configure --enable-mconf --disable-nconf --disable-gconf --disable-qconf
+```
+```bash
+make
+```
+```bash
+sudo make install
+```
+```bash
+sudo ldconfig
 ```

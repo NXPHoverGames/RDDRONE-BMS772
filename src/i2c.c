@@ -2,23 +2,23 @@
  * nxp_bms/BMS_v1/src/i2c.c
  *
  * BSD 3-Clause License
- * 
- * Copyright 2021 NXP
- * 
+ *
+ * Copyright 2021-2023 NXP
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * 3. Neither the name of the copyright holder nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -54,7 +54,7 @@
  * Defines
  ****************************************************************************/
 /* Device naming */
-#define I2C_PATH    "/dev/i2c0"
+#define I2C_PATH "/dev/i2c0"
 
 /****************************************************************************
  * Types
@@ -63,17 +63,14 @@
 /****************************************************************************
  * private data
  ****************************************************************************/
-
-/*! @brief variable to indicate of it is initialized */
-static bool gI2cInitialized = false;  
-
-// this variable is used to determain if the I2C bus may be used
+//! @brief  this variable is used to determain if the I2C bus may be used
 bool gEnableI2cBus = false;
 
 /*! @brief  mutex for the i2c bus */
 static pthread_mutex_t gI2cBusLock;
+
 /****************************************************************************
- * private Functions declerations 
+ * private Functions declerations
  ****************************************************************************/
 
 /****************************************************************************
@@ -81,36 +78,25 @@ static pthread_mutex_t gI2cBusLock;
  ****************************************************************************/
 
 /*!
- * @brief   This function is used to initialize the I2C 
+ * @brief   This function is used to initialize the I2C
  *
  * @return  0 if ok, -1 if there is an error
  */
 int i2c_initialize(void)
 {
-    int lvRetValue = 0;
+    // initialize the mutex
+    pthread_mutex_init(&gI2cBusLock, NULL);
 
-    // check if already initialzed
-    if(!gI2cInitialized)
-    {
-        // initialize the mutex
-        pthread_mutex_init(&gI2cBusLock, NULL);
-
-        // set the bus to be enabled
-        gEnableI2cBus = true;
-    
-        // it is now initialzed
-        gI2cInitialized = true;
-    }
-
-    lvRetValue = !gI2cInitialized;
+    // set the bus to be enabled
+    gEnableI2cBus = true;
 
     // return
-    return lvRetValue;
+    return OK;
 }
 
 /*!
  * @brief   This function can be used to read a data via the I2C
- *    
+ *
  * @param   slaveAdr the slave address of the I2C device
  * @param   regAdr the address of the register to read from (2 bytes)
  * @param   readReg address of the variable to become the read value
@@ -119,21 +105,12 @@ int i2c_initialize(void)
  *
  * @return  0 if ok, -1 if there is an error
  */
-int i2c_readData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* readReg, uint8_t readBytes, 
-    bool useRestart)
+int i2c_readData(uint8_t slaveAdr, uint16_t regAdr, uint8_t *readReg, uint8_t readBytes, bool useRestart)
 {
-    uint8_t writeVal[2]; 
-    struct i2c_msg_s i2c_msg[2];  
-    struct i2c_transfer_s i2c_transfer;  
-    int lvRetValue = 0, fd;
-
-    // check if not initialzed 
-    if(!gI2cInitialized)
-    {
-        // wrong byteNum
-        cli_printfError("i2c ERROR: i2c not initialzed!\n");
-        return -1;
-    }
+    uint8_t               writeVal[2];
+    struct i2c_msg_s      i2c_msg[2];
+    struct i2c_transfer_s i2c_transfer;
+    int                   lvRetValue = 0, fd;
 
     // check for NULL pointer
     if(readReg == NULL)
@@ -148,49 +125,49 @@ int i2c_readData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* readReg, uint8_t re
     writeVal[1] = regAdr & 0xFF;
 
     // make the 2 part write message with the register address to read from
-    i2c_msg[0].addr   = slaveAdr;  
-    i2c_msg[0].flags  = 0;  
-    i2c_msg[0].buffer = writeVal;  
-    i2c_msg[0].length = 2;  /* Write address of where we want to read to AT24 */  
-    i2c_msg[0].frequency = SCL_FREQ;  /* 400K bsp */  
+    i2c_msg[0].addr      = slaveAdr;
+    i2c_msg[0].flags     = 0;
+    i2c_msg[0].buffer    = writeVal;
+    i2c_msg[0].length    = 2;        /* Write address of where we want to read to AT24 */
+    i2c_msg[0].frequency = SCL_FREQ; /* 400K bsp */
 
     // check if restart is needed
     if(useRestart)
     {
         // construct the read transfer
-        i2c_msg[1].addr   = slaveAdr;  
-        i2c_msg[1].flags  = I2C_M_READ; /* Write command then sequence read data */  
-        i2c_msg[1].buffer = readReg;  
-        i2c_msg[1].length = readBytes;  
-        i2c_msg[1].frequency = SCL_FREQ;  /* 400K bsp */  
+        i2c_msg[1].addr      = slaveAdr;
+        i2c_msg[1].flags     = I2C_M_READ; /* Write command then sequence read data */
+        i2c_msg[1].buffer    = readReg;
+        i2c_msg[1].length    = readBytes;
+        i2c_msg[1].frequency = SCL_FREQ; /* 400K bsp */
 
         // set the message count to 2
-        i2c_transfer.msgc = 2;  
+        i2c_transfer.msgc = 2;
     }
     else
     {
         // set the message count to 1
-        i2c_transfer.msgc = 1;  
+        i2c_transfer.msgc = 1;
     }
 
-    // make the i2C tranfer 
+    // make the i2C tranfer
     i2c_transfer.msgv = (struct i2c_msg_s *)i2c_msg;
 
     // lock the i2c mutex
     pthread_mutex_lock(&gI2cBusLock);
 
-    // open the i2c device 
-    fd = open(I2C_PATH, O_RDONLY);  
-    
-    // check for errors
-    if(fd < 0)  
-    { 
-      // get the error 
-      lvRetValue = -2;  
+    // open the i2c device
+    fd = open(I2C_PATH, O_RDONLY);
 
-      // output to the user
-      cli_printfError("i2c ERROR: Can't open i2c device, error: %d\n", lvRetValue);
-    }  
+    // check for errors
+    if(fd < 0)
+    {
+        // get the error
+        lvRetValue = -2;
+
+        // output to the user
+        cli_printfError("i2c ERROR: Can't open i2c device, error: %d\n", lvRetValue);
+    }
 
     // check if the bus is not enabled
     if(!gEnableI2cBus)
@@ -205,18 +182,17 @@ int i2c_readData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* readReg, uint8_t re
     // check for no errors
     if(!lvRetValue)
     {
-        /* do the i2C transfer to read the register */  
-        lvRetValue = ioctl(fd, I2CIOC_TRANSFER, (unsigned long)&i2c_transfer);  
+        /* do the i2C transfer to read the register */
+        lvRetValue = ioctl(fd, I2CIOC_TRANSFER, (unsigned long)&i2c_transfer);
 
         // check for errors
-        if(lvRetValue < 0)  
-        {  
+        if(lvRetValue < 0)
+        {
             // output to the user
-            cli_printfError("i2c read ERROR: Can't do i2c tranfer 1, error: %d\n", 
-                lvRetValue);
+            cli_printfError("i2c read ERROR: Can't do i2c tranfer 1, error: %d\n", lvRetValue);
 
             // error
-            lvRetValue = -1;  
+            lvRetValue = -1;
         }
         else
         {
@@ -228,25 +204,26 @@ int i2c_readData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* readReg, uint8_t re
         if(!useRestart && !lvRetValue)
         {
             // make the read message
-            i2c_msg[0].addr   = slaveAdr;  
-            i2c_msg[0].flags  = I2C_M_READ; /* Write command then sequence read data */  
-            i2c_msg[0].buffer = readReg;  
-            i2c_msg[0].length = readBytes;  
-            i2c_msg[0].frequency = SCL_FREQ;  /* 400K bsp */  
+            i2c_msg[0].addr      = slaveAdr;
+            i2c_msg[0].flags     = I2C_M_READ; /* Write command then sequence read data */
+            i2c_msg[0].buffer    = readReg;
+            i2c_msg[0].length    = readBytes;
+            i2c_msg[0].frequency = SCL_FREQ; /* 400K bsp */
 
-            // make the i2C tranfer 
-            i2c_transfer.msgv = (struct i2c_msg_s *)i2c_msg;  
-            i2c_transfer.msgc = 1;  
+            // make the i2C tranfer
+            i2c_transfer.msgv = (struct i2c_msg_s *)i2c_msg;
+            i2c_transfer.msgc = 1;
 
-            /* do the i2C transfer to read the register */  
-            lvRetValue = ioctl(fd, I2CIOC_TRANSFER, (unsigned long)&i2c_transfer);  
+            /* do the i2C transfer to read the register */
+            lvRetValue = ioctl(fd, I2CIOC_TRANSFER, (unsigned long)&i2c_transfer);
 
             // check for errors
-            if(lvRetValue < 0)  
-            {  
+            if(lvRetValue < 0)
+            {
+                lvRetValue = errno;
+
                 // output to the user
-                cli_printfError("i2c read ERROR: Can't do i2c tranfer 2, error: %d\n", 
-                    lvRetValue);
+                cli_printfError("i2c read ERROR: Can't do i2c tranfer 2, error: %d\n", lvRetValue);
 
                 // set the error value
                 lvRetValue = -1;
@@ -256,8 +233,8 @@ int i2c_readData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* readReg, uint8_t re
                 // if it went OK, set to 0
                 lvRetValue = 0;
             }
-        } 
-    }   
+        }
+    }
 
     // close the fd
     close(fd);
@@ -271,7 +248,7 @@ int i2c_readData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* readReg, uint8_t re
 
 /*!
  * @brief   This function can be used to write a data via the I2C
- *    
+ *
  * @param   slaveAdr the slave address of the I2C device
  * @param   regAdr the address of the register to write to (2 bytes)
  * @param   writeReg address of the variable to write
@@ -279,20 +256,12 @@ int i2c_readData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* readReg, uint8_t re
  *
  * @return  0 if ok, -1 if there is an error
  */
-int i2c_writeData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* writeReg, uint8_t writeBytes)
+int i2c_writeData(uint8_t slaveAdr, uint16_t regAdr, uint8_t *writeReg, uint8_t writeBytes)
 {
-    uint8_t writeVal[2 + writeBytes]; 
-    struct i2c_msg_s i2c_msg[1];  
-    struct i2c_transfer_s i2c_transfer;  
-    int lvRetValue = 0, i, fd;
-
-    // check if not initialzed 
-    if(!gI2cInitialized)
-    {
-        // wrong byteNum
-        cli_printfError("i2c ERROR: i2c not initialzed!\n");
-        return -1;
-    }
+    uint8_t               writeVal[2 + writeBytes];
+    struct i2c_msg_s      i2c_msg[1];
+    struct i2c_transfer_s i2c_transfer;
+    int                   lvRetValue = 0, i, fd;
 
     // check for NULL pointer
     if(writeReg == NULL)
@@ -310,35 +279,35 @@ int i2c_writeData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* writeReg, uint8_t 
     for(i = 0; i < writeBytes; i++)
     {
         // add the data to write
-        writeVal[2+i] = writeReg[i];
+        writeVal[2 + i] = writeReg[i];
     }
 
     // make the 2 part write message with the register address to write to and the values
-    i2c_msg[0].addr   = slaveAdr;  
-    i2c_msg[0].flags  = 0;  
-    i2c_msg[0].buffer = writeVal;  
-    i2c_msg[0].length = 2 + writeBytes;  /* Write address of where we want to read to AT24 */  
-    i2c_msg[0].frequency = SCL_FREQ;  /* 400K bsp */  
+    i2c_msg[0].addr      = slaveAdr;
+    i2c_msg[0].flags     = 0;
+    i2c_msg[0].buffer    = writeVal;
+    i2c_msg[0].length    = 2 + writeBytes; /* Write address of where we want to read to AT24 */
+    i2c_msg[0].frequency = SCL_FREQ;       /* 400K bsp */
 
-    // make the i2C tranfer 
-    i2c_transfer.msgv = (struct i2c_msg_s *)i2c_msg;  
+    // make the i2C tranfer
+    i2c_transfer.msgv = (struct i2c_msg_s *)i2c_msg;
     i2c_transfer.msgc = 1;
 
     // lock the i2c mutex
     pthread_mutex_lock(&gI2cBusLock);
 
-    // open the i2c device 
-    fd = open(I2C_PATH, O_RDONLY);  
-    
-    // check for errors
-    if(fd < 0)  
-    { 
-      // get the error 
-      lvRetValue = -2;  
+    // open the i2c device
+    fd = open(I2C_PATH, O_RDONLY);
 
-      // output to the user
-      cli_printfError("i2c ERROR: Can't open i2c device, error: %d\n", lvRetValue);
-    }  
+    // check for errors
+    if(fd < 0)
+    {
+        // get the error
+        lvRetValue = -2;
+
+        // output to the user
+        cli_printfError("i2c ERROR: Can't open i2c device, error: %d\n", lvRetValue);
+    }
 
     // check if the bus is not enabled
     if(!gEnableI2cBus)
@@ -352,15 +321,17 @@ int i2c_writeData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* writeReg, uint8_t 
     // check for no errors
     if(!lvRetValue)
     {
-        /* do the i2C transfer to read the register */  
-        lvRetValue = ioctl(fd, I2CIOC_TRANSFER, (unsigned long)&i2c_transfer);  
+        /* do the i2C transfer to read the register */
+        lvRetValue = ioctl(fd, I2CIOC_TRANSFER, (unsigned long)&i2c_transfer);
 
         // check for errors
-        if(lvRetValue < 0)  
-        {  
+        if(lvRetValue < 0)
+        {
+            // get the error
+            lvRetValue = errno;
+
             // output to the user
-            cli_printfError("i2c write ERROR: Can't do i2c tranfer, error: %d\n", 
-                lvRetValue);
+            cli_printfError("i2c write ERROR: Can't do i2c tranfer, error: %d\n", lvRetValue);
 
             // set the error value
             lvRetValue = -1;
@@ -384,7 +355,7 @@ int i2c_writeData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* writeReg, uint8_t 
 
 /*!
  * @brief   This function can be used to read a data byte from the NFC chip session register
- *    
+ *
  * @param   slaveAdr the slave address of the I2C NFC device
  * @param   regAdr the address of the register to read from (2 bytes)
  * @param   byteNum the numer of byte to read from (0-3)
@@ -393,29 +364,20 @@ int i2c_writeData(uint8_t slaveAdr, uint16_t regAdr, uint8_t* writeReg, uint8_t 
  *
  * @return  0 if ok, -1 if there is an error
  */
-int i2c_nfcReadSessionRegByte(uint8_t slaveAdr, uint16_t regAdr, uint8_t byteNum,
-  uint8_t* readReg, uint8_t readBytes)
+int i2c_nfcReadSessionRegByte(
+    uint8_t slaveAdr, uint16_t regAdr, uint8_t byteNum, uint8_t *readReg, uint8_t readBytes)
 {
-    uint8_t writeVal[3]; 
-    struct i2c_msg_s i2c_msg[2];  
-    struct i2c_transfer_s i2c_transfer;  
-    int lvRetValue, fd;
-    uint8_t i;
-
-    // check if not initialzed 
-    if(!gI2cInitialized)
-    {
-        // wrong byteNum
-        cli_printfError("i2c ERROR: i2c not initialzed!\n");
-        return -1;
-    }
+    uint8_t               writeVal[3];
+    struct i2c_msg_s      i2c_msg[2];
+    struct i2c_transfer_s i2c_transfer;
+    int                   lvRetValue, fd;
+    uint8_t               i;
 
     // check byteNum for valid value
     if(byteNum < 0 || byteNum > 3)
     {
         // wrong byteNum
-        cli_printfError("i2c ERROR: wrong byteNum (0-3 is allowed): %d\n", 
-        byteNum);
+        cli_printfError("i2c ERROR: wrong byteNum (0-3 is allowed): %d\n", byteNum);
         return -1;
     }
 
@@ -436,56 +398,56 @@ int i2c_nfcReadSessionRegByte(uint8_t slaveAdr, uint16_t regAdr, uint8_t byteNum
         writeVal[2] = (byteNum + i) % 4;
 
         // make the 2 part write message with the register address to read from
-        i2c_msg[0].addr   = slaveAdr;  
-        i2c_msg[0].flags  = 0;  
-        i2c_msg[0].buffer = writeVal;  
-        i2c_msg[0].length = 3;  /* Write address of where we want to read to AT24 */  
-        i2c_msg[0].frequency = SCL_FREQ;  /* 400K bsp */  
+        i2c_msg[0].addr      = slaveAdr;
+        i2c_msg[0].flags     = 0;
+        i2c_msg[0].buffer    = writeVal;
+        i2c_msg[0].length    = 3;        /* Write address of where we want to read to AT24 */
+        i2c_msg[0].frequency = SCL_FREQ; /* 400K bsp */
 
         // make the read message
-        i2c_msg[1].addr   = slaveAdr;  
-        i2c_msg[1].flags  = I2C_M_READ; /* Write command then sequence read data */  
-        i2c_msg[1].buffer = &readReg[i];  
-        i2c_msg[1].length = 1;  
-        i2c_msg[1].frequency = SCL_FREQ;  /* 400K bsp */  
+        i2c_msg[1].addr      = slaveAdr;
+        i2c_msg[1].flags     = I2C_M_READ; /* Write command then sequence read data */
+        i2c_msg[1].buffer    = &readReg[i];
+        i2c_msg[1].length    = 1;
+        i2c_msg[1].frequency = SCL_FREQ; /* 400K bsp */
 
-        // make the i2C tranfer 
-        i2c_transfer.msgv = (struct i2c_msg_s *)i2c_msg;  
-        i2c_transfer.msgc = 2;      
+        // make the i2C tranfer
+        i2c_transfer.msgv = (struct i2c_msg_s *)i2c_msg;
+        i2c_transfer.msgc = 2;
 
         // lock the i2c mutex
         pthread_mutex_lock(&gI2cBusLock);
 
-        // open the i2c device 
-        fd = open(I2C_PATH, O_RDONLY);  
-        
+        // open the i2c device
+        fd = open(I2C_PATH, O_RDONLY);
+
         // check for errors
-        if(fd < 0)  
-        { 
-          // get the error 
-          lvRetValue = -1;  
+        if(fd < 0)
+        {
+            // get the error
+            lvRetValue = -1;
 
-          // output to the user
-          cli_printfError("i2c ERROR: Can't open i2c device, error: %d\n", lvRetValue);
-        }  
+            // output to the user
+            cli_printfError("i2c ERROR: Can't open i2c device, error: %d\n", lvRetValue);
+        }
 
-        /* do the i2C transfer to read the register */  
-        lvRetValue = ioctl(fd, I2CIOC_TRANSFER, (unsigned long)&i2c_transfer); 
+        /* do the i2C transfer to read the register */
+        lvRetValue = ioctl(fd, I2CIOC_TRANSFER, (unsigned long)&i2c_transfer);
 
         // close the fd
-        close(fd); 
+        close(fd);
 
         // unlock the mutex
         pthread_mutex_unlock(&gI2cBusLock);
 
         // check for errors
-        if(lvRetValue < 0)  
-        {  
+        if(lvRetValue < 0)
+        {
             // output to the user
             cli_printfError("i2c read ses ERROR: Can't do i2c tranfer, error: %d\n", lvRetValue);
 
             // return to the user
-            return lvRetValue;  
+            return lvRetValue;
         }
         else
         {
@@ -494,13 +456,13 @@ int i2c_nfcReadSessionRegByte(uint8_t slaveAdr, uint16_t regAdr, uint8_t byteNum
         }
     }
 
-  // return to the user
-  return lvRetValue;
+    // return to the user
+    return lvRetValue;
 }
 
 /*!
  * @brief   This function can be used to write data to a byte of the NFC chip session register
- *    
+ *
  * @param   slaveAdr the slave address of the I2C NFC device
  * @param   regAdr the address of the register to read from (2 bytes)
  * @param   byteNum the numer of byte to write to (0-3)
@@ -511,30 +473,20 @@ int i2c_nfcReadSessionRegByte(uint8_t slaveAdr, uint16_t regAdr, uint8_t byteNum
  *
  * @return  0 if ok, -1 if there is an error
  */
-int i2c_nfcWriteSessionRegByte(uint8_t slaveAdr, uint16_t regAdr, uint8_t byteNum,
-  uint8_t* writeReg, uint8_t mask, uint8_t writeBytes)
+int i2c_nfcWriteSessionRegByte(
+    uint8_t slaveAdr, uint16_t regAdr, uint8_t byteNum, uint8_t *writeReg, uint8_t mask, uint8_t writeBytes)
 {
-    uint8_t writeVal[4 + writeBytes]; 
-    struct i2c_msg_s i2c_msg[1];  
-    struct i2c_transfer_s i2c_transfer;  
-    int lvRetValue = 0, fd;
-    uint8_t i;
-
-    // check if not initialzed 
-    if(!gI2cInitialized)
-    {
-        // wrong byteNum
-        cli_printfError("i2c ERROR: i2c not initialzed!\n");
-        lvRetValue = -1;
-        return lvRetValue;
-    }
+    uint8_t               writeVal[4 + writeBytes];
+    struct i2c_msg_s      i2c_msg[1];
+    struct i2c_transfer_s i2c_transfer;
+    int                   lvRetValue = 0, fd;
+    uint8_t               i;
 
     // check byteNum for valid value
     if(byteNum < 0 || byteNum > 3)
     {
         // wrong byteNum
-        cli_printfError("i2c ERROR: wrong byteNum (0-3 is allowed): %d\n", 
-        byteNum);
+        cli_printfError("i2c ERROR: wrong byteNum (0-3 is allowed): %d\n", byteNum);
         lvRetValue = -1;
         return lvRetValue;
     }
@@ -556,40 +508,40 @@ int i2c_nfcWriteSessionRegByte(uint8_t slaveAdr, uint16_t regAdr, uint8_t byteNu
         writeVal[1] = regAdr & 0xFF;
         writeVal[2] = (byteNum + i) % 4;
         writeVal[3] = mask;
-        writeVal[4] = writeReg[i]; 
+        writeVal[4] = writeReg[i];
 
         // make the 2 part write message with the register address to read from
-        i2c_msg[0].addr   = slaveAdr;  
-        i2c_msg[0].flags  = 0;  
-        i2c_msg[0].buffer = writeVal;  
-        i2c_msg[0].length = 5;  /* Write address of where we want to read to AT24 */  
-        i2c_msg[0].frequency = SCL_FREQ;  /* 400K bsp */  
+        i2c_msg[0].addr      = slaveAdr;
+        i2c_msg[0].flags     = 0;
+        i2c_msg[0].buffer    = writeVal;
+        i2c_msg[0].length    = 5;        /* Write address of where we want to read to AT24 */
+        i2c_msg[0].frequency = SCL_FREQ; /* 400K bsp */
 
-        // make the i2C tranfer 
-        i2c_transfer.msgv = (struct i2c_msg_s *)i2c_msg;  
+        // make the i2C tranfer
+        i2c_transfer.msgv = (struct i2c_msg_s *)i2c_msg;
         i2c_transfer.msgc = 1;
 
         // lock the i2c mutex
         pthread_mutex_lock(&gI2cBusLock);
 
-        // open the i2c device 
-        fd = open(I2C_PATH, O_RDONLY);  
-        
-        // check for errors
-        if(fd < 0)  
-        { 
-          // get the error 
-          lvRetValue = -1;  
+        // open the i2c device
+        fd = open(I2C_PATH, O_RDONLY);
 
-          // output to the user
-          cli_printfError("i2c ERROR: Can't open i2c device, error: %d\n", lvRetValue);
-        }  
+        // check for errors
+        if(fd < 0)
+        {
+            // get the error
+            lvRetValue = -1;
+
+            // output to the user
+            cli_printfError("i2c ERROR: Can't open i2c device, error: %d\n", lvRetValue);
+        }
 
         // check if there is no error
         if(!lvRetValue)
         {
-            /* do the i2C transfer to read the register */  
-            lvRetValue = ioctl(fd, I2CIOC_TRANSFER, (unsigned long)&i2c_transfer);  
+            /* do the i2C transfer to read the register */
+            lvRetValue = ioctl(fd, I2CIOC_TRANSFER, (unsigned long)&i2c_transfer);
         }
 
         // close the fd
@@ -599,14 +551,13 @@ int i2c_nfcWriteSessionRegByte(uint8_t slaveAdr, uint16_t regAdr, uint8_t byteNu
         pthread_mutex_unlock(&gI2cBusLock);
 
         // check for errors
-        if(lvRetValue < 0)  
-        {  
+        if(lvRetValue < 0)
+        {
             // output to the user
-            cli_printfError("i2c write ERROR: Can't do i2c tranfer, error: %d\n", 
-                lvRetValue);
+            cli_printfError("i2c write ERROR: Can't do i2c tranfer, error: %d\n", lvRetValue);
 
             // return to the user
-            return lvRetValue;  
+            return lvRetValue;
         }
         else
         {
@@ -615,14 +566,14 @@ int i2c_nfcWriteSessionRegByte(uint8_t slaveAdr, uint16_t regAdr, uint8_t byteNu
         }
     }
 
-  // return to the user
-  return lvRetValue;
+    // return to the user
+    return lvRetValue;
 }
 
 /*!
  * @brief   this function will be used to configure if an I2C transmission may be done
- *          
- * @param   enable If this is true the I2C transmision of the bus is enabled, disabled otherwise 
+ *
+ * @param   enable If this is true the I2C transmision of the bus is enabled, disabled otherwise
  *
  * @return  If successful, the function will return zero (OK). Otherwise -1
  * @example if(i2c_enableTransmission(false))
@@ -632,29 +583,16 @@ int i2c_nfcWriteSessionRegByte(uint8_t slaveAdr, uint16_t regAdr, uint8_t byteNu
  */
 int i2c_enableTransmission(bool enable)
 {
-    int lvRetValue = -1;
-
-    // check if not initialized
-    if(!gI2cInitialized)
-    {
-        // return error
-        cli_printfError("i2c ERROR: Isn't initialized!\n");
-        return lvRetValue;
-    }
-
     // lock the i2c mutex
     pthread_mutex_lock(&gI2cBusLock);
 
-    // set the variable 
+    // set the variable
     gEnableI2cBus = enable;
 
     // unlock the mutex
     pthread_mutex_unlock(&gI2cBusLock);
 
-    // it went ok 
-    lvRetValue = 0;
-
-    return lvRetValue;
+    return OK;
 }
 
 /****************************************************************************

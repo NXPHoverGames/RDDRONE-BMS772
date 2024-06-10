@@ -2,23 +2,23 @@
  * nxp_bms/BMS_v1/src/cli.c
  *
  * BSD 3-Clause License
- * 
- * Copyright 2020-2021 NXP
- * 
+ *
+ * Copyright 2020-2023 NXP
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * 3. Neither the name of the copyright holder nor the names of its
  *    contributors may be used to endorse or promote products derived from
  *    this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -49,6 +49,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include "data.h"
 #include "power.h"
@@ -59,169 +60,250 @@
 /****************************************************************************
  * Defines
  ****************************************************************************/
-#define DEFAULT_PRIORITY            100
-#define DEFAULT_STACK_SIZE          1024
 
-#define HELP_COMMAND                "help" 
-#define GET_COMMAND                 "get"
-#define SET_COMMAND                 "set"
-#define SHOW_COMMAND                "show"
+#define HELP_COMMAND        "help"
+#define GET_COMMAND         "get"
+#define SET_COMMAND         "set"
+#define SHOW_COMMAND        "show"
+#define RESET_COMMAND       "reset"
+#define SLEEP_COMMAND       "sleep"
+#define WAKE_COMMAND        "wake"
+#define DEEP_SLEEP_COMMAND  "deepsleep"
+#define SAVE_COMMAND        "save"
+#define LOAD_COMMAND        "load"
+#define DEFAULT_COMMAND     "default"
+#define TIME_COMMAND        "time"
+#define AMOUNT_COMMANDS     12
+#define PARAMS_COMMAND      "parameters"
+#define SHOW_MEAS_COMMAND   "show-meas"
+#define SHOW_CURRENT        "i-batt"
+#define SHOW_AVG_CURRENT    "i-avg"
+#define SHOW_CELL_VOLTAGE   "v-cell"
+#define SHOW_STACK_VOLTAGE  "v-batt"
+#define SHOW_BAT_VOLTAGE    "v-out"
+#define SHOW_OUTPUT_STATUS  "s-out"
+#define SHOW_TEMPERATURE    "c-bms"
+#define SHOW_ENGERGY_COMS   "e-used"
+#define SHOW_REMAINING_CAP  "a-rem"
+#define SHOW_STATE_O_CHARGE "s-charge"
+#define SHOW_AVG_POWER      "p-avg"
+#define SHOW_STATE          "state"
+#define SHOW_ALL            "all"
+#define SHOW_TOP            "top"
 
-#define RESET_COMMAND               "reset"
-#define SLEEP_COMMAND               "sleep"
-#define WAKE_COMMAND                "wake"
-#define DEEP_SLEEP_COMMAND          "deepsleep"
-#define SAVE_COMMAND                "save"
-#define LOAD_COMMAND                "load"
-#define DEFAULT_COMMAND             "default"
-#define TIME_COMMAND                "time"
-
-#define AMOUNT_COMMANDS             12
-
-#define PARAMS_COMMAND              "parameters"
-#define SHOW_MEAS_COMMAND           "show-meas"
-
-#define SHOW_CURRENT                "i-batt"
-#define SHOW_AVG_CURRENT            "i-avg"
-#define SHOW_CELL_VOLTAGE           "v-cell"
-#define SHOW_STACK_VOLTAGE          "v-batt"
-#define SHOW_BAT_VOLTAGE            "v-out"
-#define SHOW_OUTPUT_STATUS          "s-out"
-#define SHOW_TEMPERATURE            "c-bms"
-#define SHOW_ENGERGY_COMS           "e-used"
-#define SHOW_REMAINING_CAP          "a-rem"
-#define SHOW_STATE_O_CHARGE         "s-charge"
-#define SHOW_AVG_POWER              "p-avg"
-#define SHOW_STATE                  "state"
-#define SHOW_ALL                    "all"
-#define SHOW_TOP                    "top"
-
-#define PARAMETER_ARRAY_SIZE        NONE + 2
-
-// because a measured update sequence (bms show top 1 and bms show all 1) takes 42ms, max wait time will be 100ms
+// because a measured update sequence (bms show top 1 and bms show all 1) takes 42ms, max wait time will be
+// 100ms
 #define CLI_TIMED_LOCK_WAIT_TIME_MS 500
 #define MS_TO_NS_MULT               1000000
-#ifndef NSEC_MAX 
-    #define NSEC_MAX                999999999
+#ifndef NSEC_MAX
+#    define NSEC_MAX 999999999
 #endif
 
 /****************************************************************************
  * Types
  ****************************************************************************/
 /*! @brief Enum to print the text in different colors */
-typedef enum {RED, GREEN, YELLOW}printColor_t;
+typedef enum
+{
+    RED,
+    GREEN,
+    YELLOW
+} printColor_t;
 
 /*! @brief these are the possible show commands */
 typedef enum
-{   
-    CLI_CURRENT         = 0,    //!< the user wants to see the CURRENT after the cyclic measurement
-    CLI_AVG_CURRENT     = 1,    //!< the user wants to see the AVG_CURRENT after the cyclic measurement
-    CLI_CELL_VOLTAGE    = 2,    //!< the user wants to see the CELL_VOLTAGE after the cyclic measurement
-    CLI_STACK_VOLTAGE   = 3,    //!< the user wants to see the STACK_VOLTAGE after the cyclic measurement
-    CLI_BAT_VOLTAGE     = 4,    //!< the user wants to see the BAT_VOLTAGE after the cyclic measurement
-    CLI_OUTPUT_STATUS   = 5,    //!< the user wants to see the OUTPUT_STATUS after the cyclic measurement
-    CLI_TEMPERATURE     = 6,    //!< the user wants to see the TEMPERATURE after the cyclic measurement
-    CLI_ENERGY_CONSUMED = 7,    //!< the user wants to see the ENERGY_CONSUMED after the cyclic measurement
-    CLI_REMAINING_CAP   = 8,    //!< the user wants to see the REMAINING_CAP after the cyclic measurement
-    CLI_STATE_OF_CHARGE = 9,    //!< the user wants to see the STATE_OF_CHARGE after the cyclic measurement
-    CLI_AVG_POWER       = 10,   //!< the user wants to see the AVG_POWER after the cyclic measurement
-    CLI_STATE           = 11,   //!< the user wants to see the main state afther the cyclic measurement
-    CLI_ALL             = 12,   //!< the user want to see all the measurement
-    CLI_TOP             = 13,   //!< the user wants to see refreshing with all the measurements
+{
+    CLI_CURRENT         = 0,  //!< the user wants to see the CURRENT after the cyclic measurement
+    CLI_AVG_CURRENT     = 1,  //!< the user wants to see the AVG_CURRENT after the cyclic measurement
+    CLI_CELL_VOLTAGE    = 2,  //!< the user wants to see the CELL_VOLTAGE after the cyclic measurement
+    CLI_STACK_VOLTAGE   = 3,  //!< the user wants to see the STACK_VOLTAGE after the cyclic measurement
+    CLI_BAT_VOLTAGE     = 4,  //!< the user wants to see the BAT_VOLTAGE after the cyclic measurement
+    CLI_OUTPUT_STATUS   = 5,  //!< the user wants to see the OUTPUT_STATUS after the cyclic measurement
+    CLI_TEMPERATURE     = 6,  //!< the user wants to see the TEMPERATURE after the cyclic measurement
+    CLI_ENERGY_CONSUMED = 7,  //!< the user wants to see the ENERGY_CONSUMED after the cyclic measurement
+    CLI_REMAINING_CAP   = 8,  //!< the user wants to see the REMAINING_CAP after the cyclic measurement
+    CLI_STATE_OF_CHARGE = 9,  //!< the user wants to see the STATE_OF_CHARGE after the cyclic measurement
+    CLI_AVG_POWER       = 10, //!< the user wants to see the AVG_POWER after the cyclic measurement
+    CLI_STATE           = 11, //!< the user wants to see the main state afther the cyclic measurement
+    CLI_ALL             = 12, //!< the user want to see all the measurement
+    CLI_TOP             = 13, //!< the user wants to see refreshing with all the measurements
     CLI_NONE            = 14
-}showCommands_t;
+} showCommands_t;
 
 /****************************************************************************
  * private data
  ****************************************************************************/
 
 // the string array for the states
-static const char *gStatesArray[] = 
-{
-    //"INIT", "NORMAL", "CHARGE", "SLEEP", "OCV", "FAULT", "SELF_DISCHARGE", "DEEP_SLEEP"
-    FOR_EACH_STATE(GENERATE_STRING)
+const char *gStatesArray[] =
+{ 
+    [SELF_TEST]                            = "SELF_TEST",
+    [INIT]                                 = "INIT",
+    [NORMAL]                               = "NORMAL",
+    [CHARGE]                               = "CHARGE",
+    [SLEEP]                                = "SLEEP",
+    [OCV]                                  = "OCV",
+    [FAULT_ON]                             = "FAULT_ON",
+    [FAULT_OFF]                            = "FAULT_OFF",
+    [SELF_DISCHARGE]                       = "SELF_DISCHARGE",
+    [DEEP_SLEEP]                           = "DEEP_SLEEP"
 };
 
 // the string array for the states
-static const char *gChargeStatesArray[] = 
+const char *gChargeStatesArray[] =
 {
-    //"INIT", "NORMAL", "CHARGE", "SLEEP", "OCV", "FAULT", "SELF_DISCHARGE", "DEEP_SLEEP"
-    FOR_EACH_CHARGE_STATE(GENERATE_STRING)
+    [CHARGE_START]                                  = "CHARGE_START",
+    [CHARGE_CB]                                     = "CHARGE_CB",
+    [RELAXATION]                                    = "RELAXATION",
+    [CHARGE_COMPLETE]                               = "CHARGE_COMPLETE"
 };
 
 // the string array for the parameters
-static const char *gGetSetParameters[PARAMETER_ARRAY_SIZE] = {
-
-    // generate a string for all the parameters in the FOR_EACH_PARAMETER define in BMS_data_types.h
-    FOR_EACH_PARAMETER(GENERATE_STRING)
-
-    // add these 2 strings to it
-    "STATE",
-    "ALL"               
-};
-
-//! @brief this array consists of all the non writable parameters
-const parameterKind_t nonWritableParameters[] =
+const char *gGetSetParameters[PARAMETER_ARRAY_SIZE] =
 {
-    C_BATT,
-    V_OUT,
-    V_BATT,
-    I_BATT,
-    I_BATT_AVG,
-    I_BATT_10S_AVG,
-    S_OUT,
-    S_IN_FLIGHT,
-    P_AVG,
-    E_USED,
-    T_FULL,
-    S_FLAGS,
-    S_HEALTH,
-    S_CHARGE,
-    V_CELL1,
-    V_CELL2,
-    V_CELL3,
-    V_CELL4,
-    V_CELL5,
-    V_CELL6,
-    C_AFE,
-    C_T,
-    C_R,
-    NONE
+    [V_OUT]                     = "V_OUT",
+    [V_BATT]                    = "V_BATT",
+    [N_CELLS]                   = "N_CELLS",
+    [V_CELL1]                   = "V_CELL1",
+    [V_CELL2]                   = "V_CELL2",
+    [V_CELL3]                   = "V_CELL3",
+    [V_CELL4]                   = "V_CELL4",
+    [V_CELL5]                   = "V_CELL5",
+    [V_CELL6]                   = "V_CELL6",
+    [I_BATT]                    = "I_BATT",
+    [I_BATT_AVG]                = "I_BATT_AVG",
+    [I_BATT_10S_AVG]            = "I_BATT_10S_AVG",
+    [SENSOR_ENABLE]             = "SENSOR_ENABLE",
+    [C_BATT]                    = "C_BATT",
+    [C_AFE]                     = "C_AFE",
+    [C_T]                       = "C_T",
+    [C_R]                       = "C_R",
+
+    [P_AVG]                     = "P_AVG",
+    [E_USED]                    = "E_USED",
+    [T_FULL]                    = "T_FULL",
+    [A_REM]                     = "A_REM",
+    [A_FULL]                    = "A_FULL",
+    [A_FACTORY]                 = "A_FACTORY",
+    [S_CHARGE]                  = "S_CHARGE",
+    [S_HEALTH]                  = "S_HEALTH",
+    [S_OUT]                     = "S_OUT",
+    [S_IN_FLIGHT]               = "S_IN_FLIGHT",
+    [BATT_ID]                   = "BATT_ID",
+
+    [V_CELL_OV]                 = "V_CELL_OV",
+    [V_CELL_UV]                 = "V_CELL_UV",
+    [V_CELL_NOMINAL]            = "V_CELL_NOMINAL",
+    [V_STORAGE]                 = "V_STORAGE",
+    [V_CELL_MARGIN]             = "V_CELL_MARGIN",
+    [V_RECHARGE_MARGIN]         = "V_RECHARGE_MARGIN",
+    [I_PEAK_MAX]                = "I_PEAK_MAX",
+    [I_OUT_MAX]                 = "I_OUT_MAX",
+    [I_OUT_NOMINAL]             = "I_OUT_NOMINAL",
+    [I_FLIGHT_MODE]             = "I_FLIGHT_MODE",
+    [I_SLEEP_OC]                = "I_SLEEP_OC",
+    [I_SYSTEM]                  = "I_SYSTEM",
+    [I_CHARGE_MAX]              = "I_CHARGE_MAX",
+    [I_CHARGE_NOMINAL]          = "I_CHARGE_NOMINAL",
+    [I_CHARGE_FULL]             = "I_CHARGE_FULL",
+    [C_CELL_OT]                 = "C_CELL_OT",
+    [C_CELL_UT]                 = "C_CELL_UT",
+    [C_PCB_OT]                  = "C_PCB_OT",
+    [C_PCB_UT]                  = "C_PCB_UT",
+    [C_CELL_OT_CHARGE]          = "C_CELL_OT_CHARGE",
+    [C_CELL_UT_CHARGE]          = "C_CELL_UT_CHARGE",
+    [N_CHARGES]                 = "N_CHARGES",
+    [N_CHARGES_FULL]            = "N_CHARGES_FULL",
+    [OCV_SLOPE]                 = "OCV_SLOPE",
+    [BATTERY_TYPE]              = "BATTERY_TYPE",
+
+    [T_MEAS]                    = "T_MEAS",
+    [T_FTTI]                    = "T_FTTI",
+    [T_BMS_TIMEOUT]             = "T_BMS_TIMEOUT",
+    [T_FAULT_TIMEOUT]           = "T_FAULT_TIMEOUT",
+    [T_BCC_SLEEP_CYCLIC]        = "T_BCC_SLEEP_CYCLIC",
+    [T_SLEEP_TIMEOUT]           = "T_SLEEP_TIMEOUT",
+    [T_OCV_CYCLIC0]             = "T_OCV_CYCLIC0",
+    [T_OCV_CYCLIC1]             = "T_OCV_CYCLIC1",
+    [T_CHARGE_DETECT]           = "T_CHARGE_DETECT",
+    [T_CB_DELAY]                = "T_CB_DELAY",
+    [T_CHARGE_RELAX]            = "T_CHARGE_RELAX",
+    [BATT_EOL]                  = "BATT_EOL",
+    [S_FLAGS]                   = "S_FLAGS",
+    [SELF_DISCHARGE_ENABLE]     = "SELF_DISCHARGE_ENABLE",
+    [FLIGHT_MODE_ENABLE]        = "FLIGHT_MODE_ENABLE",
+    [EMERGENCY_BUTTON_ENABLE]   = "EMERGENCY_BUTTON_ENABLE",
+    [SMBUS_ENABLE]              = "SMBUS_ENABLE",
+    [GATE_CHECK_ENABLE]         = "GATE_CHECK_ENABLE",
+    [MODEL_ID]                  = "MODEL_ID",
+    [MODEL_NAME]                = "MODEL_NAME",
+
+    [CYPHAL_NODE_STATIC_ID]     = "CYPHAL_NODE_STATIC_ID",
+    [CYPHAL_ES_SUB_ID]          = "CYPHAL_ES_SUB_ID",
+    [CYPHAL_BS_SUB_ID]          = "CYPHAL_BS_SUB_ID",
+    [CYPHAL_BP_SUB_ID]          = "CYPHAL_BP_SUB_ID",
+    [CYPHAL_LEGACY_BI_SUB_ID]   = "CYPHAL_LEGACY_BI_SUB_ID",
+    [DRONECAN_NODE_STATIC_ID]   = "DRONECAN_NODE_STATIC_ID",
+    [DRONECAN_BAT_CONTINUOUS]   = "DRONECAN_BAT_CONTINUOUS",
+    [DRONECAN_BAT_PERIODIC]     = "DRONECAN_BAT_PERIODIC",
+    [DRONECAN_BAT_CELLS]        = "DRONECAN_BAT_CELLS",
+    [DRONECAN_BAT_INFO]         = "DRONECAN_BAT_INFO",
+    [DRONECAN_BAT_INFO_AUX]     = "DRONECAN_BAT_INFO_AUX",
+    [CAN_MODE]                  = "CAN_MODE",
+    [CAN_FD_MODE]               = "CAN_FD_MODE",
+    [CAN_BITRATE]               = "CAN_BITRATE",
+    [CAN_FD_BITRATE]            = "CAN_FD_BITRATE",
+
+    [V_MIN]                     = "V_MIN",
+    [V_MAX]                     = "V_MAX",
+    [I_RANGE_MAX]               = "I_RANGE_MAX",
+    [I_MAX]                     = "I_MAX",
+    [I_SHORT]                   = "I_SHORT",
+    [T_SHORT]                   = "T_SHORT",
+    [I_BAL]                     = "I_BAL",
+    [M_MASS]                    = "M_MASS",
+    [F_V_OUT_DIVIDER_FACTOR]    = "F_V_OUT_DIVIDER_FACTOR",
+    //[NONE]                      = "NONE",
+
+    // add these 2 strings to it as extra commands
+                                  "STATE",
+                                  "ALL"
 };
 
-//! @brief this array consists of all the parameters that are written to the BCC and my not be written in sleep mode
+/*! @brief this array consists of all the parameters that are written to the BCC and my not be written in
+ * sleep mode
+ */
 const parameterKind_t BCCParameters[] =
 {
     N_CELLS,
-    T_CYCLIC,
-    I_SLEEP_OC, 
+    SENSOR_ENABLE,
     V_CELL_OV,
     V_CELL_UV,
+    I_SLEEP_OC,
     C_CELL_OT,
-    C_CELL_OT_CHARGE,
     C_CELL_UT,
-    C_CELL_UT_CHARGE,
-    C_PCB_UT,
     C_PCB_OT,
-    SENSOR_ENABLE,
-    BATTERY_TYPE
+    C_PCB_UT,
+    C_CELL_OT_CHARGE,
+    C_CELL_UT_CHARGE,
+    BATTERY_TYPE,
+    T_BCC_SLEEP_CYCLIC,
 };
 
-bool gCliInitialized = false;
-bool gCliPrintLockInitialized = false;
-static pthread_mutex_t gCliPrintLock;       
+bool                   gCliPrintLockInitialized = false;
+static pthread_mutex_t gCliPrintLock;
 
 static char gGetSetParamsLowerString[32];
 
-static uint16_t gShowMeasurements = 0; 
-static bool gDoTop = false;
+static uint16_t gShowMeasurements = 0;
+static bool     gDoTop            = false;
 
 //! @brief Callback function to handle a command in the main.c
-userCommandCallbackBatFuntion       gUserCommandCallbackFuntionfp;
+userCommandCallbackBatFuntion gUserCommandCallbackFuntionfp;
 /****************************************************************************
  * private Functions
  ****************************************************************************/
-//! to print the help 
+//! to print the help
 void printHelp(void);
 
 //! this prints all the parameters from gGetSetParameters
@@ -233,9 +315,9 @@ void printAllParameterValues(void);
 int cli_printfColor(printColor_t color, const char *fmt, va_list argp);
 
 /*!
- * @brief   this function can be used to change what is viewed 
+ * @brief   this function can be used to change what is viewed
  *          on the CLI (the new measurements)
- *          
+ *
  * @param   showCommand the showcommand that the user entered.
  * @param   value the value of that param.
  *
@@ -248,62 +330,36 @@ void setShowMeas(showCommands_t showCommand, bool value);
  ****************************************************************************/
 /*!
  * @brief   this function is needed to get the address of the state and the mutex to the cli
- *          
- * @param   p_userCommandCallbackBatFuntion address of the function to be called when a commands needs to be processed by the main
  *
- * @return  If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error:
+ * @param   p_userCommandCallbackBatFuntion address of the function to be called when a commands needs to be
+ *          processed by the main
+ *
+ * @return  If successful, the function will return zero (OK). Otherwise, an error number will be returned to
+ *          indicate the error:
  */
 int cli_initialize(userCommandCallbackBatFuntion p_userCommandCallbackBatFuntion)
 {
-    int lvRetValue = 0;
+    // initialize the mutex
+    pthread_mutex_init(&gCliPrintLock, NULL);
+    gCliPrintLockInitialized = true;
 
-    // check if initialized
-    if(!gCliInitialized)
-    {
-        // initialize the mutex
-        pthread_mutex_init(&gCliPrintLock, NULL);
-        gCliPrintLockInitialized = true;
+    DEBUGASSERT((sizeof(gStatesArray) / sizeof(char *)) == NUMBER_OF_MAIN_STATES);
+    DEBUGASSERT((sizeof(gChargeStatesArray) / sizeof(char *)) == NUMBER_OF_CHARGE_STATES);
+    DEBUGASSERT(((sizeof(gGetSetParameters) / sizeof(char *)) - (EXTRA_GET_AND_SET_PARS)) == NONE);
 
-        // connect the callback function
-        gUserCommandCallbackFuntionfp = p_userCommandCallbackBatFuntion;
-
-        // set that it is initialized
-        gCliInitialized = true;
-    }
+    // connect the callback function
+    gUserCommandCallbackFuntionfp = p_userCommandCallbackBatFuntion;
 
     // return
-    return lvRetValue;
+    return OK;
 }
 
 /*!
- * @brief   this function is deinitialize the cli
- *          
- * @param   None
- *
- * @return  If successful, the function will return zero (OK). Otherwise, an error number will be returned to indicate the error:
- * @example if(cli_deinitialize())
- *          {
- *              // do something with the error
- *          }
- */
-int cli_deinitialize(void)
-{
-    // reset the initialized variable
-    gCliInitialized = false;
-
-    // return
-    return 0;
-}
-
-/****************************************************************************
- * main
- ****************************************************************************/
-/*!
- * @brief   this function is the cli function. 
+ * @brief   this function is the cli function.
  *          it will take care of the commands send to the BMS
  *          like the "help", "set" and "get" command
- *          
- * @param   the amount of arguments in char *argv[] 
+ *
+ * @param   the amount of arguments in char *argv[]
  * @param   the arguments to the function
  *
  * @return  If successful, the function will return zero (OK). Otherwise -1
@@ -311,35 +367,32 @@ int cli_deinitialize(void)
  */
 int cli_processCommands(int argc, char **argv)
 {
-    commands_t lvCommands = CLI_WRONG; 
+    commands_t     lvCommands     = CLI_WRONG;
     showCommands_t lvShowCommands = CLI_NONE;
 
-    //cli_printf("Hello, World! test!");
-    FAR char *lvCommandString = argv[1];
+    FAR char *lvCommandString   = argv[1];
     FAR char *lvParameterString = argv[2];
-    FAR char *lvValueString = argv[3];
+    FAR char *lvValueString     = argv[3];
 
-    int lvRetValue = -1;
-    bool lvFoundParam = false;
-    bool lvSendParameters = false;
-    bool lvSendShowCommands = false;
-    bool lvGetAll = false;
-    bool nonWritableFound = false;
-    int i, j;
-    const char *lvCommandArray[AMOUNT_COMMANDS] = {HELP_COMMAND, GET_COMMAND, SET_COMMAND, SHOW_COMMAND,
-                                                   RESET_COMMAND, SLEEP_COMMAND, WAKE_COMMAND, DEEP_SLEEP_COMMAND,
-                                                   SAVE_COMMAND, LOAD_COMMAND, DEFAULT_COMMAND, TIME_COMMAND};
+    int         lvRetValue         = -1;
+    bool        lvFoundParam       = false;
+    bool        lvSendParameters   = false;
+    bool        lvSendShowCommands = false;
+    bool        lvGetAll           = false;
+    int         i, j;
+    const char *lvCommandArray[AMOUNT_COMMANDS] = { HELP_COMMAND, GET_COMMAND, SET_COMMAND, SHOW_COMMAND,
+        RESET_COMMAND, SLEEP_COMMAND, WAKE_COMMAND, DEEP_SLEEP_COMMAND, SAVE_COMMAND, LOAD_COMMAND,
+        DEFAULT_COMMAND, TIME_COMMAND };
 
-    const char *lvShowCommandArgArr[] = {SHOW_CURRENT, SHOW_AVG_CURRENT, SHOW_CELL_VOLTAGE, SHOW_STACK_VOLTAGE, 
-                                        SHOW_BAT_VOLTAGE, SHOW_OUTPUT_STATUS, SHOW_TEMPERATURE, SHOW_ENGERGY_COMS,
-                                        SHOW_REMAINING_CAP, SHOW_STATE_O_CHARGE, SHOW_AVG_POWER, SHOW_STATE, 
-                                        SHOW_ALL, SHOW_TOP};
+    const char *lvShowCommandArgArr[] = { SHOW_CURRENT, SHOW_AVG_CURRENT, SHOW_CELL_VOLTAGE,
+        SHOW_STACK_VOLTAGE, SHOW_BAT_VOLTAGE, SHOW_OUTPUT_STATUS, SHOW_TEMPERATURE, SHOW_ENGERGY_COMS,
+        SHOW_REMAINING_CAP, SHOW_STATE_O_CHARGE, SHOW_AVG_POWER, SHOW_STATE, SHOW_ALL, SHOW_TOP };
 
     parameterKind_t lvParameter = NONE;
-    float lvFloatVal;
-    char *lvPStringVal;
-    int32_t lvIntVal = 0;
-    uint64_t lvUint64Val = 0;
+    float           lvFloatVal;
+    char *          lvPStringVal;
+    int32_t         lvIntVal    = 0;
+    uint64_t        lvUint64Val = 0;
     struct timespec currentTime;
     struct timespec sampleTime;
 
@@ -347,7 +400,7 @@ int cli_processCommands(int argc, char **argv)
     mcuPowerModes_t mcuPowerMode;
 
     // check if initialized
-    if(!gCliInitialized)
+    if(!gCliPrintLockInitialized)
     {
         cli_printfError("CLI ERROR: isn't initialized, please initialize cli\n");
         return lvRetValue;
@@ -364,48 +417,56 @@ int cli_processCommands(int argc, char **argv)
                 // set the command
                 lvCommands = CLI_HELP;
             }
-            else if((!strncmp(lvCommandString, lvCommandArray[RESET_INDEX], strlen(lvCommandArray[RESET_INDEX]))))
+            else if((!strncmp(
+                        lvCommandString, lvCommandArray[RESET_INDEX], strlen(lvCommandArray[RESET_INDEX]))))
             {
                 // set the command
                 lvCommands = CLI_RESET;
             }
-            else if((!strncmp(lvCommandString, lvCommandArray[SLEEP_INDEX], strlen(lvCommandArray[SLEEP_INDEX]))))
+            else if((!strncmp(
+                        lvCommandString, lvCommandArray[SLEEP_INDEX], strlen(lvCommandArray[SLEEP_INDEX]))))
             {
                 // set the command
                 lvCommands = CLI_SLEEP;
             }
-            else if((!strncmp(lvCommandString, lvCommandArray[WAKE_INDEX], strlen(lvCommandArray[WAKE_INDEX]))))
+            else if((!strncmp(
+                        lvCommandString, lvCommandArray[WAKE_INDEX], strlen(lvCommandArray[WAKE_INDEX]))))
             {
                 // set the command
                 lvCommands = CLI_WAKE;
             }
-            else if((!strncmp(lvCommandString, lvCommandArray[DEEP_SLEEP_INDEX], strlen(lvCommandArray[DEEP_SLEEP_INDEX]))))
+            else if((!strncmp(lvCommandString, lvCommandArray[DEEP_SLEEP_INDEX],
+                        strlen(lvCommandArray[DEEP_SLEEP_INDEX]))))
             {
                 // set the command
                 lvCommands = CLI_DEEP_SLEEP;
             }
-            else if((!strncmp(lvCommandString, lvCommandArray[SAVE_INDEX], strlen(lvCommandArray[SAVE_INDEX]))))
+            else if((!strncmp(
+                        lvCommandString, lvCommandArray[SAVE_INDEX], strlen(lvCommandArray[SAVE_INDEX]))))
             {
-                // set the command 
+                // set the command
                 lvCommands = CLI_SAVE;
             }
-            else if((!strncmp(lvCommandString, lvCommandArray[LOAD_INDEX], strlen(lvCommandArray[LOAD_INDEX]))))
+            else if((!strncmp(
+                        lvCommandString, lvCommandArray[LOAD_INDEX], strlen(lvCommandArray[LOAD_INDEX]))))
             {
-                // set the command 
+                // set the command
                 lvCommands = CLI_LOAD;
             }
-            else if((!strncmp(lvCommandString, lvCommandArray[DEFAULT_INDEX], strlen(lvCommandArray[DEFAULT_INDEX]))))
+            else if((!strncmp(lvCommandString, lvCommandArray[DEFAULT_INDEX],
+                        strlen(lvCommandArray[DEFAULT_INDEX]))))
             {
-                // set the command 
+                // set the command
                 lvCommands = CLI_DEFAULT;
             }
-            else if((!strncmp(lvCommandString, lvCommandArray[TIME_INDEX], strlen(lvCommandArray[TIME_INDEX]))))
+            else if((!strncmp(
+                        lvCommandString, lvCommandArray[TIME_INDEX], strlen(lvCommandArray[TIME_INDEX]))))
             {
-                // set the command 
+                // set the command
                 lvCommands = CLI_TIME;
             }
 
-        break;
+            break;
 
         // two commands
         case 3:
@@ -417,32 +478,33 @@ int cli_processCommands(int argc, char **argv)
             }
 
             // check for help parameters command
-            else if((!strncmp(lvCommandString, lvCommandArray[HELP_INDEX], strlen(lvCommandArray[HELP_INDEX]))))
+            else if((!strncmp(
+                        lvCommandString, lvCommandArray[HELP_INDEX], strlen(lvCommandArray[HELP_INDEX]))))
             {
                 // set the command
                 lvCommands = CLI_HELP;
 
-                if((!strcmp(lvParameterString, PARAMS_COMMAND)))//, strlen(PARAMS_COMMAND))))
+                if((!strcmp(lvParameterString, PARAMS_COMMAND))) //, strlen(PARAMS_COMMAND))))
                 {
                     // set it to true
                     lvSendParameters = true;
                 }
-                else if ((!strcmp(lvParameterString, SHOW_MEAS_COMMAND)))//, strlen(SHOW_MEAS_COMMAND))))
+                else if((!strcmp(lvParameterString, SHOW_MEAS_COMMAND))) //, strlen(SHOW_MEAS_COMMAND))))
                 {
                     // set the variable
                     lvSendShowCommands = true;
                 }
                 else
                 {
-                    // if wrong third command 
+                    // if wrong third command
                     // reset the commands
-                    lvCommands = CLI_WRONG; 
+                    lvCommands = CLI_WRONG;
                 }
             }
 
             break;
 
-        // three commands 
+        // three commands
         case 4:
             // check for a set command
             if((!strncmp(lvCommandString, lvCommandArray[SET_INDEX], strlen(lvCommandArray[SET_INDEX]))))
@@ -452,12 +514,13 @@ int cli_processCommands(int argc, char **argv)
             }
 
             // check for the show command
-            else if((!strncmp(lvCommandString, lvCommandArray[SHOW_INDEX], strlen(lvCommandArray[SHOW_INDEX]))))
+            else if((!strncmp(
+                        lvCommandString, lvCommandArray[SHOW_INDEX], strlen(lvCommandArray[SHOW_INDEX]))))
             {
                 // set the command
                 lvCommands = CLI_SHOW;
             }
-        break;
+            break;
 
         // too little or too much commands
         default:
@@ -465,14 +528,14 @@ int cli_processCommands(int argc, char **argv)
             cli_printfError("Wrong input!\t");
             cli_printf("try \"bms help\"\n");
             return lvRetValue;
-        break;
+            break;
     }
 
     // do somthing with the different commands
     switch(lvCommands)
     {
         // in case of a wrong input (should've already be filtered out)
-        case CLI_WRONG: 
+        case CLI_WRONG:
             // there is an error
             cli_printfError("Wrong input!\t");
             cli_printf("try \"bms help\"\n");
@@ -508,7 +571,7 @@ int cli_processCommands(int argc, char **argv)
 
             lvRetValue = 0;
             // go through the string array
-            for (i = 0; i < (PARAMETER_ARRAY_SIZE); i++)
+            for(i = 0; i < (PARAMETER_ARRAY_SIZE); i++)
             {
                 // change the get set parameter to lowercase and convert all underscores to upderscores
                 // change each character of the string parameters to lowercase for the user input
@@ -530,18 +593,19 @@ int cli_processCommands(int argc, char **argv)
                 gGetSetParamsLowerString[j] = '\0';
 
                 // compare the string
-                if((strncmp(lvParameterString, gGetSetParamsLowerString, strlen(gGetSetParameters[i])) == 0) 
-                    && (strlen(lvParameterString) == strlen(gGetSetParameters[i])))
+                if((strncmp(lvParameterString, gGetSetParamsLowerString, strlen(gGetSetParameters[i])) ==
+                       0) &&
+                    (strlen(lvParameterString) == strlen(gGetSetParameters[i])))
                 {
                     // check if the parameter can be set
                     if(i <= NONE)
                     {
                         // save the parameter
-                        lvParameter = (parameterKind_t)(i);
+                        lvParameter  = (parameterKind_t)(i);
                         lvFoundParam = true;
                         break;
                     }
-                    
+
                     // it is ALL
                     // check if it is GET
                     if(lvCommands == CLI_GET)
@@ -550,15 +614,15 @@ int cli_processCommands(int argc, char **argv)
                         lvGetAll = true;
 
                         // set the first parameter
-                        lvParameter = 0;
+                        lvParameter  = 0;
                         lvFoundParam = true;
                         break;
-                    }               
+                    }
                 }
                 else if(i > NONE)
                 {
                     // there is an error
-                    cli_printf("Wrong parameter input! \ttry \"bms help\"\n"); 
+                    cli_printf("Wrong parameter input! \ttry \"bms help\"\n");
                 }
             }
 
@@ -595,7 +659,7 @@ int cli_processCommands(int argc, char **argv)
                                 // print it
                                 cli_printf("%.3f", lvFloatVal);
                             }
-                        break;
+                            break;
                         // if it is a string
                         case STRINGVAL:
 
@@ -611,11 +675,11 @@ int cli_processCommands(int argc, char **argv)
                                 // print it
                                 cli_printf("%s", lvPStringVal);
                             }
-                        break;
+                            break;
                         case UINT64VAL:
                             // get the value
                             if(data_getParameter(lvParameter, &lvUint64Val, NULL) == NULL)
-                            {   
+                            {
                                 // something went wrong
                                 cli_printfError("CLI ERROR: data_getParameter\n");
                             }
@@ -623,16 +687,16 @@ int cli_processCommands(int argc, char **argv)
                             {
                                 // print it
                                 cli_printf("%" PRIu64, lvUint64Val);
-                                //cli_printf("%"PRIu64"", lvUint64Val);
+                                // cli_printf("%"PRIu64"", lvUint64Val);
                             }
-                        
-                        break;
+
+                            break;
                         // if it is a integer (max int32_t)
                         default:
 
                             // get the value
                             if(data_getParameter(lvParameter, &lvIntVal, NULL) == NULL)
-                            {   
+                            {
                                 // something went wrong
                                 cli_printfError("CLI ERROR: data_getParameter\n");
                             }
@@ -641,13 +705,13 @@ int cli_processCommands(int argc, char **argv)
                                 // print it
                                 cli_printf("%d", lvIntVal);
                             }
-                        break;
+                            break;
                     }
 
                     // check if there is a unit
                     if(*data_getUnit(lvParameter) != '-')
                     {
-                        // add the unit 
+                        // add the unit
                         cli_printf(" %s\n", data_getUnit(lvParameter));
                     }
                     else
@@ -657,13 +721,13 @@ int cli_processCommands(int argc, char **argv)
                     }
                 }
                 else
-                // the user wants the state 
+                // the user wants the state
                 {
                     // check if the charge state needs to be outputted as well
                     if(data_getMainState() == CHARGE)
                     {
                         // print the state and the charge state
-                        cli_printf("\"%s-%s\"\n", gStatesArray[(int)(data_getMainState())], 
+                        cli_printf("\"%s-%s\"\n", gStatesArray[(int)(data_getMainState())],
                             gChargeStatesArray[(int)(data_getChargeState())]);
                     }
                     else
@@ -674,44 +738,27 @@ int cli_processCommands(int argc, char **argv)
                 }
             }
             // if it is a set command
-            else if (lvCommands == CLI_SET && lvFoundParam)
+            else if(lvCommands == CLI_SET && lvFoundParam)
             {
                 // set the parameter to the user
                 if(lvParameter != NONE)
                 {
-                    // check if it is the parameters that are able to be set
-                    for(i = 0; nonWritableParameters[i] != NONE; i++)
-                    {
-                        // check if it is non writable
-                        if(lvParameter == nonWritableParameters[i])
-                        {
-                            // this should be written
-                            // set the value
-                            nonWritableFound = true;
-
-                            // break the for loop
-                            break;
-                        }
-                    }
-
                     // check if the value may be written
-                    if(!nonWritableFound)
+                    if(data_getParameterIfUserReadOnly(lvParameter) == 0)
                     {
                         // get the MCU power state and check for an error
                         mcuPowerMode = power_setNGetMcuPowerMode(false, ERROR_VALUE);
                         if(mcuPowerMode == ERROR_VALUE)
                         {
-                            // get the error 
-                            lvRetValue = errno; 
+                            // get the error
+                            lvRetValue = errno;
 
                             // error
-                            cli_printfError("cli ERROR: Could not get MCU power state 1: %d \n", 
-                                lvRetValue);
+                            cli_printfError("cli ERROR: Could not get MCU power state 1: %d \n", lvRetValue);
                         }
 
                         // check if the MCU is in a mode where the BCC SPI(1) is off
-                        if((mcuPowerMode == VLPR_MODE) ||
-                            (mcuPowerMode == ERROR_VALUE)) 
+                        if((mcuPowerMode == VLPR_MODE) || (mcuPowerMode == ERROR_VALUE))
                         {
                             cli_printf("Some parameters can not be processed in sleep mode\n");
                             cli_printf("Waking up the BMS... \n");
@@ -726,23 +773,23 @@ int cli_processCommands(int argc, char **argv)
                             currentTime.tv_sec = sampleTime.tv_sec;
 
                             // wake up the BMS
-                            gUserCommandCallbackFuntionfp(CLI_WAKE, lvIntVal);
+                            gUserCommandCallbackFuntionfp(CLI_WAKE);
 
                             // get the MCU power state and check for an error
                             mcuPowerMode = power_setNGetMcuPowerMode(false, ERROR_VALUE);
                             if(mcuPowerMode == ERROR_VALUE)
                             {
-                                // get the error 
-                                lvRetValue = errno; 
+                                // get the error
+                                lvRetValue = errno;
 
                                 // error
-                                cli_printfError("cli ERROR: Could not get MCU power mode 2: %d \n", 
-                                    lvRetValue);
+                                cli_printfError(
+                                    "cli ERROR: Could not get MCU power mode 2: %d \n", lvRetValue);
                             }
-                            
+
                             // wait until the MCU is not in a mode where the BCC spi is off
                             // or a timeout happens (2-3 seconds)
-                            while(((mcuPowerMode == VLPR_MODE) || (mcuPowerMode == ERROR_VALUE)) && 
+                            while(((mcuPowerMode == VLPR_MODE) || (mcuPowerMode == ERROR_VALUE)) &&
                                 ((sampleTime.tv_sec + 3) > currentTime.tv_sec))
                             {
                                 // sleep for 1ms
@@ -758,12 +805,12 @@ int cli_processCommands(int argc, char **argv)
                                 mcuPowerMode = power_setNGetMcuPowerMode(false, ERROR_VALUE);
                                 if(mcuPowerMode == ERROR_VALUE)
                                 {
-                                    // get the error 
-                                    lvRetValue = errno; 
+                                    // get the error
+                                    lvRetValue = errno;
 
                                     // error
-                                    cli_printfError("cli ERROR: Could not get MCU power mode 3: %d \n", 
-                                        lvRetValue);
+                                    cli_printfError(
+                                        "cli ERROR: Could not get MCU power mode 3: %d \n", lvRetValue);
                                 }
                             }
 
@@ -771,29 +818,28 @@ int cli_processCommands(int argc, char **argv)
                             mcuPowerMode = power_setNGetMcuPowerMode(false, ERROR_VALUE);
                             if(mcuPowerMode == ERROR_VALUE)
                             {
-                                // get the error 
-                                lvRetValue = errno; 
+                                // get the error
+                                lvRetValue = errno;
 
                                 // error
-                                cli_printfError("cli ERROR: Could not get MCU power mode 4: %d \n", 
-                                    lvRetValue);
+                                cli_printfError(
+                                    "cli ERROR: Could not get MCU power mode 4: %d \n", lvRetValue);
                             }
 
                             // check if the MCU is in a mode where the BCC SPI(1) is off
-                            if((mcuPowerMode == VLPR_MODE) || 
-                                (mcuPowerMode == ERROR_VALUE))
+                            if((mcuPowerMode == VLPR_MODE) || (mcuPowerMode == ERROR_VALUE))
                             {
                                 // inform user and return
                                 cli_printfError("CLI ERROR: could not wake up MCU!\n");
                                 lvRetValue = -1;
-                                
+
                                 // return
                                 return lvRetValue;
                             }
                         }
 
-                        // TODO do we need to add a password?
-                        //cli_printf("add password!\n");
+                        // TODO is a password needed?
+                        // cli_printf("add password!\n");
                         // check which type the value should be
                         // get the parameter from the data sturct
                         switch(data_getType(lvParameter))
@@ -814,19 +860,19 @@ int cli_processCommands(int argc, char **argv)
                                     // inform user and return
                                     cli_printfError("CLI ERROR: conversion error!\n");
                                     lvRetValue = -1;
-                                    
+
                                     // return
                                     return lvRetValue;
                                 }
 
-                                //set the parameter and check if failed
+                                // set the parameter and check if failed
                                 if(data_setParameter(lvParameter, &lvFloatVal))
                                 {
                                     // if failed
                                     cli_printfError("Failed!\tMaybe outside minimum or maximum\n");
                                 }
                                 else
-                                {   
+                                {
                                     // get the parameter
                                     if(data_getParameter(lvParameter, &lvFloatVal, NULL) == NULL)
                                     {
@@ -840,7 +886,7 @@ int cli_processCommands(int argc, char **argv)
                                     }
                                 }
 
-                            break;
+                                break;
                             // if it is a string
                             case STRINGVAL:
 
@@ -848,25 +894,26 @@ int cli_processCommands(int argc, char **argv)
                                 cli_printf("setting %s with \"%s\"...\n", lvParameterString, lvValueString);
 
                                 // check if the string lenght is OK
-                                if(strlen(lvValueString) > MODEL_NAME_MAX_CHARS)
+                                if(strlen(lvValueString) > STRING_MAX_CHARS)
                                 {
                                     // it is too long
-                                    cli_printf("input string too long! max characters is %d\n", MODEL_NAME_MAX_CHARS);
+                                    cli_printf(
+                                        "input string too long! max characters is %d\n", STRING_MAX_CHARS);
                                     lvRetValue = -1;
                                     break;
                                 }
 
                                 // set the parameter and check if failed
                                 if(data_setParameter(lvParameter, lvValueString))
-                                {   
+                                {
                                     //  if failed
                                     cli_printfError("Failed!\n");
                                 }
                                 else
-                                {   
+                                {
                                     // get the set value
                                     lvPStringVal = data_getParameter(lvParameter, NULL, NULL);
-                                    
+
                                     // check for errors
                                     if(lvPStringVal == NULL)
                                     {
@@ -880,7 +927,7 @@ int cli_processCommands(int argc, char **argv)
                                     }
                                 }
 
-                            break;
+                                break;
                             case UINT64VAL:
                                 // get the value
 
@@ -888,10 +935,11 @@ int cli_processCommands(int argc, char **argv)
                                 if(lvValueString[0] == '-')
                                 {
                                     // if failed output to the user
-                                    cli_printfError("Failed!\tParameter is of type unsigned, no negatives allowed\n");
-                                    
+                                    cli_printfError(
+                                        "Failed!\tParameter is of type unsigned, no negatives allowed\n");
+
                                     // break out so the value is not set!
-                                    break; 
+                                    break;
                                 }
 
                                 // convert string to float
@@ -899,7 +947,8 @@ int cli_processCommands(int argc, char **argv)
                                 lvUint64Val = strtoull(lvValueString, NULL, 10);
 
                                 // inform user
-                                cli_printf("setting %s with \"%" PRIu64 "\"...\n", lvParameterString, lvUint64Val);
+                                cli_printf(
+                                    "setting %s with \"%" PRIu64 "\"...\n", lvParameterString, lvUint64Val);
 
                                 // check for errors
                                 if(lvUint64Val == 0 && (errno == ERANGE || errno == EINVAL))
@@ -913,12 +962,12 @@ int cli_processCommands(int argc, char **argv)
 
                                 // set the parameter and check if failed
                                 if(data_setParameter(lvParameter, &lvUint64Val))
-                                {   
+                                {
                                     // if failed
                                     cli_printfError("Failed!\tMaybe outside minimum or maximum\n");
                                 }
                                 else
-                                {   
+                                {
                                     // get the parameter
                                     if(data_getParameter(lvParameter, &lvUint64Val, NULL) == NULL)
                                     {
@@ -932,13 +981,13 @@ int cli_processCommands(int argc, char **argv)
                                     }
                                 }
 
-                            break;                  
+                                break;
 
                             // if it is a integer (max int32_t)
                             default:
                                 // get the value
 
-                                // convert string to float
+                                // convert string to int
                                 // watch out this returns a long int!
                                 lvIntVal = strtol(lvValueString, NULL, 10);
 
@@ -962,21 +1011,23 @@ int cli_processCommands(int argc, char **argv)
                                     if(lvValueString[0] == '-')
                                     {
                                         // if failed output to the user
-                                        cli_printfError("Failed!\tParameter is of type unsigned, no negatives allowed\n");
-                                        
+                                        cli_printfError(
+                                            "Failed!\tParameter is of type unsigned, no negatives allowed\n");
+
                                         // break out so the value is not set!
-                                        break; 
+                                        break;
                                     }
 
                                     // check if the value is not higher than the max UINT8 value
                                     if(lvIntVal > UINT8_MAX)
                                     {
                                         // if failed output to the user
-                                        cli_printfError("Failed!\tParameter does not fit in datatype %d > UINT8_MAX (%d)\n", 
+                                        cli_printfError("Failed!\tParameter does not fit in datatype %d > "
+                                                        "UINT8_MAX (%d)\n",
                                             lvIntVal, UINT8_MAX);
-                                        
+
                                         // break out so the value is not set!
-                                        break; 
+                                        break;
                                     }
                                 }
                                 // check if it is a UINT16
@@ -986,32 +1037,34 @@ int cli_processCommands(int argc, char **argv)
                                     if(lvValueString[0] == '-')
                                     {
                                         // if failed output to the user
-                                        cli_printfError("Failed!\tParameter is of type unsigned, no negatives allowed\n");
-                                        
+                                        cli_printfError(
+                                            "Failed!\tParameter is of type unsigned, no negatives allowed\n");
+
                                         // break out so the value is not set!
-                                        break; 
+                                        break;
                                     }
-                                    
+
                                     // check if the value is not higher than the max UINT8 value
                                     if(lvIntVal > UINT16_MAX)
                                     {
                                         // if failed output to the user
-                                        cli_printfError("Failed!\tParameter does not fit in datatype %d > UINT16_MAX (%d)\n",
-                                        lvIntVal, UINT16_MAX);
-                                        
+                                        cli_printfError("Failed!\tParameter does not fit in datatype %d > "
+                                                        "UINT16_MAX (%d)\n",
+                                            lvIntVal, UINT16_MAX);
+
                                         // break out so the value is not set!
-                                        break; 
+                                        break;
                                     }
                                 }
 
                                 // set the parameter and check if failed
                                 if(data_setParameter(lvParameter, &lvIntVal))
-                                {   
+                                {
                                     // if failed
                                     cli_printfError("Failed!\tMaybe outside minimum or maximum\n");
                                 }
                                 else
-                                {   
+                                {
                                     // get the parameter
                                     if(data_getParameter(lvParameter, &lvIntVal, NULL) == NULL)
                                     {
@@ -1023,9 +1076,8 @@ int cli_processCommands(int argc, char **argv)
                                         // if succeeded
                                         cli_printfGreen("succeeded! %d is set!\n", lvIntVal);
                                     }
-                                    
                                 }
-                            break;
+                                break;
                         }
                     }
                     // if it is one of the parameters that shouldn't be written
@@ -1043,8 +1095,8 @@ int cli_processCommands(int argc, char **argv)
                 }
             }
 
-        break;
-        
+            break;
+
         // in case of time
         case CLI_TIME:
             // get the current time and output it to the user
@@ -1053,17 +1105,17 @@ int cli_processCommands(int argc, char **argv)
             if(clock_gettime(CLOCK_REALTIME, &currentTime) == -1)
             {
                 cli_printfError("CLI ERROR: failed to get currentTime!\n");
-                
+
                 lvRetValue = -1;
                 return lvRetValue;
             }
 
             // output the time to the user
-            cli_printf("Time since boot: %ds %dms\n", currentTime.tv_sec, currentTime.tv_nsec/1000000);
-        
+            cli_printf("Time since boot: %ds %dms\n", currentTime.tv_sec, currentTime.tv_nsec / 1000000);
+
             // it went ok
             lvRetValue = 0;
-        break;
+            break;
 
         // in case of show
         case CLI_SHOW:
@@ -1071,10 +1123,10 @@ int cli_processCommands(int argc, char **argv)
             // check the second parameters
             for(i = 0; i < CLI_NONE; i++)
             {
-                // check each 
+                // check each
                 if(!strncmp(lvParameterString, lvShowCommandArgArr[i], strlen(lvShowCommandArgArr[i])))
                 {
-                    // found it 
+                    // found it
                     lvShowCommands = (showCommands_t)i;
                     break;
                 }
@@ -1112,13 +1164,13 @@ int cli_processCommands(int argc, char **argv)
                 cli_printf("wrong show command! try \"bms help show-meas\"\n");
             }
 
-        break;
-            
+            break;
+
         // it is an other command
         default:
             // call the callback
-            gUserCommandCallbackFuntionfp(lvCommands, lvIntVal);
-        break;
+            lvRetValue = gUserCommandCallbackFuntionfp(lvCommands);
+            break;
     }
 
     // return
@@ -1127,25 +1179,25 @@ int cli_processCommands(int argc, char **argv)
 
 /*!
  * @brief   this function is the same as cli_printf(), but it will make sure it can be used
- *          by multiple threads 
- *          
- * @param   fmt This is the string that contains the text to be written to stdout. 
- *          It can optionally contain embedded format tags that are replaced by 
- *          the values specified in subsequent additional arguments and formatted as requested. 
+ *          by multiple threads
+ *
+ * @param   fmt This is the string that contains the text to be written to stdout.
+ *          It can optionally contain embedded format tags that are replaced by
+ *          the values specified in subsequent additional arguments and formatted as requested.
  *          Format tags prototype is %[flags][width][.precision][length]specifier
  *
  * @param   the arguments of the function
  *
- * @return  If successful, the total number of characters written is returned. 
+ * @return  If successful, the total number of characters written is returned.
  *          On failure, a negative number is returned.
  */
 int cli_printf(FAR const IPTR char *fmt, ...)
 {
-    va_list ap;
-    int     lvRetValue;
+    va_list         ap;
+    int             lvRetValue;
     struct timespec waitTime;
 
-    // check if mutex is initialzed 
+    // check if mutex is initialzed
     if(gCliPrintLockInitialized)
     {
         // get the time
@@ -1154,10 +1206,11 @@ int cli_printf(FAR const IPTR char *fmt, ...)
             cli_printfError("CLI ERROR: failed to get time!\n");
         }
 
-        // add the time 
-        waitTime.tv_sec     +=  (int)(CLI_TIMED_LOCK_WAIT_TIME_MS / 1000) + 
-                                ((waitTime.tv_nsec + (CLI_TIMED_LOCK_WAIT_TIME_MS % 1000) * MS_TO_NS_MULT) / (NSEC_MAX+1)); 
-        waitTime.tv_nsec    =   (waitTime.tv_nsec + (CLI_TIMED_LOCK_WAIT_TIME_MS % 1000) * MS_TO_NS_MULT) % (NSEC_MAX+1) ; 
+        // add the time
+        waitTime.tv_sec += (int)(CLI_TIMED_LOCK_WAIT_TIME_MS / 1000) +
+            ((waitTime.tv_nsec + (CLI_TIMED_LOCK_WAIT_TIME_MS % 1000) * MS_TO_NS_MULT) / (NSEC_MAX + 1));
+        waitTime.tv_nsec =
+            (waitTime.tv_nsec + (CLI_TIMED_LOCK_WAIT_TIME_MS % 1000) * MS_TO_NS_MULT) % (NSEC_MAX + 1);
 
         // lock the mutex
         lvRetValue = pthread_mutex_timedlock(&gCliPrintLock, &waitTime);
@@ -1208,20 +1261,20 @@ int cli_printf(FAR const IPTR char *fmt, ...)
 
 /*!
  * @brief   this function is the same as cli_printf(), but it will print the message in red
- *          
- * @param   fmt This is the string that contains the text to be written to stdout. 
- *          It can optionally contain embedded format tags that are replaced by 
- *          the values specified in subsequent additional arguments and formatted as requested. 
+ *
+ * @param   fmt This is the string that contains the text to be written to stdout.
+ *          It can optionally contain embedded format tags that are replaced by
+ *          the values specified in subsequent additional arguments and formatted as requested.
  *          Format tags prototype is %[flags][width][.precision][length]specifier
  *
  * @param   the arguments of the function
  *
- * @return  If successful, the total number of characters written is returned. 
+ * @return  If successful, the total number of characters written is returned.
  *          On failure, a negative number is returned.
  */
 int cli_printfError(FAR const IPTR char *fmt, ...)
 {
-    int lvRetValue;
+    int     lvRetValue;
     va_list ap;
 
     // initialze variable list ap
@@ -1239,20 +1292,20 @@ int cli_printfError(FAR const IPTR char *fmt, ...)
 
 /*!
  * @brief   this function is the same as cli_printf(), but it will print the message in orange
- *          
- * @param   fmt This is the string that contains the text to be written to stdout. 
- *          It can optionally contain embedded format tags that are replaced by 
- *          the values specified in subsequent additional arguments and formatted as requested. 
+ *
+ * @param   fmt This is the string that contains the text to be written to stdout.
+ *          It can optionally contain embedded format tags that are replaced by
+ *          the values specified in subsequent additional arguments and formatted as requested.
  *          Format tags prototype is %[flags][width][.precision][length]specifier
  *
  * @param   the arguments of the function
  *
- * @return  If successful, the total number of characters written is returned. 
+ * @return  If successful, the total number of characters written is returned.
  *          On failure, a negative number is returned.
  */
 int cli_printfWarning(FAR const IPTR char *fmt, ...)
 {
-    int lvRetValue;
+    int     lvRetValue;
     va_list ap;
 
     // initialze variable list ap
@@ -1270,20 +1323,20 @@ int cli_printfWarning(FAR const IPTR char *fmt, ...)
 
 /*!
  * @brief   this function is the same as cli_printf(), but it will print the message in green
- *          
- * @param   fmt This is the string that contains the text to be written to stdout. 
- *          It can optionally contain embedded format tags that are replaced by 
- *          the values specified in subsequent additional arguments and formatted as requested. 
+ *
+ * @param   fmt This is the string that contains the text to be written to stdout.
+ *          It can optionally contain embedded format tags that are replaced by
+ *          the values specified in subsequent additional arguments and formatted as requested.
  *          Format tags prototype is %[flags][width][.precision][length]specifier
  *
  * @param   the arguments of the function
  *
- * @return  If successful, the total number of characters written is returned. 
+ * @return  If successful, the total number of characters written is returned.
  *          On failure, a negative number is returned.
  */
 int cli_printfGreen(FAR const IPTR char *fmt, ...)
 {
-    int lvRetValue;
+    int     lvRetValue;
     va_list ap;
 
     // initialze variable list ap
@@ -1302,21 +1355,21 @@ int cli_printfGreen(FAR const IPTR char *fmt, ...)
 /*!
  * @brief   this function is the same as cli_printf(), but with no mutex lock
  * @warning should be used with cli_printLock()
- *          
- * @param   fmt This is the string that contains the text to be written to stdout. 
- *          It can optionally contain embedded format tags that are replaced by 
- *          the values specified in subsequent additional arguments and formatted as requested. 
+ *
+ * @param   fmt This is the string that contains the text to be written to stdout.
+ *          It can optionally contain embedded format tags that are replaced by
+ *          the values specified in subsequent additional arguments and formatted as requested.
  *          Format tags prototype is %[flags][width][.precision][length]specifier
  *
  * @param   the arguments of the function
  *
- * @return  If successful, the total number of characters written is returned. 
+ * @return  If successful, the total number of characters written is returned.
  *          On failure, a negative number is returned.
  */
 int cli_printfNoLock(FAR const IPTR char *fmt, ...)
 {
     va_list ap;
-    int lvRetValue; 
+    int     lvRetValue;
 
     // initialze variable list ap
     va_start(ap, fmt);
@@ -1334,24 +1387,24 @@ int cli_printfNoLock(FAR const IPTR char *fmt, ...)
 /*!
  * @brief   this function is the same as cli_printf(), but with a try mutex lock
  * @warning should be used with cli_printLock()
- *          
- * @param   fmt This is the string that contains the text to be written to stdout. 
- *          It can optionally contain embedded format tags that are replaced by 
- *          the values specified in subsequent additional arguments and formatted as requested. 
+ *
+ * @param   fmt This is the string that contains the text to be written to stdout.
+ *          It can optionally contain embedded format tags that are replaced by
+ *          the values specified in subsequent additional arguments and formatted as requested.
  *          Format tags prototype is %[flags][width][.precision][length]specifier
  *
  * @param   the arguments of the function
  *
- * @return  If successful, the total number of characters written is returned. 
+ * @return  If successful, the total number of characters written is returned.
  *          On failure, a negative number is returned.
  */
 int cli_printfTryLock(FAR const IPTR char *fmt, ...)
 {
     va_list ap;
-    int     lvRetValue; 
+    int     lvRetValue;
     int     mutexState;
 
-    // check if mutex is initialzed 
+    // check if mutex is initialzed
     if(gCliPrintLockInitialized)
     {
         // lock the mutex
@@ -1366,7 +1419,7 @@ int cli_printfTryLock(FAR const IPTR char *fmt, ...)
         // end the variable list
         va_end(ap);
 
-        // check if the mutex was locked 
+        // check if the mutex was locked
         if(!mutexState)
         {
             // unlock the mutex
@@ -1390,17 +1443,17 @@ int cli_printfTryLock(FAR const IPTR char *fmt, ...)
 }
 
 /*!
- * @brief   this function is used to lock and unlock the cli_print mutex. 
- *          it can be used to make sure updating the measured data is done without 
+ * @brief   this function is used to lock and unlock the cli_print mutex.
+ *          it can be used to make sure updating the measured data is done without
  *          writting random things in between.
- *          
+ *
  * @param   lock when true it will lock, when false it will unlock the cli_print mutex
  *
  * @return  0 If successful, otherwise an error will indicate the error
  */
 int cli_printLock(bool lock)
 {
-    int lvRetValue = -1; 
+    int lvRetValue = -1;
     // int fd;
     // struct termios attributes;
 
@@ -1429,335 +1482,193 @@ int cli_printLock(bool lock)
 
 /*!
  * @brief   this function is used to update the data on the CLI when needed.
- *          
- * @param   none
+ *
+ * @param   pCommonBatteryVariables pointer to the commonBatteryVariables_t to update the information
+ * @param   pCalcBatteryVariables pointer to the calcBatteryVariables_t to update the information
  *
  * @return  0 If successful, otherwise an error will indicate the error
  */
-int cli_updateData(void)
+int cli_updateData(
+    commonBatteryVariables_t *pCommonBatteryVariables, calcBatteryVariables_t *pCalcBatteryVariables)
 {
-    float floatVal, defaultParameterFloat;
-    uint8_t uint8Val, i, defaultParameterUint8;
-    int lineCounterVal = 0;
-    parameterKind_t parameter;
+    int             lineCounterVal = 0, i;
+    variableTypes_u variable1;
 
-    const char gSaveCursor[]        = VT100_SAVECURSOR;
-    const char gRestoreCursor[]     = VT100_RESTORECURSOR;
+    const char gSaveCursor[]    = VT100_SAVECURSOR;
+    const char gRestoreCursor[] = VT100_RESTORECURSOR;
+
+    // check for NULL pointer in debug mode
+    DEBUGASSERT(pCommonBatteryVariables != NULL);
+    DEBUGASSERT(pCalcBatteryVariables != NULL);
 
     // check if anything needs to be send over the CLI
     if(gShowMeasurements)
     {
-        // check if the top command is on 
+        // check if the top command is on
         if(gDoTop)
         {
             // reset the lineCounterVal
             lineCounterVal = 1;
 
             // Check if the user wants the current
-            if(gShowMeasurements & (1<<CLI_CURRENT))
+            if(gShowMeasurements & (1 << CLI_CURRENT))
             {
-                // get the value
-                parameter = I_BATT;
-                defaultParameterFloat = I_BATT_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // save the cursor position
-                cli_printf("%s \e[%d;1H \e[2K \ri-batt: \t %8.3f A%s" , &gSaveCursor, 
-                    lineCounterVal, floatVal, &gRestoreCursor);
+                cli_printf("%s \e[%d;1H \e[2K \ri-batt: \t %8.3f A%s", &gSaveCursor, lineCounterVal,
+                    pCommonBatteryVariables->I_batt, &gRestoreCursor);
 
                 // increase the line counter
                 lineCounterVal++;
             }
 
             // Check if the user wants the avg current
-            if(gShowMeasurements & (1<<CLI_AVG_CURRENT))  
+            if(gShowMeasurements & (1 << CLI_AVG_CURRENT))
             {
-                // get the value
-                parameter = I_BATT_AVG;
-                defaultParameterFloat = I_BATT_AVG_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // print the average current and samples
-                cli_printf("%s\e[%d;1H \e[2K \ri-batt-avg: \t %8.3f A%s", &gSaveCursor,
-                    lineCounterVal, floatVal, &gRestoreCursor);
-                
+                cli_printf("%s\e[%d;1H \e[2K \ri-batt-avg: \t %8.3f A%s", &gSaveCursor, lineCounterVal,
+                    pCommonBatteryVariables->I_batt_avg, &gRestoreCursor);
+
                 // increase the line counter
                 lineCounterVal++;
             }
 
             // Check if the user wants the cell voltages
-            if(gShowMeasurements & (1<<CLI_CELL_VOLTAGE))
+            if(gShowMeasurements & (1 << CLI_CELL_VOLTAGE))
             {
-                // get the number of cells
-                parameter = N_CELLS;
-                defaultParameterUint8 = N_CELLS_DEFAULT;
-                if(data_getParameter(parameter, &uint8Val, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    uint8Val = defaultParameterUint8;
-                } 
-
-                // loop though all the available cells 
-                for(i = 0; i < uint8Val; i++)
+                // loop though all the available cells
+                for(i = 0; i < pCommonBatteryVariables->N_cells; i++)
                 {
                     // get the cell voltage
-                    // get the value
-                    parameter = V_CELL1;
-                    defaultParameterFloat = V_CELL1_DEFAULT;
-                    if(data_getParameter((parameterKind_t)(parameter + i), 
-                        &floatVal, NULL) == NULL)
-                    {
-                        cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                        floatVal = defaultParameterFloat;
-                    } 
-
                     // print the cell voltage
-                    cli_printf("%s\e[%d;1H \e[2K \rv-cell%d:\t %8.3f V%s", &gSaveCursor, 
-                        lineCounterVal, i+1, floatVal, &gRestoreCursor);
-                
+                    cli_printf("%s\e[%d;1H \e[2K \rv-cell%d:\t %8.3f V%s", &gSaveCursor, lineCounterVal,
+                        i + 1, (pCommonBatteryVariables->V_cellVoltages).V_cellArr[i], &gRestoreCursor);
+
                     // increase the line counter
                     lineCounterVal++;
                 }
             }
 
             // Check if the user wants the stack voltage
-            if(gShowMeasurements & (1<<CLI_STACK_VOLTAGE))
+            if(gShowMeasurements & (1 << CLI_STACK_VOLTAGE))
             {
-                // get the value
-                parameter = V_BATT;
-                defaultParameterFloat = V_BATT_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // print the battery voltage
-                cli_printf("%s\e[%d;1H \e[2K \rv-batt:\t\t %8.3f V%s", &gSaveCursor, 
-                    lineCounterVal, floatVal, &gRestoreCursor);
-                
+                cli_printf("%s\e[%d;1H \e[2K \rv-batt:\t\t %8.3f V%s", &gSaveCursor, lineCounterVal,
+                    pCommonBatteryVariables->V_batt, &gRestoreCursor);
+
                 // increase the line counter
                 lineCounterVal++;
             }
 
-            // Check if the user wants the battery voltage 
-            if(gShowMeasurements & (1<<CLI_BAT_VOLTAGE))
+            // Check if the user wants the battery voltage
+            if(gShowMeasurements & (1 << CLI_BAT_VOLTAGE))
             {
-                // get the value
-                parameter = V_OUT;
-                defaultParameterFloat = V_OUT_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // print the output voltage
-                cli_printf("%s\e[%d;1H \e[2K \rv-out: \t\t %8.3f V%s", &gSaveCursor,
-                    lineCounterVal, floatVal, &gRestoreCursor);
-                
+                cli_printf("%s\e[%d;1H \e[2K \rv-out: \t\t %8.3f V%s", &gSaveCursor, lineCounterVal,
+                    pCommonBatteryVariables->V_out, &gRestoreCursor);
+
                 // increase the line counter
                 lineCounterVal++;
             }
 
             // Check if the user wants the output status
-            if(gShowMeasurements & (1<<CLI_OUTPUT_STATUS))
+            if(gShowMeasurements & (1 << CLI_OUTPUT_STATUS))
             {
-                // get the value
-                parameter = S_OUT;
-                defaultParameterUint8 = S_OUT_DEFAULT;
-                if(data_getParameter(parameter, &uint8Val, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    uint8Val = defaultParameterUint8;
-                } 
-
                 // print the output status
-                cli_printf("%s\e[%d;1H \e[2K \rs-out \t\t\t%d%s", &gSaveCursor,
-                    lineCounterVal, uint8Val, &gRestoreCursor);
-                
+                cli_printf("%s\e[%d;1H \e[2K \rs-out \t\t\t%d%s", &gSaveCursor, lineCounterVal,
+                    pCalcBatteryVariables->s_out, &gRestoreCursor);
+
                 // increase the line counter
                 lineCounterVal++;
             }
 
             // Check if the user wants the temperature
-            if(gShowMeasurements & (1<<CLI_TEMPERATURE))
+            if(gShowMeasurements & (1 << CLI_TEMPERATURE))
             {
                 // Check if the battery sensor is enabled
-                // get the number of cells
-                parameter = SENSOR_ENABLE;
-                defaultParameterUint8 = SENSOR_ENABLE_DEFAULT;
-                if(data_getParameter(parameter, &uint8Val, NULL) == NULL)
+                if(pCommonBatteryVariables->sensor_enable)
                 {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    uint8Val = defaultParameterUint8;
-                }
-
-                // check if the sensor is enabled
-                if(uint8Val)
-                {
-                    // get the value
-                    parameter = C_BATT;
-                    defaultParameterFloat = C_BATT_DEFAULT;
-                    if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                    {
-                        cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                        floatVal = defaultParameterFloat;
-                    } 
-
                     // print the battery temperature
-                    cli_printf("%s\e[%d;1H \e[2K \rc-batt: \t %8.3f C%s", &gSaveCursor,
-                        lineCounterVal, floatVal, &gRestoreCursor);
-                    
+                    cli_printf("%s\e[%d;1H \e[2K \rc-batt: \t %8.3f C%s", &gSaveCursor, lineCounterVal,
+                        pCommonBatteryVariables->C_batt, &gRestoreCursor);
+
                     // increase the line counter
                     lineCounterVal++;
                 }
 
-                // get the value
-                parameter = C_AFE;
-                defaultParameterFloat = C_AFE_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // print the afe temperature
-                cli_printf("%s\e[%d;1H \e[2K \rc-afe: \t\t %8.3f C%s", &gSaveCursor,
-                    lineCounterVal, floatVal, &gRestoreCursor);
-                
+                cli_printf("%s\e[%d;1H \e[2K \rc-afe: \t\t %8.3f C%s", &gSaveCursor, lineCounterVal,
+                    pCommonBatteryVariables->C_AFE, &gRestoreCursor);
+
                 // increase the line counter
                 lineCounterVal++;
-
-                // get the value
-                parameter = C_T;
-                defaultParameterFloat = C_T_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
 
                 // print the transistor temperature
-                cli_printf("%s\e[%d;1H \e[2K \rc-t: \t\t %8.3f C%s", &gSaveCursor, 
-                    lineCounterVal, floatVal, &gRestoreCursor);
-                
+                cli_printf("%s\e[%d;1H \e[2K \rc-t: \t\t %8.3f C%s", &gSaveCursor, lineCounterVal,
+                    pCommonBatteryVariables->C_T, &gRestoreCursor);
+
                 // increase the line counter
                 lineCounterVal++;
 
-                // get the value
-                parameter = C_R;
-                defaultParameterFloat = C_R_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // print the resistor temperature
-                cli_printf("%s\e[%d;1H \e[2K \rc-r: \t\t %8.3f C%s", &gSaveCursor, 
-                    lineCounterVal, floatVal, &gRestoreCursor);
-                
+                cli_printf("%s\e[%d;1H \e[2K \rc-r: \t\t %8.3f C%s", &gSaveCursor, lineCounterVal,
+                    pCommonBatteryVariables->C_R, &gRestoreCursor);
+
                 // increase the line counter
                 lineCounterVal++;
             }
 
-            // Check if the user wants the energy consumed 
-            if(gShowMeasurements & (1<<CLI_ENERGY_CONSUMED))
+            // Check if the user wants the energy consumed
+            if(gShowMeasurements & (1 << CLI_ENERGY_CONSUMED))
             {
-                // get the value
-                parameter = E_USED;
-                defaultParameterFloat = E_USED_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // print the energy used
-                cli_printf("%s\e[%d;1H \e[2K \re-used: \t %8.3f Wh%s", &gSaveCursor, 
-                    lineCounterVal, floatVal, &gRestoreCursor);
-                
+                cli_printf("%s\e[%d;1H \e[2K \re-used: \t %8.3f Wh%s", &gSaveCursor, lineCounterVal,
+                    pCalcBatteryVariables->E_used, &gRestoreCursor);
+
                 // increase the line counter
                 lineCounterVal++;
             }
 
             // Check if the user wants the remaining capacity
-            if(gShowMeasurements & (1<<CLI_REMAINING_CAP))
+            if(gShowMeasurements & (1 << CLI_REMAINING_CAP))
             {
-                // get the value
-                parameter = A_REM;
-                defaultParameterFloat = A_REM_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // print the remaning capacity
-                cli_printf("%s\e[%d;1H \e[2K \ra-rem: \t\t %8.3f Ah%s", &gSaveCursor, 
-                    lineCounterVal, floatVal, &gRestoreCursor);
-                
+                cli_printf("%s\e[%d;1H \e[2K \ra-rem: \t\t %8.3f Ah%s", &gSaveCursor, lineCounterVal,
+                    pCalcBatteryVariables->A_rem, &gRestoreCursor);
+
                 // increase the line counter
                 lineCounterVal++;
             }
 
             // Check if the user wants the state of charge
-            if(gShowMeasurements & (1<<CLI_STATE_OF_CHARGE))
+            if(gShowMeasurements & (1 << CLI_STATE_OF_CHARGE))
             {
-                // get the value
-                parameter = S_CHARGE;
-                defaultParameterUint8 = S_CHARGE_DEFAULT;
-                if(data_getParameter(parameter, &uint8Val, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    uint8Val = defaultParameterUint8;
-                } 
-
                 // print the state of charge
-                cli_printf("%s\e[%d;1H \e[2K \rs-charge:\t      %3d %%%s", &gSaveCursor, 
-                    lineCounterVal, uint8Val, &gRestoreCursor);
-                
+                cli_printf("%s\e[%d;1H \e[2K \rs-charge:\t      %3d %%%s", &gSaveCursor, lineCounterVal,
+                    pCalcBatteryVariables->s_charge, &gRestoreCursor);
+
                 // increase the line counter
                 lineCounterVal++;
             }
 
             // Check if the user wants the avg power
-            if(gShowMeasurements & (1<<CLI_AVG_POWER))
+            if(gShowMeasurements & (1 << CLI_AVG_POWER))
             {
-                // get the value
-                parameter = P_AVG;
-                defaultParameterFloat = P_AVG_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // print the average power
-                cli_printf("%s\e[%d;1H \e[2K \rp-avg: \t\t %8.3f W%s", &gSaveCursor, 
-                    lineCounterVal, floatVal, &gRestoreCursor);
+                cli_printf("%s\e[%d;1H \e[2K \rp-avg: \t\t %8.3f W%s", &gSaveCursor, lineCounterVal,
+                    pCalcBatteryVariables->P_avg, &gRestoreCursor);
 
                 // increase the line counter
                 lineCounterVal++;
             }
 
             // check if the user want to state
-            if(gShowMeasurements & (1<<CLI_STATE))
+            if(gShowMeasurements & (1 << CLI_STATE))
             {
                 // get the state in a uint8 value
-                uint8Val = (uint8_t)data_getMainState();
+                variable1.uint8Var = (uint8_t)data_getMainState();
 
                 // check if the charge state needs to be outputted as well
-                if((states_t)uint8Val == CHARGE)
+                if((states_t)variable1.uint8Var == CHARGE)
                 {
                     // get the charge state
                     i = (uint8_t)data_getChargeState();
@@ -1766,22 +1677,22 @@ int cli_updateData(void)
                     if(i == RELAXATION)
                     {
                         // print the state and the charge state
-                        cli_printf("%s\e[%d;1H \e[2K \rstate:  %s_%s%s", &gSaveCursor, 
-                            lineCounterVal, gStatesArray[uint8Val], gChargeStatesArray[i], &gRestoreCursor);
+                        cli_printf("%s\e[%d;1H \e[2K \rstate:  %s_%s%s", &gSaveCursor, lineCounterVal,
+                            gStatesArray[variable1.uint8Var], gChargeStatesArray[i], &gRestoreCursor);
                     }
                     // the other states contain the word charge
                     else
                     {
                         // print the charge state
-                        cli_printf("%s\e[%d;1H \e[2K \rstate: \t  %*s%s", &gSaveCursor, 
-                            lineCounterVal, 15, gChargeStatesArray[i], &gRestoreCursor);
+                        cli_printf("%s\e[%d;1H \e[2K \rstate: \t  %*s%s", &gSaveCursor, lineCounterVal, 15,
+                            gChargeStatesArray[i], &gRestoreCursor);
                     }
                 }
                 else
                 {
                     // output the state
-                    cli_printf("%s\e[%d;1H \e[2K \rstate: \t   %*s%s", &gSaveCursor, 
-                        lineCounterVal, 14, gStatesArray[uint8Val], &gRestoreCursor);
+                    cli_printf("%s\e[%d;1H \e[2K \rstate: \t   %*s%s", &gSaveCursor, lineCounterVal, 14,
+                        gStatesArray[variable1.uint8Var], &gRestoreCursor);
                 }
             }
         }
@@ -1791,308 +1702,164 @@ int cli_updateData(void)
             // print every value on the CLI
 
             // Check if the user wants the current
-            if(gShowMeasurements & (1<<CLI_CURRENT))
+            if(gShowMeasurements & (1 << CLI_CURRENT))
             {
-                // get the value
-                parameter = I_BATT;
-                defaultParameterFloat = I_BATT_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // clear the line and write the value
                 cli_printf("\e[2K");
 
                 // print it
-                cli_printf("i-batt: \t %8.3f A\n", floatVal);
+                cli_printf("i-batt: \t %8.3f A\n", pCommonBatteryVariables->I_batt);
             }
 
             // Check if the user wants the avg current
-            if(gShowMeasurements & (1<<CLI_AVG_CURRENT))  
+            if(gShowMeasurements & (1 << CLI_AVG_CURRENT))
             {
-                // get the value
-                parameter = I_BATT_AVG;
-                defaultParameterFloat = I_BATT_AVG_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // clear the line and write the value
                 cli_printf("\e[2K");
                 // output the average current if needed
-                cli_printf("i-batt-avg: \t %8.3f A\n", floatVal);
+                cli_printf("i-batt-avg: \t %8.3f A\n", pCommonBatteryVariables->I_batt_avg);
             }
 
             // Check if the user wants the cell voltages
-            if(gShowMeasurements & (1<<CLI_CELL_VOLTAGE))
+            if(gShowMeasurements & (1 << CLI_CELL_VOLTAGE))
             {
-                // get the number of cells
-                parameter = N_CELLS;
-                defaultParameterUint8 = N_CELLS_DEFAULT;
-                if(data_getParameter(parameter, &uint8Val, NULL) == NULL)
+                // loop though all the available cells
+                for(i = 0; i < pCommonBatteryVariables->N_cells; i++)
                 {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    uint8Val = defaultParameterUint8;
-                } 
-
-                // loop though all the available cells 
-                for(i = 0; i < uint8Val; i++)
-                {
-                    // get the cell voltage
-                    // get the value
-                    parameter = V_CELL1;
-                    defaultParameterFloat = V_CELL1_DEFAULT;
-                    if(data_getParameter((parameterKind_t)(parameter + i), 
-                        &floatVal, NULL) == NULL)
-                    {
-                        cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                        floatVal = defaultParameterFloat;
-                    } 
-
                     // clear the line and write the value
                     cli_printf("\e[2K");
-                    
+
                     // print the cell voltage
-                    cli_printf("v-cell%d:\t %8.3f V\n", i+1, floatVal);
+                    cli_printf("v-cell%d:\t %8.3f V\n", i + 1,
+                        (pCommonBatteryVariables->V_cellVoltages).V_cellArr[i]);
                 }
             }
 
             // Check if the user wants the stack voltage
-            if(gShowMeasurements & (1<<CLI_STACK_VOLTAGE))
+            if(gShowMeasurements & (1 << CLI_STACK_VOLTAGE))
             {
-                // get the value
-                parameter = V_BATT;
-                defaultParameterFloat = V_BATT_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // clear the line and write the value
                 cli_printf("\e[2K");
-                cli_printf("v-batt:\t\t %8.3f V\n", floatVal);
+                cli_printf("v-batt:\t\t %8.3f V\n", pCommonBatteryVariables->V_batt);
             }
 
             // Check if the user wants the battery voltage
-            if(gShowMeasurements & (1<<CLI_BAT_VOLTAGE))
+            if(gShowMeasurements & (1 << CLI_BAT_VOLTAGE))
             {
-                // get the value
-                parameter = V_OUT;
-                defaultParameterFloat = V_OUT_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
-                 // clear the line and write the value
-                cli_printf("\e[2K");
-                
-                // print it
-                cli_printf("v-out: \t\t %8.3f V\n", floatVal);
-            }
-            
-            // Check if the user wants the output status
-            if(gShowMeasurements & (1<<CLI_OUTPUT_STATUS))
-            {
-                // get the value
-                parameter = S_OUT;
-                defaultParameterUint8 = S_OUT_DEFAULT;
-                if(data_getParameter(parameter, &uint8Val, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    uint8Val = defaultParameterUint8;
-                } 
-
                 // clear the line and write the value
                 cli_printf("\e[2K");
-                cli_printf("s-out \t\t\t%d\n", uint8Val);
+
+                // print it
+                cli_printf("v-out: \t\t %8.3f V\n", pCommonBatteryVariables->V_batt);
+            }
+
+            // Check if the user wants the output status
+            if(gShowMeasurements & (1 << CLI_OUTPUT_STATUS))
+            {
+                // clear the line and write the value
+                cli_printf("\e[2K");
+                cli_printf("s-out \t\t\t%d\n", pCalcBatteryVariables->s_out);
             }
 
             // Check if the user wants the temperature
-            if(gShowMeasurements & (1<<CLI_TEMPERATURE))
+            if(gShowMeasurements & (1 << CLI_TEMPERATURE))
             {
                 // Check if the battery sensor is enabled
-                // get the number of cells
-                parameter = SENSOR_ENABLE;
-                defaultParameterUint8 = SENSOR_ENABLE_DEFAULT;
-                if(data_getParameter(parameter, &uint8Val, NULL) == NULL)
+                if(pCommonBatteryVariables->sensor_enable)
                 {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    uint8Val = defaultParameterUint8;
-                }
-
-                // check if the sensor is enabled
-                if(uint8Val)
-                {
-                    // get the value
-                    parameter = C_BATT;
-                    defaultParameterFloat = C_BATT_DEFAULT;
-                    if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                    {
-                        cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                        floatVal = defaultParameterFloat;
-                    } 
-
                     // clear the line and write the value
                     cli_printf("\e[2K");
-                    cli_printf("c-batt: \t %8.3f C\n", floatVal);
+                    cli_printf("c-batt: \t %8.3f C\n", pCommonBatteryVariables->C_batt);
                 }
 
-                // get the value
-                parameter = C_AFE;
-                defaultParameterFloat = C_AFE_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
+                // clear the line and write the value
+                cli_printf("\e[2K");
+                cli_printf("c-afe: \t\t %8.3f C\n", pCommonBatteryVariables->C_AFE);
 
                 // clear the line and write the value
                 cli_printf("\e[2K");
-                cli_printf("c-afe: \t\t %8.3f C\n", floatVal);
-
-                // get the value
-                parameter = C_T;
-                defaultParameterFloat = C_T_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
+                cli_printf("c-t: \t\t %8.3f C\n", pCommonBatteryVariables->C_T);
 
                 // clear the line and write the value
                 cli_printf("\e[2K");
-                cli_printf("c-t: \t\t %8.3f C\n", floatVal);
-
-                // get the value
-                parameter = C_R;
-                defaultParameterFloat = C_R_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
-                // clear the line and write the value
-                cli_printf("\e[2K");
-                cli_printf("c-r: \t\t %8.3f C\n", floatVal);
+                cli_printf("c-r: \t\t %8.3f C\n", pCommonBatteryVariables->C_R);
             }
 
-            // Check if the user wants the energy consumed 
-            if(gShowMeasurements & (1<<CLI_ENERGY_CONSUMED))
+            // Check if the user wants the energy consumed
+            if(gShowMeasurements & (1 << CLI_ENERGY_CONSUMED))
             {
-                // get the value
-                parameter = E_USED;
-                defaultParameterFloat = E_USED_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // clear the line and write the value
                 cli_printf("\e[2K");
-                cli_printf("e-used: \t %8.3f Wh\n", floatVal);
+                cli_printf("e-used: \t %8.3f Wh\n", pCalcBatteryVariables->E_used);
             }
 
             // Check if the user wants the remaining charge
-            if(gShowMeasurements & (1<<CLI_REMAINING_CAP))
+            if(gShowMeasurements & (1 << CLI_REMAINING_CAP))
             {
-                // get the value
-                parameter = A_REM;
-                defaultParameterFloat = A_REM_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // clear the line and write the value
                 cli_printf("\e[2K");
-                cli_printf("a-rem: \t\t %8.3f Ah\n", floatVal);
+                cli_printf("a-rem: \t\t %8.3f Ah\n", pCalcBatteryVariables->A_rem);
             }
 
             // Check if the user wants the state of charge
-            if(gShowMeasurements & (1<<CLI_STATE_OF_CHARGE))
+            if(gShowMeasurements & (1 << CLI_STATE_OF_CHARGE))
             {
-                // get the value
-                parameter = S_CHARGE;
-                defaultParameterUint8 = S_CHARGE_DEFAULT;
-                if(data_getParameter(parameter, &uint8Val, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    uint8Val = defaultParameterUint8;
-                } 
-
                 // clear the line and write the value
                 cli_printf("\e[2K");
                 // output the state of charge
-                cli_printf("s-charge:\t\t%d %%\n", uint8Val);
+                cli_printf("s-charge:\t\t%d %%\n", pCalcBatteryVariables->s_charge);
             }
 
             // Check if the user wants the average power
-            if(gShowMeasurements & (1<<CLI_AVG_POWER))
+            if(gShowMeasurements & (1 << CLI_AVG_POWER))
             {
-                // get the value
-                parameter = P_AVG;
-                defaultParameterFloat = P_AVG_DEFAULT;
-                if(data_getParameter(parameter, &floatVal, NULL) == NULL)
-                {
-                    cli_printfError("cli_updateData ERROR: getting parameter %d failed!\n");
-                    floatVal = defaultParameterFloat;
-                } 
-
                 // clear the line and write the value
                 cli_printf("\e[2K");
                 // output the average power
-                cli_printf("p-avg: \t\t %8.3f W\n", floatVal);
+                cli_printf("p-avg: \t\t %8.3f W\n", pCalcBatteryVariables->P_avg);
             }
 
             // check if the user want to state
-            if(gShowMeasurements & (1<<CLI_STATE))
+            if(gShowMeasurements & (1 << CLI_STATE))
             {
                 // get the state in a uint8 value
-                uint8Val = (uint8_t)data_getMainState();
+                variable1.uint8Var = (uint8_t)data_getMainState();
 
                 // check if the charge state needs to be outputted as well
-                if((states_t)uint8Val == CHARGE)
+                if((states_t)variable1.uint8Var == CHARGE)
                 {
                     // print the state and the charge state
-                    cli_printf("state: \t\t    \"%s-%s\"\n", 
-                        gStatesArray[uint8Val], gChargeStatesArray[(int)(data_getChargeState())]);
+                    cli_printf("state: \t\t    \"%s-%s\"\n", gStatesArray[variable1.uint8Var],
+                        gChargeStatesArray[(int)(data_getChargeState())]);
                 }
                 else
                 {
                     // output the state
-                    cli_printf("state: \t\t    \"%s\"\n", 
-                        gStatesArray[uint8Val]);
+                    cli_printf("state: \t\t    \"%s\"\n", gStatesArray[variable1.uint8Var]);
                 }
             }
         }
-     }
+    }
 
     return 0;
 }
 
 /*!
  * @brief   this function is used to get the string of a state.
- *          
+ *
  * @param   getMainState if true, it will get the main state string.
  *          If false, it will get the charge state string.
  * @param   state the state to get the string of, if getMainState is true from the states_t
  *          otherwise from the charge_states_t.
  * @param   dest This is the pointer to the destination array where the content is to be copied.
+ *          May be NULL, if NULL, returnvalue is the value of the const string
  *
- * @return  This returns a pointer to the destination string dest.
+ * @return  This returns a pointer to the destination string dest or const string.
  */
 char *cli_getStateString(bool getMainState, uint8_t state, char *dest)
 {
+    char *ret;
+
     // check what kind of state the user want the string of
     // if it is the main state
     if(getMainState)
@@ -2101,15 +1868,24 @@ char *cli_getStateString(bool getMainState, uint8_t state, char *dest)
         if(state > (uint8_t)DEEP_SLEEP)
         {
             // error
-            cli_printfError("cli ERROR: state (%d) > main state enum (%d)\n",
-                state, (uint8_t)DEEP_SLEEP);
+            cli_printfError("cli ERROR: state (%d) > main state enum (%d)\n", state, (uint8_t)DEEP_SLEEP);
 
             // return the self-test state to indicate an error
             state = (uint8_t)SELF_TEST;
         }
 
-        // set the state
-        strcpy(dest, gStatesArray[state]);
+        // check if null pointer
+        if(dest != NULL)
+        {
+            // set the state
+            strcpy(dest, gStatesArray[state]);
+            ret = dest;
+        }
+        else
+        {
+            // give the address of the state array
+            ret = (char *)gStatesArray[state];
+        }
     }
     // if the user want the charge state string
     else
@@ -2118,19 +1894,29 @@ char *cli_getStateString(bool getMainState, uint8_t state, char *dest)
         if(state > (uint8_t)CHARGE_COMPLETE)
         {
             // error
-            cli_printfError("cli ERROR: state (%d) > charge state enum (%d)\n",
-                state, (uint8_t)CHARGE_COMPLETE);
+            cli_printfError(
+                "cli ERROR: state (%d) > charge state enum (%d)\n", state, (uint8_t)CHARGE_COMPLETE);
 
             // return the relaxation state to indicate an error
             state = (uint8_t)RELAXATION;
         }
 
-        // set the state
-        strcpy(dest, gChargeStatesArray[state]);
+        // check if null pointer
+        if(dest != NULL)
+        {
+            // set the state
+            strcpy(dest, gChargeStatesArray[state]);
+            ret = dest;
+        }
+        else
+        {
+            // give the address of the state array
+            ret = (char *)gChargeStatesArray[state];
+        }
     }
 
     // return the destination string
-    return dest;
+    return ret;
 }
 
 /****************************************************************************
@@ -2149,7 +1935,7 @@ void printHelp(void)
     cli_printf("bms get <parameter>       --this command gets a parameter value.\n");
     cli_printf("                            parameter is the parameter you want\n");
     cli_printf("bms get all               --this command gets all the parameters\n");
-    cli_printf("                            including the values\n");   
+    cli_printf("                            including the values\n");
     cli_printf("bms set <parameter> <x>   --this command can be used to set a parameter\n");
     cli_printf("                            WARNING this could lead to unsave operations!\n");
     cli_printf("                            WARNING only use this command in a safe manner!\n");
@@ -2157,22 +1943,28 @@ void printHelp(void)
     cli_printf("                            x is the new value of the parameter you want to set\n");
     cli_printf("                            to enter a decimal value use \".\" as seperator\n");
     cli_printf("                            to enter a string with spaces use \"input string\"\n");
-    cli_printf("bms show <show-meas> <x>  --this command can be used to show the cyclic measurement results\n");
-    cli_printf("                            show-meas is the to measurement to enable or disable visibility\n");
+    cli_printf(
+        "bms show <show-meas> <x>  --this command can be used to show the cyclic measurement results\n");
+    cli_printf(
+        "                            show-meas is the to measurement to enable or disable visibility\n");
     cli_printf("                            if x is 1 the measurement is shown, if 0 it will be disabled\n");
     cli_printf("bms reset                 --this command will reset the fault when in the fault state\n");
     cli_printf("bms sleep                 --with this command it will go to the sleep state\n");
     cli_printf("                            from the normal or the self_discharge state\n");
-    cli_printf("                            NOTE: if current is drawn it will transition to the normal state\n");
+    cli_printf(
+        "                            NOTE: if current is drawn it will transition to the normal state\n");
     cli_printf("bms wake                  --this command will wake the BMS in the sleep state\n");
     cli_printf("bms deepsleep             --with this command it will go to the deep sleep state\n");
     cli_printf("                            from the sleep state or the charge state\n");
-    cli_printf("bms save                  --this command will save the current settings (parameters) to flash\n");
-    cli_printf("bms load                  --this command will load the saved settings (parameters) from flash\n");
+    cli_printf(
+        "bms save                  --this command will save the current settings (parameters) to flash\n");
+    cli_printf(
+        "bms load                  --this command will load the saved settings (parameters) from flash\n");
     cli_printf("bms default               --this command will load the default settings\n");
     cli_printf("bms time                  --this command will output the time since boot\n");
     cli_printf("reboot                    --this command will reboot the microcontroller\n");
-    cli_printf("                            this command should be used without the word bms in front of it\n\n");
+    cli_printf(
+        "                            this command should be used without the word bms in front of it\n\n");
     cli_printf("some parameters have a letter in front of the \"-\", this indicates the type of parameter\n");
     cli_printf("a - capacity\n");
     cli_printf("c - temperature (celcius)\n");
@@ -2189,24 +1981,23 @@ void printHelp(void)
 void printParameters(void)
 {
     int i, j;
-    bool nonWritableFound = false;
 
     // standard message
     cli_printf("These are the <parameter> inputs that can be used to get or set a parameter:\n");
 
     cli_printf("parameter");
 
-    // move the cursor to position 
+    // move the cursor to position
     cli_printf("\r" VT100_FMT_CURSORRT, 22);
 
     cli_printf("unit");
 
-    // move the cursor to position 
+    // move the cursor to position
     cli_printf("\r" VT100_FMT_CURSORRT, 28);
 
     cli_printf("RO/RW");
 
-    // move the cursor to position 
+    // move the cursor to position
     cli_printf("\r" VT100_FMT_CURSORRT, 35);
 
     cli_printf("type\n");
@@ -2234,7 +2025,7 @@ void printParameters(void)
         // print them
         cli_printf("%s", gGetSetParamsLowerString);
 
-        // move the cursor to position 
+        // move the cursor to position
         cli_printf("\r" VT100_FMT_CURSORRT, 22);
 
         // make sure you stay in the array
@@ -2247,26 +2038,11 @@ void printParameters(void)
             cli_printf("-");
         }
 
-        // move the cursor to position 
+        // move the cursor to position
         cli_printf("\r" VT100_FMT_CURSORRT, 30);
 
-        // reset the value
-        nonWritableFound = false;
-
-        // check if the parameter is non writable
-        for(j = 0; nonWritableParameters[j] != NONE; j++)
-        {
-            // check if the parameter is non writable 
-            if(i == nonWritableParameters[j])
-            {
-                // set the value and escape the for loop
-                nonWritableFound = true;
-                break;
-            }
-        }
-
         // check if non writable
-        if(nonWritableFound || i >= NONE)
+        if((data_getParameterIfUserReadOnly(i) == 1) || i >= NONE)
         {
             cli_printf("RO");
         }
@@ -2275,7 +2051,7 @@ void printParameters(void)
             cli_printf("RW");
         }
 
-        // move the cursor to position 
+        // move the cursor to position
         cli_printf("\r" VT100_FMT_CURSORRT, 35);
 
         // make sure you stay in the array
@@ -2297,10 +2073,10 @@ void printParameters(void)
 //! this prints all the parameters from FOR_EACH_PARAMETER with the value
 void printAllParameterValues(void)
 {
-    int i, j;
-    float lvFloatVal = 0.0;
-    char *lvPStringVal;
-    int32_t lvIntVal;
+    int      i, j;
+    float    lvFloatVal = 0.0;
+    char *   lvPStringVal;
+    int32_t  lvIntVal;
     uint64_t lvUint64Val;
 
     // standard message
@@ -2310,7 +2086,7 @@ void printAllParameterValues(void)
     for(i = 0; i < NONE; i++)
     {
         // reset the intvalues
-        lvIntVal = 0;
+        lvIntVal    = 0;
         lvUint64Val = 0;
 
         // change each character of the string parameters to lowercase for the user input
@@ -2332,9 +2108,9 @@ void printAllParameterValues(void)
         gGetSetParamsLowerString[j] = '\0';
 
         // print them
-        cli_printf("%s", gGetSetParamsLowerString);//, strlen(gGetSetParamsLowerString));
+        cli_printf("%s", gGetSetParamsLowerString); //, strlen(gGetSetParamsLowerString));
 
-        // move the cursor to position 
+        // move the cursor to position
         cli_printf("\r" VT100_FMT_CURSORRT, 24);
 
         // get the parameter value from the data sturct
@@ -2353,7 +2129,7 @@ void printAllParameterValues(void)
                     cli_printf("%.3f", lvFloatVal);
                 }
 
-            break;
+                break;
             // if it is a string
             case STRINGVAL:
                 // get the value
@@ -2370,7 +2146,7 @@ void printAllParameterValues(void)
                     cli_printf("%s", lvPStringVal);
                 }
 
-            break;
+                break;
             // if it is a uint64_t value
             case UINT64VAL:
                 // get the value
@@ -2384,7 +2160,7 @@ void printAllParameterValues(void)
                     cli_printf("%" PRIu64, lvUint64Val);
                 }
 
-            break;
+                break;
             // if it is a integer (max int32_t)
             default:
                 // get the value
@@ -2398,10 +2174,10 @@ void printAllParameterValues(void)
                     cli_printf("%d", lvIntVal);
                 }
 
-            break;
+                break;
         }
 
-        // move the cursor to position 
+        // move the cursor to position
         cli_printf("\r" VT100_FMT_CURSORRT, 35);
 
         // output the unit
@@ -2414,7 +2190,6 @@ void printAllParameterValues(void)
         {
             cli_printf("-\n");
         }
-
     }
 
     // return
@@ -2424,32 +2199,32 @@ void printAllParameterValues(void)
 int cli_printfColor(printColor_t color, const char *fmt, va_list argp)
 {
     int lvRetValue;
-    //va_list argp;
+    // va_list argp;
     struct timespec waitTime;
-    char colorSequence[7];
+    char            colorSequence[7];
 
     // check which color it is
     switch(color)
     {
-        case RED: 
+        case RED:
             // set  the red color string
             sprintf(colorSequence, "\e[31m");
-        break;
+            break;
         case GREEN:
             // set  the green color string
             sprintf(colorSequence, "\e[32m");
-        break;
-        case YELLOW: 
+            break;
+        case YELLOW:
             // set  the yellow color string
             sprintf(colorSequence, "\e[33m");
-        break;
-        default:    
+            break;
+        default:
             // set the normal color string
             sprintf(colorSequence, "\e[39m");
-        break;
+            break;
     }
 
-    // check if mutex is initialzed 
+    // check if mutex is initialzed
     if(gCliPrintLockInitialized)
     {
         // get the time
@@ -2458,10 +2233,11 @@ int cli_printfColor(printColor_t color, const char *fmt, va_list argp)
             cli_printf("%sCLI ERROR: failed to get time!\e[39m\n", "\e[31m");
         }
 
-        // add the time 
-        waitTime.tv_sec     +=  (int)(CLI_TIMED_LOCK_WAIT_TIME_MS / 1000) + 
-                                ((waitTime.tv_nsec + (CLI_TIMED_LOCK_WAIT_TIME_MS % 1000) * MS_TO_NS_MULT) / (NSEC_MAX+1)); 
-        waitTime.tv_nsec    =   (waitTime.tv_nsec + (CLI_TIMED_LOCK_WAIT_TIME_MS % 1000) * MS_TO_NS_MULT) % (NSEC_MAX+1) ; 
+        // add the time
+        waitTime.tv_sec += (int)(CLI_TIMED_LOCK_WAIT_TIME_MS / 1000) +
+            ((waitTime.tv_nsec + (CLI_TIMED_LOCK_WAIT_TIME_MS % 1000) * MS_TO_NS_MULT) / (NSEC_MAX + 1));
+        waitTime.tv_nsec =
+            (waitTime.tv_nsec + (CLI_TIMED_LOCK_WAIT_TIME_MS % 1000) * MS_TO_NS_MULT) % (NSEC_MAX + 1);
 
         // lock the mutex
         lvRetValue = pthread_mutex_timedlock(&gCliPrintLock, &waitTime);
@@ -2482,7 +2258,7 @@ int cli_printfColor(printColor_t color, const char *fmt, va_list argp)
             pthread_mutex_unlock(&gCliPrintLock);
         }
         else
-        {           
+        {
             // print the red color sequence
             lvRetValue |= printf("%s", colorSequence);
 
@@ -2505,15 +2281,15 @@ int cli_printfColor(printColor_t color, const char *fmt, va_list argp)
         // print the normal color sequence
         lvRetValue |= printf("\e[39m");
     }
-    
+
     // return to the user
     return lvRetValue;
 }
 
 /*!
- * @brief   this function can be used to change what is viewed 
+ * @brief   this function can be used to change what is viewed
  *          on the CLI (the new measurements)
- *          
+ *
  * @param   showCommand the showcommand that the user entered.
  * @param   value the value of that param.
  *
@@ -2521,9 +2297,9 @@ int cli_printfColor(printColor_t color, const char *fmt, va_list argp)
  */
 void setShowMeas(showCommands_t showCommand, bool value)
 {
-    int i;
+    int     i;
     int32_t int32Val;
-    int lineCounterVal = 0;
+    int     lineCounterVal = 0;
 
     // check if a bit is set
     if(showCommand < CLI_ALL)
@@ -2567,21 +2343,21 @@ void setShowMeas(showCommands_t showCommand, bool value)
                 for(i = 0; i < CLI_ALL; i++)
                 {
                     // set the value
-                    gShowMeasurements |= (1<<i);
+                    gShowMeasurements |= (1 << i);
                 }
             }
 
             // if the top command has been given
             if(gDoTop)
             {
-                // clear the screen 
+                // clear the screen
                 cli_printf("\e[2J");
 
                 // loop though them
                 for(i = 0; i < CLI_ALL; i++)
                 {
                     // check if they need to be displayed
-                    if(gShowMeasurements & (1<<i))
+                    if(gShowMeasurements & (1 << i))
                     {
                         // increase the linecounter value
                         lineCounterVal++;
@@ -2592,16 +2368,17 @@ void setShowMeas(showCommands_t showCommand, bool value)
                             // get the cell count
                             if(data_getParameter(N_CELLS, &int32Val, NULL) == NULL)
                             {
-                               cli_printfError("bcc_monitoring_setShowMeas ERROR: getting cell count went wrong!\n");
-                            } 
+                                cli_printfError(
+                                    "bcc_monitoring_setShowMeas ERROR: getting cell count went wrong!\n");
+                            }
 
-                            // add some more lines for the other cells 
+                            // add some more lines for the other cells
                             lineCounterVal += ((int32Val & 0xFF) - 1);
                         }
                         // if it is the temperatures
                         else if(i == CLI_TEMPERATURE)
                         {
-                            // add some more lines for the other 
+                            // add some more lines for the other
                             lineCounterVal += 3;
                         }
                     }
@@ -2617,7 +2394,7 @@ void setShowMeas(showCommands_t showCommand, bool value)
             // set the topvariable
             gDoTop = value;
 
-            // check if reset is needed 
+            // check if reset is needed
             if(value)
             {
                 // clear the screen
@@ -2644,15 +2421,16 @@ void setShowMeas(showCommands_t showCommand, bool value)
                             // get the cell count
                             if(data_getParameter(N_CELLS, &int32Val, NULL) == NULL)
                             {
-                               cli_printfError("bcc_monitoring_setShowMeas ERROR: getting cell count went wrong!\n");
-                            } 
+                                cli_printfError(
+                                    "bcc_monitoring_setShowMeas ERROR: getting cell count went wrong!\n");
+                            }
 
-                            // add some more lines for the other cells 
+                            // add some more lines for the other cells
                             lineCounterVal += ((int32Val & 0xFF) - 1);
                         }
                         else if(i == CLI_TEMPERATURE)
                         {
-                            // add some more lines for the other 
+                            // add some more lines for the other
                             lineCounterVal += 3;
                         }
                     }

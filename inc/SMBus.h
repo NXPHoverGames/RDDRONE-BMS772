@@ -3,7 +3,7 @@
  *
  * BSD 3-Clause License
  * 
- * Copyright 2021 NXP
+ * Copyright 2021-2022 NXP
  * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -57,7 +57,7 @@
  * Includes
  ******************************************************************************/
 #include <stdio.h>
-
+#include "data.h"
 /*******************************************************************************
  * defines
  ******************************************************************************/
@@ -89,11 +89,16 @@ int SMBus_initialize(void);
  * @param   resetCurrent If this value is true, the current will be set to 0
  *          This could be used if a low power state is used and the SMBus struct 
  *          will not be updated anymore
+ * @param   pCommonBatteryVariables pointer to the commonBatteryVariables_t to update the information
+ *          May be NULL if resetCurrent is true
+ * @param   pCalcBatteryVariables pointer to the calcBatteryVariables_t to update the information
+ *          May be NULL if resetCurrent is true
  *
  * @return  If successful, the function will return zero (OK). 
  *          Otherwise, an error number will be returned to indicate the error:
  */
-int SMBus_updateInformation(bool resetCurrent);
+int SMBus_updateInformation(bool resetCurrent, commonBatteryVariables_t *pCommonBatteryVariables,
+calcBatteryVariables_t *pCalcBatteryVariables);
 
 /*******************************************************************************
  * EOF
