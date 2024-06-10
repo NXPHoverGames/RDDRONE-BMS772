@@ -111,10 +111,7 @@ Install the kconfig-frontends. If this doesn't work, see below 'If the installat
 ```bash
 sudo apt-get install kconfig-frontends
 ```
-Go back to the nuttx directory
-```bash
-cd ../../../nuttx
-```
+
 ### Install the cross compiler if needed
 Tested with version 9.3.1.
 If not already installed, install the cross compiler with the following command:
