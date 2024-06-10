@@ -107,7 +107,7 @@ sudo apt-get install gperf
 ```bash
 sudo apt-get install libncurses5-dev
 ```
-Install the kconfig-frontends. If this doesn't work, see below 'If the installation of kconfig-frontends did not work:'
+Install the kconfig-frontends. If this doesn't work, see below 'Installing kconfig-frontends'
 ```bash
 sudo apt-get install kconfig-frontends
 ```
@@ -197,8 +197,10 @@ Quit the JLinkExe
 ```bash
 q
 ```
+## Installing kconfig-frontends
 If the installation of kconfig-frontends did not work:
 Go back from the nuttx directory and make a tools directory next to it.
+From the nuttx directory:
 ```bash
 cd ..
 ```
