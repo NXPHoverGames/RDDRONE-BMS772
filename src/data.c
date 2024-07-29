@@ -2781,7 +2781,6 @@ static int handleParamaterChange(parameterKind_t parameter, void* value)
                     variable2.floatVar = SODIUM_ION_V_CELL_NOMINAL_DEFAULT;
 
                     cli_printfWarning("WARNING: Check if these sodium-ion parameters are OK for your cell!\n");
-                    cli_printfWarning("WARNING: The sodium-ion OCV curve in bcc_monitorin.c is not correct yet!\n");
                 }
                 break;
                 default:
