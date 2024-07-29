@@ -24,18 +24,21 @@ NXP does not convey any license under its patent rights nor the rights of others
 NXP has battery emulators that may be used during testing:
 https://www.nxp.com/design/development-boards/analog-toolbox/6-cell-battery-pack-to-supply-mc33772-evbs:BATT-6EMULATOR.
 
-This readme files will explain how to get the right nuttx and nuttx-apps repository with the BMS4.0 patches and build the BMS software (create a binary file).
+This readme files will explain how to get the right nuttx and nuttx-apps repository with the BMS6.0 patches and build the BMS software (create a binary file).
 This will work best on a linux machine, you could use a virtual machine for it.
 
 See this webpage for the NuttX quickstart guide: https://nuttx.apache.org/docs/latest/quickstart/quickstart.html.
 
-## Make sure git is installed
+## Make sure git and zip are installed
 If git is not installed, open a terminal and type the following commands:
 ```bash
 sudo apt-get update
 ```
 ```bash
 sudo apt-get install git
+```
+```bash
+sudo apt-get install zip
 ```
 
 ## Get the incubator nuttx and apps
