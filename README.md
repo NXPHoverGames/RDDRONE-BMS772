@@ -1,5 +1,9 @@
 # RDDRONE-BMS772
 NuttX source code for RDDRONE-BMS772
+
+For the newer 7.0 version and MR-BMS771 (7S - 14S) board support, see https://github.com/NXPHoverGames/MR-BMS771.
+For the RDDRONE-BMS772 MATLAB Simulink MBDT BMS example, please download the NXP_MBDToolbox_S32K1xx_4.3.2_patch.zip in https://github.com/NXPHoverGames/RDDRONE-BMS772/tree/main/MBDT and follow the instructions.
+ 
 ## Disclaimer - CAUTION WARNING
 ### CAUTION - WARNING
 Lithium and other batteries are dangerous and must be treated with care. 
@@ -19,7 +23,9 @@ NXP does not convey any license under its patent rights nor the rights of others
 
 ## sources
 * To view the gitbook of this product see https://nxp.gitbook.io/rddrone-bms772/.
-* To view the design files and the product on the NXP webpage see https://www.nxp.com/design/designs/rddrone-bms772-smart-battery-management-for-mobile-robotics:RDDRONE-BMS772. 
+* To view the design files and the product on the NXP webpage see https://www.nxp.com/design/designs/rddrone-bms772-smart-battery-management-for-mobile-robotics:RDDRONE-BMS772.
+* For the RDDRONE-BMS772 MATLAB Simulink MBDT BMS example, please download the NXP_MBDToolbox_S32K1xx_4.3.2_patch.zip in https://github.com/NXPHoverGames/RDDRONE-BMS772/tree/main/MBDT and follow the instructions.
+* For the newer 7.0 version and MR-BMS771 (7S - 14S) support, see https://github.com/NXPHoverGames/MR-BMS771.
 
 NXP has battery emulators that may be used during testing:
 https://www.nxp.com/design/development-boards/analog-toolbox/6-cell-battery-pack-to-supply-mc33772-evbs:BATT-6EMULATOR.
