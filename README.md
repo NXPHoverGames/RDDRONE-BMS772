@@ -35,6 +35,8 @@ This will work best on a linux machine, you could use a virtual machine for it.
 
 See this webpage for the NuttX quickstart guide: https://nuttx.apache.org/docs/latest/quickstart/quickstart.html.
 
+To use the RDDRONE-BMS772 NXP BMS with an FMU in PX4, see: https://app.gitbook.com/o/-L9GLsni4p7csCR7QCJ8/s/4sYITYOw8lqjlbpxfe9d/software-guide-px4/how-to-integrate-rddrone-bms-or-mr-bms771-in-px4-via-dronecan
+
 ## Make sure git and zip are installed
 If git is not installed, open a terminal and type the following commands:
 ```bash
